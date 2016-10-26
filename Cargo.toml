@@ -4,3 +4,20 @@ version = "0.1.0"
 authors = ["Austin Bonander <austin.bonander@gmail.com>"]
 
 [dependencies]
+lazy_static = "*"
+hyper = "0.9"
+mime = "*"
+multipart = "0.9.0-alpha.1"
+serde = "*"
+url = "*"
+
+serde_json = {version = "*", optional = true }
+
+[dev-dependencies]
+serde_derive = "*"
+
+[features]
+default = ["json"]
+json = ["serde_json"]
+
+
