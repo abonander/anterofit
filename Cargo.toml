@@ -4,14 +4,20 @@ version = "0.1.0"
 authors = ["Austin Bonander <austin.bonander@gmail.com>"]
 
 [dependencies]
-lazy_static = "*"
-hyper = "0.9"
+futures = "*"
 mime = "*"
 multipart = "0.9.0-alpha.1"
+quick-error = "*"
 serde = "*"
 url = "*"
 
+threadpool = { version = "*", optional = true }
+
 serde_json = {version = "*", optional = true }
+
+[dependencies.hyper]
+# version = hyper = "0.9.12"
+git = "https://github.com/hyperium/hyper"
 
 [dev-dependencies]
 serde_derive = "*"
@@ -19,5 +25,6 @@ serde_derive = "*"
 [features]
 default = ["json"]
 json = ["serde_json"]
+pool = ["threadpool"]
 
 

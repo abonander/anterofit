@@ -2,12 +2,15 @@
 //#![warn(missing_docs)]
 
 #[macro_use]
-extern crate lazy_static;
+extern crate quick_error;
+
+extern crate futures;
 
 extern crate hyper;
 extern crate mime;
 extern crate multipart;
 extern crate serde;
+
 extern crate url;
 
 #[macro_export]
@@ -15,30 +18,25 @@ pub mod macros;
 pub mod net;
 pub mod serialize;
 
-use std::error::Error;
-use std::marker::PhantomData;
-use std::fmt;
+pub mod executor;
 
-pub struct Request<T> {
-    _marker: PhantomData<T>,
+pub mod error;
+
+mod never;
+
+pub use error::Error;
+pub use error::Never as NeverError;
+
+pub type Result<T> = Result<T, Error>;
+
+trait ExecBox: Send + 'static {
+    fn exec(self: Box<Self>);
 }
 
-pub enum NeverError {}
-
-impl Error for NeverError {
-    fn description(&self) -> &str {
-        unreachable!("How the hell did you even call this?!");
+impl<F> ExecBox for F where F: FnOnce() + Send + 'static {
+    fn exec(self: Box<Self>) {
+        (*self)()
     }
 }
 
-impl fmt::Debug for NeverError {
-    fn fmt(&self, _: &mut fmt::Formatter) -> fmt::Result {
-        unreachable!("How the hell did you even call this?!");
-    }
-}
 
-impl fmt::Display for NeverError {
-    fn fmt(&self, _: &mut fmt::Formatter) -> fmt::Result {
-        unreachable!("How the hell did you even call this?!");
-    }
-}

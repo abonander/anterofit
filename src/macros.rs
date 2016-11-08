@@ -22,7 +22,7 @@ macro_rules! get {
         }
     ) => (
         $(#[$meta])*
-        fn $fnname (&self, $($args)*) -> $crate::Request<$ret> {
+        fn $fnname (&self, $($args)*) -> $crate::Request<Self, $ret> {
             request_impl! {
                 self; $crate::net::Method::Get;
                 $($body)+
@@ -30,11 +30,13 @@ macro_rules! get {
         }
     );
     (
+        $(#[$meta:meta])*
         fn $fnname:ident <$($generics:tt)*> ($($arg:pat),+) -> $ret:ty {
                 $($body:tt)+
         }
     ) => (
-        fn $fnname <$($generics)*> (&self, $($arg),+) -> $crate::Request<$ret> {
+        $(#[$meta])*
+        fn $fnname <$($generics)*> (&self, $($arg),+) -> $crate::Request<Self, $ret> {
             request_impl! {
                 self; $crate::net::Method::Get;
                 $($body)+
@@ -58,7 +60,7 @@ macro_rules! request_impl {
                 builder = ($buildexpr)(builder);
             )*
 
-            builder.into_request()
+            self.request(builder)
         }
     )
 }

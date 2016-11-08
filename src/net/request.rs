@@ -1,16 +1,28 @@
 
-use hyper::client::IntoUrl;
+use futures::Complete;
+
+use hyper::client::{IntoUrl, Response, RequestBuilder as NetRequestBuilder};
+use hyper::error::Result as HyperResult;
 use hyper::header::{Headers, Header, HeaderFormat};
 use hyper::method::Method;
-use hyper::Url;
 
 use multipart::client::lazy::Multipart;
+
+use url::{self, Url};
 
 use std::fmt::{self, Write};
 use std::io::{self, Empty, Read};
 use std::mem;
 
-use super::Body;
+use std::panic;
+
+use net::{Adapter, RequestAdapter, RequestAdapter_};
+
+use net::body::Body;
+
+use net::intercept::Interceptor;
+
+use ::{ExecBox, Result};
 
 pub struct RequestHead {
     url: Url,
@@ -68,6 +80,8 @@ impl RequestHead {
 
         self
     }
+
+    fn start()
 }
 
 pub struct RequestBuilder<B> {
@@ -101,5 +115,55 @@ impl<B> RequestBuilder<B> {
     }
 }
 
+#[must_use = "Request has not been sent yet"]
+pub struct Request<'a, A, T> {
+    adapter: &'a A,
+    exec: Box<ExecBox>,
+    call: Call<T>,
+}
+
+impl<'a, A, T> Request<'a, A, T> {
+    pub fn here(self) -> Result<T> {
+
+    }
+}
+
+pub fn new<A, B, T>(adpt: &A, builder: RequestBuilder<B>) -> Request<A, T>
+where A: RequestAdapter {
+    let adpt_ = adpt.clone();
+
+    let (tx, rx) = futures::oneshot();
+
+    let exec = Box::new(move || {
+        let res = panic::catch_unwind(move || send_request(adpt, builder))
+
+        tx.complete(panic::catch_unwind
+    });
+
+    Request {
+        adapter: self,
+        exec: exec,
+        call: call::from_oneshot(rx),
+    }
+}
+
+
+fn exec_request<A, B, T>(adpt: &A, builder: RequestBuilder<B>) -> Result<T>
+where A: RequestAdapter, B: Body, T: Deserialize {
+    adpt.intercept(&mut builder.head);
+
+    let body = builder.body.into_readable()
+
+
+        let result =
+            .send(&adpt.base_url, &adpt.client)
+            .and_then(|mut response| try!(adpt.deserializer.deserialize(&mut response)));
+
+    }
+}
+
+fn concat_urls(base_url: &Url, path: &Url) {
+    base_url.
+}
 
 

@@ -1,41 +1,51 @@
-use hyper::{Client, Url};
+use hyper::{Client, Url, RequestAdapter as NetRequestAdapter};
 use hyper::client::{IntoUrl};
+
 pub use hyper::method::Method;
 
 pub use hyper::header::Headers;
+
+use std::error::Error;
+use std::panic::UnwindSafe;
+use std::sync::Arc;
 
 use serialize::{Serializer, Deserializer, NoSerializer, NoDeserializer};
 
 pub use self::intercept::{Interceptor, Chain};
 
-pub use self::body::{Fields, Body};
+pub use self::body::*;
 
-#[doc(noinline)]
-pub use self::body::{FileField, AddField};
+pub use call::Call;
 
-pub use self::builder::{RequestHead, RequestBuilder};
+pub use self::executor::*;
 
-mod intercept;
+pub use self::request::{RequestHead, RequestBuilder, Request};
 
 mod body;
 
-mod builder;
+mod call;
 
-use std::sync::Arc;
+mod intercept;
 
-pub struct AdapterBuilder<I, S, D> {
+mod request;
+
+use ::Result;
+
+pub struct AdapterBuilder<E, I, S, D> {
     base_url: Url,
     client: Option<Client>,
+    executor: E,
     interceptor: I,
     serializer: S,
     deserializer: D,
 }
 
-impl AdapterBuilder<(), NoSerializer, NoDeserializer> {
+impl AdapterBuilder<DefaultExecutor, (), NoSerializer, NoDeserializer> {
     fn new(url: Url) -> Self {
         AdapterBuilder {
             base_url: url,
             client: None,
+            executor: DefaultExecutor::new(),
             interceptor: (),
             serializer: NoSerializer,
             deserializer: NoDeserializer,
@@ -43,41 +53,56 @@ impl AdapterBuilder<(), NoSerializer, NoDeserializer> {
     }
 }
 
-impl<I, S, D> AdapterBuilder<I, S, D> {
-    pub fn interceptor<I_>(self, interceptor: I_) -> AdapterBuilder<I_, S, D> {
+impl<E, I, S, D> AdapterBuilder<E, I, S, D> {
+    pub fn interceptor<I_>(self, interceptor: I_) -> AdapterBuilder<E, I_, S, D> {
         AdapterBuilder {
             base_url: self.base_url,
             client: self.client,
+            executor: self.executor,
             interceptor: interceptor,
             serializer: self.serializer,
             deserializer: self.deserializer,
         }
     }
 
-    pub fn chain_interceptor<I_>(self, next: I_) -> AdapterBuilder<Chain<I, I_>, S, D> {
+    pub fn chain_interceptor<I_>(self, next: I_) -> AdapterBuilder<E, Chain<I, I_>, S, D> {
         AdapterBuilder {
             base_url: self.base_url,
             client: self.client,
+            executor: self.executor,
             interceptor: Chain::new(self.interceptor, next),
             serializer: self.serializer,
             deserializer: self.deserializer,
         }
     }
 
-    pub fn serialize<S_>(self, serialize: S_) -> AdapterBuilder<I, S_, D> {
+    pub fn executor<E_>(self, executor: E_) -> AdapterBuilder<E_, I, S, D> {
         AdapterBuilder {
             base_url: self.base_url,
             client: self.client,
+            executor: executor,
+            interceptor: self.interceptor,
+            serializer: self.serializer,
+            deserializer: self.deserializer,
+        }
+    }
+
+    pub fn serialize<S_>(self, serialize: S_) -> AdapterBuilder<E, I, S_, D> {
+        AdapterBuilder {
+            base_url: self.base_url,
+            client: self.client,
+            executor: self.executor,
             interceptor: self.interceptor,
             serializer: serialize,
             deserializer: self.deserializer,
         }
     }
 
-    pub fn deserialize<D_>(self, deserialize: D_) -> AdapterBuilder<I, S, D_> {
+    pub fn deserialize<D_>(self, deserialize: D_) -> AdapterBuilder<E, I, S, D_> {
         AdapterBuilder {
             base_url: self.base_url,
             client: self.client,
+            executor: self.executor,
             interceptor: self.interceptor,
             serializer: self.serializer,
             deserializer: deserialize,
@@ -89,34 +114,89 @@ impl<I, S, D> AdapterBuilder<I, S, D> {
     }
 }
 
-impl<I, S, D> AdapterBuilder<I, S, D> where I: Interceptor, S: Serializer, D: Deserializer {
-    pub fn build(self) -> Adapter<I, S, D> {
+impl<E, I, S, D> AdapterBuilder<E, I, S, D>
+where E: Executor, I: Interceptor, S: Serializer, D: Deserializer {
+
+    pub fn build(self) -> Adapter<E, I, S, D> {
         Adapter(Arc::new(
             Adapter_ {
-            base_url: self.base_url,
-            client: self.client.unwrap_or_else(Client::new),
-            interceptor: self.interceptor,
-            serialize: self.serializer,
-            deserialize: self.deserializer
-        }
+                base_url: self.base_url,
+                client: self.client.unwrap_or_else(Client::new),
+                executor: self.executor,
+                interceptor: self.interceptor,
+                serialize: self.serializer,
+                deserialize: self.deserializer
+            }
         ))
     }
 }
 
-pub struct Adapter<I, S, D>(Arc<Adapter_<I, S, D>>);
+pub struct Adapter<E, I, S, D>(Arc<Adapter_<E, I, S, D>>);
 
-impl<I, S, D> Adapter<I, S, D> {
-    pub fn builder(url: Url) -> AdapterBuilder<(), NoSerializer, NoDeserializer> {
+impl<E, I, S, D> Adapter<E, I, S, D> {
+    pub fn builder(url: Url) -> AdapterBuilder<DefaultExecutor, (), NoSerializer, NoDeserializer> {
         AdapterBuilder::new(url)
     }
 }
 
-struct Adapter_<I, S, D> {
+impl<E, I, S, D> Clone for Adapter<E, I, S, D> {
+    fn clone(&self) -> Self {
+        Adapter(self.0.clone())
+    }
+}
+
+struct Adapter_<E, I, S, D> {
     base_url: Url,
     client: Client,
+    executor: E,
     interceptor: I,
     serialize: S,
     deserialize: D,
 }
 
-pub trait RequestAdapter {}
+pub trait RequestAdapter: RequestAdapter_ {
+    fn request<B, T>(&self, builder: RequestBuilder<B>) -> Request<Self, T>
+    where B: Body, T: Deserialize;
+}
+
+impl<T> RequestAdapter for T where T: RequestAdapter_ {
+    fn request<B, T>(&self, builder: RequestBuilder<B>) -> Request<Self, T> where B: Body, T: Deserialize {
+        request::new(self, builder)
+    }
+}
+
+trait RequestAdapter_: Send + Clone + 'static + UnwindSafe {
+    fn intercept(&self, head: &mut RequestHead);
+
+    fn request_builder(&self, url: &Url, method: Method) -> NetRequestBuilder;
+
+    fn execute(&self, exec: Box<ExecBox>);
+
+    fn serialize<T: Serialize, W: Write>(&self, val: T, to: &mut W) -> Result<()>;
+
+    fn deserialize<T: Deserialize, R: Read>(&self, from: &mut R) -> Result<T>;
+}
+
+impl<E, I, S, D> RequestAdapter_ for Adapter<E, I, S, D>
+where E: Executor, I: Interceptor, S: Serializer, D: Deserializer {
+
+    fn execute(&self, exec: Box<ExecBox>) {
+        self.0.executor.execute(exec)
+    }
+
+    fn serialize<T: Serialize, W: Write>(&self, val: T, to: &mut W) -> Result<()> {
+        try!(self.0.serializer.serialize(val, to))
+    }
+
+    fn deserialize<T: Deserialize, R: Read>(&self, from: &mut R) -> Result<T> {
+        try!(self.0.deserialize.deserialize(from))
+    }
+
+    fn intercept(&self, head: &mut RequestHead) {
+        self.0.interceptor.intercept(head);
+    }
+
+    fn request_builder(&self, url: &Url, method: Method) -> NetRequestBuilder {
+        unimplemented!()
+    }
+}
