@@ -1,4 +1,10 @@
+use std::error::Error;
 use std::fmt;
+use std::io::{Read, Write};
+
+use super::{Serializer, Deserializer, Serialize, Deserialize};
+
+use ::Result;
 
 pub struct NoSerializer;
 
@@ -6,10 +12,8 @@ pub struct NoSerializer;
 pub struct NoSerializerError(());
 
 impl Serializer for NoSerializer {
-    type Error = NoSerializerError;
-
-    fn serialize<T: Serialize, W: Write>(&self, _: &T, _: &mut W) -> Result<(), Self::Error> {
-        Err(NoSerializerError(()))
+    fn serialize<T: Serialize, W: Write>(&self, _: &T, _: &mut W) -> Result<()> {
+        Err(NoSerializerError(()).into())
     }
 }
 
@@ -43,9 +47,7 @@ impl fmt::Display for NoDeserializerError {
 }
 
 impl Deserializer for NoDeserializer {
-    type Error = NoDeserializerError;
-
-    fn deserialize<T: Deserialize, R: Read>(&self, read: &mut R) -> Result<T, Self::Error> {
-        Err(NoDeserializerError(()))
+    fn deserialize<T: Deserialize, R: Read>(&self, _: &mut R) -> Result<T> {
+        Err(NoDeserializerError(()).into())
     }
 }

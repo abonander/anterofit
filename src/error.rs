@@ -1,9 +1,12 @@
 pub use hyper::Error as HyperError;
-pub use hyper::error::ParseError as UrlError;
+
+pub use url::ParseError as UrlError;
+//pub use hyper::error::ParseError as UrlError;
+
+use serialize::{NoSerializerError, NoDeserializerError};
 
 pub type MultipartError = ::multipart::client::lazy::LazyIoError<'static>;
 
-use std::any::Any;
 use std::io::Error as IoError;
 use std::error::Error as StdError;
 use std::fmt;
@@ -21,7 +24,6 @@ quick_error! {
             cause(e)
             description(e.description())
         }
-        #[cfg(feature = "json")]
         JsonSerialize(e: ::serialize::json::Error) {
             from()
             cause(e)
@@ -33,7 +35,17 @@ quick_error! {
             description(e.description())
         }
         Multipart(e: MultipartError) {
-            from(),
+            from()
+            cause(e)
+            description(e.description())
+        }
+        NoSerializer(e: NoSerializerError) {
+            from()
+            cause(e)
+            description(e.description())
+        }
+        NoDeserializer(e: NoDeserializerError) {
+            from()
             cause(e)
             description(e.description())
         }
@@ -42,15 +54,13 @@ quick_error! {
             cause(&**e)
             description(e.description())
         }
-        Panic(e: Box<Any + Send>) {
-            from()
-            description(panic_err_str(e))
+        Panic {
+            from(::futures::Canceled)
+            description("The request could not be completed because a panic occurred on the worker thread.")
         }
         ResultTaken {
-            from(::futures::Canceled)
             description("The result has already been taken from this Call.")
         }
-        /// Here to satisfy the type-checker.
         __Never(e: Never) {
             from()
             cause(e)
@@ -92,13 +102,10 @@ impl fmt::Display for Never {
     }
 }
 
-fn panic_err_str(any: &(Any + Send)) -> &str {
-    if let Some(s) = any.downcast_ref::<&'static str>() {
-        s
-    } else if let Some(s) = any.downcast_ref::<String>() {
-        s
-    } else {
-        "Unexpected value passed to `panic!()` from the worker thread. Check the stderr stream
-        for the panic backtrace."
-    }
+pub fn flatten_res<T, E>(res: Result<Result<T, Error>, E>) -> Result<T, Error> where Error: From<E> {
+    try!(res)
+}
+
+pub fn map_res<T, E>(res: Result<T, E>) -> Result<T, Error> where Error: From<E> {
+    res.map_err(|e| e.into())
 }

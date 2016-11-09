@@ -1,17 +1,19 @@
 // FIXME before release
 //#![warn(missing_docs)]
+#![feature(insert_str)]
 
 #[macro_use]
 extern crate quick_error;
 
 extern crate futures;
 
-extern crate hyper;
 extern crate mime;
 extern crate multipart;
 extern crate serde;
 
 extern crate url;
+
+pub extern crate hyper;
 
 #[macro_export]
 pub mod macros;
@@ -25,7 +27,11 @@ pub mod error;
 pub use error::Error;
 pub use error::Never as NeverError;
 
-pub type Result<T> = Result<T, Error>;
+pub use hyper::Url;
+
+pub use net::Adapter;
+
+pub type Result<T> = ::std::result::Result<T, Error>;
 
 
 

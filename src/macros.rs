@@ -17,12 +17,12 @@ macro_rules! service {
 macro_rules! get {
     (
         $(#[$meta:meta])*
-        fn $fnname:ident ($($args:tt)*) -> $ret:ty {
+        fn $fnname:ident (&self $($args:tt)*) -> $ret:ty {
                 $($body:tt)+
         }
     ) => (
         $(#[$meta])*
-        fn $fnname (&self, $($args)*) -> $crate::Request<Self, $ret> {
+        fn $fnname (&self $($args)*) -> $crate::net::Request<Self, $ret> {
             request_impl! {
                 self; $crate::net::Method::Get;
                 $($body)+
@@ -31,12 +31,12 @@ macro_rules! get {
     );
     (
         $(#[$meta:meta])*
-        fn $fnname:ident <$($generics:tt)*> ($($arg:pat),+) -> $ret:ty {
+        fn $fnname:ident <$($generics:tt)*> (&self $($args:tt)*) -> $ret:ty {
                 $($body:tt)+
         }
     ) => (
         $(#[$meta])*
-        fn $fnname <$($generics)*> (&self, $($arg),+) -> $crate::Request<Self, $ret> {
+        fn $fnname <$($generics)*> (&self $($args)*) -> $crate::net::Request<Self, $ret> {
             request_impl! {
                 self; $crate::net::Method::Get;
                 $($body)+
@@ -46,21 +46,40 @@ macro_rules! get {
 }
 
 #[macro_export]
+macro_rules! try_request (
+    ($adpt:expr, $try:expr) => (
+        match $try {
+            Ok(val) => val,
+            Err(e) => return $crate::net::Request::immediate($adpt, Err(e.into())),
+        }
+    )
+);
+
+#[macro_export]
+#[doc(hidden)]
+macro_rules! url (
+    ($urlstr:expr) => (
+        $urlstr
+    );
+    ($urlstr:expr, $($fmt:tt)+) => (
+        format!($urlstr, $($fmt)+)
+    );
+);
+
+#[macro_export]
 #[doc(hidden)]
 macro_rules! request_impl {
     ($adapter:expr; $method:expr; url = $($urlpart:tt)+ $(;$buildexpr:expr)*) => (
         {
             use $crate::net::RequestBuilder;
 
-            let url = format!($($urlpart)+);
-
-            let mut builder = RequestBuilder::new($method, &url);
+            let mut builder = RequestBuilder::new($method, url!($($urlpart)+));
 
             $(
                 builder = ($buildexpr)(builder);
             )*
 
-            self.request(builder)
+            $adapter.request(builder)
         }
     )
 }

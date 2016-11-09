@@ -1,6 +1,6 @@
 use serialize::Serialize;
 
-use super::{RequestAdapter, RequestAdapter_};
+use net::adapter::{RequestAdapter, RequestAdapter_};
 
 use mime::Mime;
 
@@ -9,23 +9,16 @@ type PreparedFields = ::multipart::client::lazy::PreparedFields<'static>;
 
 use url::form_urlencoded::Serializer as FormUrlEncoder;
 
+use std::borrow::Cow;
 use std::fs::File;
 use std::io::{self, Cursor, Read};
-use std::path::PathBuf;
 use std::mem;
+use std::path::PathBuf;
 
 use ::Result;
 
-use mime::Mime;
-use multipart::client::lazy::Multipart;
-
-use std::borrow::Cow;
-use std::fs::File;
-use std::io::Read;
-use std::path::PathBuf;
-
 pub trait Body: Send + 'static {
-    type Readable: Read;
+    type Readable: Read + 'static;
 
     fn into_readable<A>(self, adapter: &A) -> Result<Self::Readable>
     where A: RequestAdapter;
@@ -43,7 +36,6 @@ impl<B: Serialize + Send + 'static> Body for B {
         Ok(Cursor::new(buf))
     }
 }
-
 
 pub trait Fields {
     type WithText: Fields;
@@ -76,19 +68,24 @@ impl Body for EmptyFields {
     }
 }
 
-pub type TextFields = Vec<(String, String)>;
+pub struct TextFields(Vec<(String, String)>);
 
-fn push_text_field<K: ToString, V: ToString>(text: &mut TextFields, key: K, val: V) {
-    text.push((key.to_string(), val.to_string()));
+impl TextFields {
+    fn new() -> TextFields {
+        TextFields(vec![])
+    }
+
+    fn push<K: ToString, V: ToString>(&mut self, key: K, val: V) {
+        self.0.push((key.to_string(), val.to_string()));
+    }
 }
 
 impl Fields for TextFields {
     type WithText = Self;
 
     fn with_text<K: ToString, V: ToString>(mut self, key: K, val: V) -> Self {
-        push_text_field(&mut self, key, val);
+        self.push(key, val);
         self
-
     }
 
     fn with_file<K: ToString>(self, key: K, file: FileField) -> MultipartFields {
@@ -103,7 +100,7 @@ impl Body for TextFields {
         where A: RequestAdapter {
         Ok(Cursor::new(
             FormUrlEncoder::new(String::new())
-                .extend_pairs(self)
+                .extend_pairs(self.0)
                 .finish()
         ))
     }
@@ -116,7 +113,7 @@ pub struct MultipartFields {
 
 impl MultipartFields {
     fn new() -> Self {
-        Self::from_text(vec![])
+        Self::from_text(TextFields::new())
     }
 
     fn from_text(text: TextFields) -> Self {
@@ -131,7 +128,7 @@ impl Fields for MultipartFields {
     type WithText = Self;
 
     fn with_text<K: ToString, V: ToString>(mut self, key: K, val: V) -> Self::WithText {
-        push_text_field(&mut self.text, key, val);
+        self.text.push(key, val);
         self
     }
 
@@ -150,11 +147,11 @@ impl Body for MultipartFields {
 
         let mut multipart = Multipart::new();
 
-        for (key, val) in self.text_fields {
-            multipart.push_text(key, val);
+        for (key, val) in self.text.0 {
+            multipart.add_text(key, val);
         }
 
-        for (key, file) in self.file_fields {
+        for (key, file) in self.files {
             match file {
                 Stream {
                     stream,
@@ -173,7 +170,7 @@ impl Body for MultipartFields {
             }
         }
 
-        try!(multipart.prepare())
+        multipart.prepare().map_err(|e| e.into())
     }
 }
 

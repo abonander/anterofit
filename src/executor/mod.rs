@@ -1,45 +1,21 @@
-use std::sync::mpsc::{self, Sender, Receiver};
-use std::thread;
 
 #[cfg(feature = "pool")]
 mod pool;
 
+mod single;
+
 #[cfg(feature = "pool")]
-pub use pool::Pooled;
+pub use self::pool::Pooled;
+
+pub use self::single::SingleThread;
 
 pub type DefaultExecutor = SingleThread;
 
-
-pub trait Executor {
+pub trait Executor: Send + Clone + 'static {
     fn execute(&self, exec: Box<ExecBox>);
 }
 
-pub struct SingleThread {
-    sender: Sender<Box<ExecBox>>,
-}
-
-impl SingleThread {
-    pub fn new() -> Self {
-        let (tx, rx) = mpsc::channel();
-
-        thread::spawn(move || {
-            for exec in rx {
-                exec.exec();
-            }
-        });
-
-        SingleThread {
-            sender: tx
-        }
-    }
-}
-
-impl Executor for SingleThread {
-    fn execute(&self, exec: Box<ExecBox>) {
-        self.sender.send(exec);
-    }
-}
-
+#[derive(Clone)]
 pub struct SyncExecutor;
 
 impl Executor for SyncExecutor {
@@ -50,6 +26,15 @@ impl Executor for SyncExecutor {
 
 pub trait ExecBox: Send + 'static {
     fn exec(self: Box<Self>);
+}
+
+impl ExecBox {
+    /// Create a new `ExecBox` which does nothing when called.
+    ///
+    /// Since it is zero-sized, this call should not allocate.
+    pub fn noop() -> Box<Self> {
+        Box::new(|| {})
+    }
 }
 
 impl<F> ExecBox for F where F: FnOnce() + Send + 'static {
