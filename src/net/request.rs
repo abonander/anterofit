@@ -22,7 +22,9 @@ use net::body::Body;
 
 use net::intercept::Interceptor;
 
-use ::{ExecBox, Result};
+use net::executor::ExecBox;
+
+use ::Result;
 
 pub struct RequestHead {
     url: Url,
@@ -46,14 +48,14 @@ impl RequestHead {
         self
     }
 
-    pub fn append_url(&mut self, append: &Url) -> &mut Self {
-
+    pub fn append_url(&mut self, append: &Url) -> Result<&mut Self> {
+        let new_url = try!(self.url.join(append));
         self
     }
 
-    pub fn prepend_url(&mut self, prepend: Url) -> &mut Self {
+    pub fn prepend_url(&mut self, prepend: Url) -> Result<&mut Self> {
         let append = mem::replace(&mut self.url, prepend);
-        self.append_url(&append);
+        try!(self.append_url(&append));
         self
     }
 
@@ -81,7 +83,12 @@ impl RequestHead {
         self
     }
 
-    fn start()
+    fn init_request(self, base_url: &Url, client: &Client) -> Result<NetRequestBuilder> {
+        let mut url = try!(base_url.join(self.url.as_str()));
+        url.set_query(self.query.query());
+
+        Ok(client.request(url, self.method).headers(self.headers))
+    }
 }
 
 pub struct RequestBuilder<B> {
@@ -123,8 +130,14 @@ pub struct Request<'a, A, T> {
 }
 
 impl<'a, A, T> Request<'a, A, T> {
-    pub fn here(self) -> Result<T> {
+    pub fn async(self) -> Call<T> {
+        self.adapter.execute(self.exec);
+        self.call
+    }
 
+    pub fn here(self) -> Result<T> {
+        self.exec.exec();
+        self.call.block()
     }
 }
 
@@ -135,9 +148,11 @@ where A: RequestAdapter {
     let (tx, rx) = futures::oneshot();
 
     let exec = Box::new(move || {
-        let res = panic::catch_unwind(move || send_request(adpt, builder))
+        let flat_res = move || {
+            try!(panic::catch_unwind(move || send_request(adpt, builder)))
+        };
 
-        tx.complete(panic::catch_unwind
+        tx.complete(flat_res())
     });
 
     Request {
@@ -147,23 +162,18 @@ where A: RequestAdapter {
     }
 }
 
-
 fn exec_request<A, B, T>(adpt: &A, builder: RequestBuilder<B>) -> Result<T>
 where A: RequestAdapter, B: Body, T: Deserialize {
+
     adpt.intercept(&mut builder.head);
 
-    let body = builder.body.into_readable()
+    let request = adpt.request_builder(builder.head);
 
+    let body = try!(builder.body.into_readable(adpt));
 
-        let result =
-            .send(&adpt.base_url, &adpt.client)
-            .and_then(|mut response| try!(adpt.deserializer.deserialize(&mut response)));
+    let mut response = try!(request.body(body).send());
 
-    }
-}
-
-fn concat_urls(base_url: &Url, path: &Url) {
-    base_url.
+    try!(adpt.deserializer.deserialize(&mut response))
 }
 
 

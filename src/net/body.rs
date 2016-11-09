@@ -7,7 +7,7 @@ use mime::Mime;
 type Multipart = ::multipart::client::lazy::Multipart<'static, 'static>;
 type PreparedFields = ::multipart::client::lazy::PreparedFields<'static>;
 
-use url::form_urlencoded::Serializer as UrlEncoded;
+use url::form_urlencoded::Serializer as FormUrlEncoder;
 
 use std::fs::File;
 use std::io::{self, Cursor, Read};
@@ -31,7 +31,7 @@ pub trait Body: Send + 'static {
     where A: RequestAdapter;
 }
 
-impl<B: Serialize + Send + 'static, A> Body for B {
+impl<B: Serialize + Send + 'static> Body for B {
     type Readable = Cursor<Vec<u8>>;
 
     fn into_readable<A>(self, adapter: &A) -> Result<Self::Readable>
@@ -43,26 +43,6 @@ impl<B: Serialize + Send + 'static, A> Body for B {
         Ok(Cursor::new(buf))
     }
 }
-
-impl<S> Body<S> for EmptyFields {
-    type Readable = io::Empty;
-    type Error = Never;
-
-    fn into_readable(self, serializer: &S) -> Result<Self::Readable, Self::Error> {
-        Ok(io::empty())
-    }
-}
-
-impl<S> Body<S> for TextFields {
-    type Readable = Cursor<String>;
-    type Error = error::Never;
-
-    fn into_readable(self, serializer: &S) -> Result<Self::Readable, Self::Error> where Self: Sized {
-
-    }
-}
-
-
 
 
 pub trait Fields {
@@ -87,6 +67,15 @@ impl Fields for EmptyFields {
     }
 }
 
+impl Body for EmptyFields {
+    type Readable = io::Empty;
+
+    fn into_readable<A>(self, adapter: &A) -> Result<Self::Readable>
+        where A: RequestAdapter {
+        Ok(io::empty())
+    }
+}
+
 pub type TextFields = Vec<(String, String)>;
 
 fn push_text_field<K: ToString, V: ToString>(text: &mut TextFields, key: K, val: V) {
@@ -104,6 +93,19 @@ impl Fields for TextFields {
 
     fn with_file<K: ToString>(self, key: K, file: FileField) -> MultipartFields {
         MultipartFields::from_text(self).with_file(key, file)
+    }
+}
+
+impl Body for TextFields {
+    type Readable = Cursor<String>;
+
+    fn into_readable<A>(self, adapter: &A) -> Result<Self::Readable>
+        where A: RequestAdapter {
+        Ok(Cursor::new(
+            FormUrlEncoder::new(String::new())
+                .extend_pairs(self)
+                .finish()
+        ))
     }
 }
 
@@ -136,6 +138,42 @@ impl Fields for MultipartFields {
     fn with_file<K: ToString>(mut self, key: K, file: FileField) -> MultipartFields {
         self.files.push((key.to_string(), file));
         self
+    }
+}
+
+impl Body for MultipartFields {
+    type Readable = PreparedFields;
+
+    fn into_readable<A>(self, adapter: &A) -> Result<Self::Readable>
+    where A: RequestAdapter {
+        use self::FileField::*;
+
+        let mut multipart = Multipart::new();
+
+        for (key, val) in self.text_fields {
+            multipart.push_text(key, val);
+        }
+
+        for (key, file) in self.file_fields {
+            match file {
+                Stream {
+                    stream,
+                    filename,
+                    content_type
+                } => {
+                    stream.add_self(key, filename, content_type, &mut multipart);
+                },
+                File(file) => {
+                    // FIXME: somehow get filename and type from File, not sure if doable
+                    multipart.add_stream(key, file, None as Option<String>, None);
+                },
+                Path(path) => {
+                    multipart.add_file(key, path);
+                }
+            }
+        }
+
+        try!(multipart.prepare())
     }
 }
 

@@ -1,6 +1,8 @@
 pub use hyper::Error as HyperError;
 pub use hyper::error::ParseError as UrlError;
 
+pub type MultipartError = ::multipart::client::lazy::LazyIoError<'static>;
+
 use std::any::Any;
 use std::io::Error as IoError;
 use std::error::Error as StdError;
@@ -13,38 +15,43 @@ quick_error! {
             from()
             cause(e)
             description(e.description())
-        },
+        }
         Url(e: UrlError) {
             from()
             cause(e)
             description(e.description())
-        },
+        }
         #[cfg(feature = "json")]
         JsonSerialize(e: ::serialize::json::Error) {
             from()
             cause(e)
             description(e.description())
-        },
+        }
         Io(e: IoError){
             from()
             cause(e)
             description(e.description())
-        },
+        }
+        Multipart(e: MultipartError) {
+            from(),
+            cause(e)
+            description(e.description())
+        }
         Other(e: Box<StdError + Send>){
             from()
             cause(&**e)
             description(e.description())
-        },
+        }
         Panic(e: Box<Any + Send>) {
             from()
             description(panic_err_str(e))
         }
-        ResultTaken() {
+        ResultTaken {
             from(::futures::Canceled)
             description("The result has already been taken from this Call.")
         }
         /// Here to satisfy the type-checker.
-        __Never(_: Never) {
+        __Never(e: Never) {
             from()
             cause(e)
             description(e.description())

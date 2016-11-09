@@ -1,8 +1,6 @@
 use std::sync::mpsc::{self, Sender, Receiver};
 use std::thread;
 
-use ::ExecBox;
-
 #[cfg(feature = "pool")]
 mod pool;
 
@@ -47,5 +45,15 @@ pub struct SyncExecutor;
 impl Executor for SyncExecutor {
     fn execute(&self, exec: Box<ExecBox>) {
         exec.exec();
+    }
+}
+
+pub trait ExecBox: Send + 'static {
+    fn exec(self: Box<Self>);
+}
+
+impl<F> ExecBox for F where F: FnOnce() + Send + 'static {
+    fn exec(self: Box<Self>) {
+        (*self)()
     }
 }

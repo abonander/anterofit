@@ -22,21 +22,11 @@ pub mod executor;
 
 pub mod error;
 
-mod never;
-
 pub use error::Error;
 pub use error::Never as NeverError;
 
 pub type Result<T> = Result<T, Error>;
 
-trait ExecBox: Send + 'static {
-    fn exec(self: Box<Self>);
-}
 
-impl<F> ExecBox for F where F: FnOnce() + Send + 'static {
-    fn exec(self: Box<Self>) {
-        (*self)()
-    }
-}
 
 

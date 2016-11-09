@@ -168,13 +168,14 @@ impl<T> RequestAdapter for T where T: RequestAdapter_ {
 trait RequestAdapter_: Send + Clone + 'static + UnwindSafe {
     fn intercept(&self, head: &mut RequestHead);
 
-    fn request_builder(&self, url: &Url, method: Method) -> NetRequestBuilder;
 
     fn execute(&self, exec: Box<ExecBox>);
 
     fn serialize<T: Serialize, W: Write>(&self, val: T, to: &mut W) -> Result<()>;
 
     fn deserialize<T: Deserialize, R: Read>(&self, from: &mut R) -> Result<T>;
+
+    fn request_builder(&self, head: RequestHead) -> Result<NetRequestBuilder>;
 }
 
 impl<E, I, S, D> RequestAdapter_ for Adapter<E, I, S, D>
@@ -196,7 +197,7 @@ where E: Executor, I: Interceptor, S: Serializer, D: Deserializer {
         self.0.interceptor.intercept(head);
     }
 
-    fn request_builder(&self, url: &Url, method: Method) -> NetRequestBuilder {
-        unimplemented!()
+    fn request_builder(&self, head: RequestHead) -> Result<NetRequestBuilder> {
+        head.init_request(&self.0.base_url, &self.0.client)
     }
 }
