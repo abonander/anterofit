@@ -173,6 +173,8 @@ pub trait RequestAdapter_: Send + Clone + 'static {
 
     fn serialize<T: Serialize, W: Write>(&self, val: &T, to: &mut W) -> Result<()>;
 
+    fn serializer_content_type(&self) -> Option<Mime>;
+
     fn deserialize<T: Deserialize, R: Read>(&self, from: &mut R) -> Result<T>;
 
     fn request_builder(&self, head: RequestHead) -> Result<NetRequestBuilder>;
@@ -187,6 +189,10 @@ where E: Executor, I: Interceptor, S: Serializer, D: Deserializer {
 
     fn serialize<T: Serialize, W: Write>(&self, val: &T, to: &mut W) -> Result<()> {
         self.inner.serializer.serialize(val, to)
+    }
+
+    fn serializer_content_type(&self) -> Option<Mime> {
+        self.inner.serializer.content_type()
     }
 
     fn deserialize<T: Deserialize, R: Read>(&self, from: &mut R) -> Result<T> {

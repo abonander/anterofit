@@ -1,5 +1,7 @@
 pub use serde::{Serialize, Deserialize};
 
+use mime::Mime;
+
 use std::io::{Read, Write};
 
 use ::Result;
@@ -13,6 +15,8 @@ pub use self::none::*;
 
 pub trait Serializer: Send + Sync + 'static {
     fn serialize<T: Serialize, W: Write>(&self, val: &T, write: &mut W) -> Result<()>;
+
+    fn content_type(&self) -> Option<Mime>;
 }
 
 pub trait Deserializer: Send + Sync + 'static {

@@ -39,12 +39,18 @@ macro_rules! request_impl {
 
 /// Define the body of this request.
 ///
-/// Can be invoked multiple times.
+/// Can be invoked multiple times. View the source link for details on the macro variants.
 #[macro_export]
 macro_rules! body {
-    ($raw:expr) => (
-        |req| req.body($raw)
+    // Serialize `$body` as the request body using the serializer provided in the adapter.
+    //
+    // If `$body` is intended to be read directly as the request body, wrap it with `RawBody`.
+    ($body:expr) => (
+        |req| req.body($body)
     );
+    // Serialize a series of key-value pairs as the request body.
+    //
+    // By default, this will serialize to a `www-form-urlencoded` body
     ($($key:expr => $val:expr),*) => ( {
         use $crate::net::{AddField, EmptyFields};
 

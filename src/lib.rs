@@ -7,13 +7,17 @@ extern crate quick_error;
 
 extern crate futures;
 
-extern crate mime;
+#[macro_use]
+extern crate mime as mime_;
+
 extern crate multipart;
 extern crate serde;
 
 extern crate url;
 
 pub extern crate hyper;
+
+mod mime;
 
 #[macro_export]
 pub mod macros;
@@ -31,7 +35,13 @@ pub use hyper::Url;
 
 pub use net::Adapter;
 
+pub use net::RawBody;
+
 pub type Result<T> = ::std::result::Result<T, Error>;
+
+use mime::{Mime, TopLevel, SubLevel};
+
+
 
 
 

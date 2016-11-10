@@ -17,23 +17,73 @@ use std::path::PathBuf;
 
 use ::Result;
 
+pub type ReadableResult<T> = Result<Readable<T>>;
+
+pub struct Readable<R: Read> {
+    pub readable: R,
+    pub content_type: Option<Mime>,
+    // Throwaway private field for backwards compatibility.
+    _private: (),
+}
+
+impl<R: Read> Readable<R> {
+    /// Create a new `Readable` wrapped in `::Result::Ok` for convenience.
+    pub fn new_ok<C: Into<Option<Mime>>>(readable: R, content_type: C) -> Result<Self> {
+        Ok(Self::new(readable, content_type))
+    }
+
+    pub fn new<C: Into<Option<Mime>>>(readable: R, content_type: C) -> Self {
+        Readable {
+            readable: R,
+            content_type: content_type.into(),
+            _private: (),
+        }
+    }
+}
+
 pub trait Body: Send + 'static {
     type Readable: Read + 'static;
 
-    fn into_readable<A>(self, adapter: &A) -> Result<Self::Readable>
+    fn into_readable<A>(self, adapter: &A) -> ReadableResult<Self::Readable>
     where A: RequestAdapter;
 }
 
 impl<B: Serialize + Send + 'static> Body for B {
     type Readable = Cursor<Vec<u8>>;
 
-    fn into_readable<A>(self, adapter: &A) -> Result<Self::Readable>
+    fn into_readable<A>(self, adapter: &A) -> ReadableResult<Self::Readable>
     where A: RequestAdapter {
         let mut buf = Vec::new();
 
         try!(adapter.serialize(&self, &mut buf));
 
-        Ok(Cursor::new(buf))
+        Readable::new_ok(Cursor::new(buf), adapter.serializer_content_type())
+    }
+}
+
+/// A wrapper around a type that is intended to be read directly as the request body,
+/// instead of being serialized.
+pub struct RawBody<R>(Readable<R>);
+
+impl<R: Read + Send + 'static> RawBody<R> {
+    pub fn new<C: Into<Option<Mime>>>(readable: R, content_type: C) -> Self {
+        RawBody(Readable::new_ok)
+    }
+}
+
+impl<R: AsRef<[u8]> + Send + 'static> RawBody<Cursor<R>> {
+    /// Wrap anything `Cursor` can work with (such as `String` or `Vec<u8>`) as a raw request body.
+    pub fn bytes(bytes: R) -> Self {
+        RawBody::new(Cursor::new(bytes), mime::octet_stream())
+    }
+}
+
+impl<R: Read + Send + 'static> Body for RawBody<R> {
+    type Readable = R;
+
+    fn into_readable<A>(self, adapter: &A) -> ReadableResult<Self::Readable>
+    where A: RequestAdapter {
+        self.0
     }
 }
 
@@ -62,9 +112,9 @@ impl Fields for EmptyFields {
 impl Body for EmptyFields {
     type Readable = io::Empty;
 
-    fn into_readable<A>(self, adapter: &A) -> Result<Self::Readable>
-        where A: RequestAdapter {
-        Ok(io::empty())
+    fn into_readable<A>(self, adapter: &A) -> ReadableResult<Self::Readable>
+    where A: RequestAdapter {
+        Readable::new_ok(io::empty, None)
     }
 }
 
@@ -97,12 +147,14 @@ impl Body for TextFields {
     type Readable = Cursor<String>;
 
     fn into_readable<A>(self, adapter: &A) -> Result<Self::Readable>
-        where A: RequestAdapter {
-        Ok(Cursor::new(
+    where A: RequestAdapter {
+        let readable = Cursor::new(
             FormUrlEncoder::new(String::new())
                 .extend_pairs(self.0)
                 .finish()
-        ))
+        );
+
+        Readable::new_ok(readable, mime::form_urlencoded())
     }
 }
 
@@ -170,7 +222,7 @@ impl Body for MultipartFields {
             }
         }
 
-        multipart.prepare().map_err(|e| e.into())
+        let prepared = try!(multipart.prepare());
     }
 }
 

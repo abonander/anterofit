@@ -3,7 +3,7 @@ use futures::Complete;
 
 use hyper::client::{Client, Response, RequestBuilder as NetRequestBuilder};
 use hyper::error::Result as HyperResult;
-use hyper::header::{Headers, Header, HeaderFormat};
+use hyper::header::{Headers, Header, HeaderFormat, ContentType};
 use hyper::method::Method;
 
 use multipart::client::lazy::Multipart;
@@ -176,11 +176,15 @@ where A: RequestAdapter, B: Body, T: Deserialize + 'static {
 
     adpt.intercept(&mut builder.head);
 
-    let mut body = try!(builder.body.into_readable(adpt));
+    let mut readable = try!(builder.body.into_readable(adpt));
+
+    if let Some(content_type) = readable.content_type {
+        builder.head.header(ContentType(content_type));
+    }
 
     let request = try!(adpt.request_builder(builder.head));
 
-    let mut response = try!(request.body(&mut body).send());
+    let mut response = try!(request.body(&mut readable.readable).send());
 
     adpt.deserialize(&mut response)
 }

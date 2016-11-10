@@ -15,6 +15,10 @@ impl Serializer for NoSerializer {
     fn serialize<T: Serialize, W: Write>(&self, _: &T, _: &mut W) -> Result<()> {
         Err(NoSerializerError(()).into())
     }
+
+    fn content_type(&self) -> Option<Mime> {
+        None
+    }
 }
 
 impl Error for NoSerializerError {
