@@ -1,51 +1,4 @@
 #[macro_export]
-macro_rules! service {
-    (
-        pub trait $servicenm:ident {
-            $($methods:tt)*
-        }
-    ) => (
-        pub trait $servicenm : $crate::net::RequestAdapter {
-            $($methods)*
-        }
-
-        impl<T: $crate::net::RequestAdapter> $servicenm for T {}
-    )
-}
-
-#[macro_export]
-macro_rules! get {
-    (
-        $(#[$meta:meta])*
-        fn $fnname:ident (&self $($args:tt)*) -> $ret:ty {
-                $($body:tt)+
-        }
-    ) => (
-        $(#[$meta])*
-        fn $fnname (&self $($args)*) -> $crate::net::Request<Self, $ret> {
-            request_impl! {
-                self; $crate::net::Method::Get;
-                $($body)+
-            }
-        }
-    );
-    (
-        $(#[$meta:meta])*
-        fn $fnname:ident <$($generics:tt)*> (&self $($args:tt)*) -> $ret:ty {
-                $($body:tt)+
-        }
-    ) => (
-        $(#[$meta])*
-        fn $fnname <$($generics)*> (&self $($args)*) -> $crate::net::Request<Self, $ret> {
-            request_impl! {
-                self; $crate::net::Method::Get;
-                $($body)+
-            }
-        }
-    );
-}
-
-#[macro_export]
 macro_rules! try_request (
     ($adpt:expr, $try:expr) => (
         match $try {
@@ -87,19 +40,22 @@ macro_rules! request_impl {
 /// Define the body of this request.
 ///
 /// Can be invoked multiple times.
+#[macro_export]
 macro_rules! body {
     ($raw:expr) => (
         |req| req.body($raw)
     );
-    ($($key:expr => $val:expr),*) => (
-        let mut fields = $crate::net::Fields::Empty;
+    ($($key:expr => $val:expr),*) => ( {
+        use $crate::net::{AddField, EmptyFields};
+
+        let fields = $crate::net::EmptyFields;
 
         $(
-            fields.add_field($key, $val);
+            fields = $val.add_to($key, fields);
         )*;
 
-        fields
-    );
+        |req| req.body(fields)
+    });
 }
 
 #[macro_export]
@@ -125,6 +81,10 @@ macro_rules! file (
     )
 );
 
+/// A field value that resolves to a path on the filesystem.
+///
+/// This will make the request into a `multipart/form-data` request
+/// and upload the file that this path points to.
 #[macro_export]
 macro_rules! path (
     ($path:expr) => (
@@ -138,7 +98,7 @@ macro_rules! path (
 #[macro_export]
 macro_rules! query {
     ($($key:expr => $val:expr),+) => (
-        |req3| req.append_query(&[
+        |req| req.append_query(&[
             $(&$key as &::std::fmt::Display, &$val as &::std::fmt::Display),+
         ])
     )
