@@ -1,6 +1,18 @@
 # anterofit
 
-Wrap REST APIs with Rust traits.
+##### [retrofit](http://www.merriam-webster.com/dictionary/retrofit) | *verb*  \ˈre-trō-ˌfit, ˌre-trō-ˈfit\
+
+*3: to adapt to a new purpose or need*
+
+*?: a [Java library](https://square.github.io/retrofit) which generates REST API wrappers at runtime using class metadata* 
+
+##### anterofit | *verb (neologism)* \ˈan-tə-(ˌ)rō-ˌfit\
+
+*?: to create an original implement to suit a particular purpose or need*
+
+*?: a Rust crate which generates type-safe REST API wrappers at compile time using macros*
+
+---
 
 ### `test_service.rs`
 
