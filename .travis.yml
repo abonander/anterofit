@@ -10,9 +10,9 @@ os:
   - osx
 script:
   - if [ ${TRAVIS_RUST_VERSION} = "nightly" ]; then
-      cargo build --verbose --features "nightly"
-      cargo test --verbose --features "nightly"
+      cargo build --verbose --features "nightly";
+      cargo test --verbose --features "nightly";
     else
-      cargo build --verbose
-      cargo test --verbose
+      cargo build --verbose;
+      cargo test --verbose;
     fi
