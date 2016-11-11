@@ -18,7 +18,13 @@
 
 This example links with the test JSON-based REST API at https://jsonplaceholder.typicode.com:
 
+**N.B.**: this requires nightly to build because of the `proc_macro` feature. However,
+this is only necessary for brevity: on the stable and beta channels, you can use `serde_codegen`
+and a build script to generate this implementation as described [here](https://serde.rs/codegen-stable.html).
+
 ```rust 
+#![feature(proc_macro)]
+
 #[macro_use]
 extern crate serde_derive;
 

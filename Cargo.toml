@@ -1,6 +1,6 @@
 [package]
 name = "anterofit"
-version = "0.1.0"
+version = "0.0.1"
 authors = ["Austin Bonander <austin.bonander@gmail.com>"]
 
 [dependencies]
@@ -9,19 +9,20 @@ hyper = "0.9.12"
 mime = ">= 0.2.2, < 0.3"
 multipart = "0.9.0-alpha.2"
 quick-error = "1.1.0"
-serde = "*"
+serde = "0.8"
 url = "1.0"
 
 threadpool = { version = "*", optional = true }
 
-serde_json = {version = "*", optional = true }
+serde_json = {version = "0.8.3", optional = true }
 
 [dev-dependencies]
-serde_derive = "*"
+serde_derive = "0.8"
 
 [features]
 default = ["json"]
 json = ["serde_json"]
 pool = ["threadpool"]
+nightly = []
 
 

@@ -1,5 +1,5 @@
 #![feature(proc_macro)]
-#![cfg(feature = "json")]
+#![cfg(all(feature = "json", feature = "nightly"))]
 
 #[macro_use]
 extern crate anterofit;
