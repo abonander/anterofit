@@ -2,7 +2,7 @@
 
 #### [retrofit](https://square.github.io/retrofit) | *verb*  \ˈre-trō-ˌfit, ˌre-trō-ˈfit\
 
-* *to adapt an existing implement to a new purpose or need*
+* *to adapt an existing implement to suit a new purpose or need*
 
 * *a Java library which generates REST API wrappers at runtime using class metadata* 
 
