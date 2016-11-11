@@ -77,14 +77,14 @@ macro_rules! stream {
     ($stream:expr) => (
         $crate::net::FileField::from_stream($stream, None, None)
     );
-    ($stream:expr, filename = $filename:expr) => (
-        $crate::net::FileField::from_stream($stream, Some(filename), None)
+    ($stream:expr, filename: $filename:expr) => (
+        $crate::net::FileField::from_stream($stream, Some($filename), None)
     );
     ($stream:expr, content_type: $conttype:expr) => (
-        $crate::net::FileField::from_stream($stream, None, Some(content_type))
+        $crate::net::FileField::from_stream($stream, None, Some($conttype))
     );
-    ($stream:expr, filename = $filename:expr, content_type: $conttype:expr) => (
-        $crate::net::FileField::from_stream($stream, Some(filename), Some($conttype))
+    ($stream:expr, filename: $filename:expr, content_type: $conttype:expr) => (
+        $crate::net::FileField::from_stream($stream, Some($filename), Some($conttype))
     );
 }
 
