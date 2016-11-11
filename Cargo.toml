@@ -16,13 +16,12 @@ threadpool = { version = "*", optional = true }
 
 serde_json = {version = "0.8.3", optional = true }
 
-[dev-dependencies]
-serde_derive = "0.8"
+serde_derive = { version = "0.8", optional = true }
 
 [features]
 default = ["json"]
 json = ["serde_json"]
 pool = ["threadpool"]
-nightly = []
+nightly = ["serde_derive"]
 
 

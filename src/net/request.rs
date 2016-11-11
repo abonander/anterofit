@@ -60,7 +60,7 @@ impl RequestHead {
     }
 
     pub fn prepend_url<P: AsRef<str>>(&mut self, prepend: P) -> &mut Self {
-        self.url.to_mut().insert_str(0, prepend.as_ref());
+        prepend_str(prepend.as_ref(), self.url.to_mut());
         self
     }
 
@@ -189,4 +189,20 @@ where A: RequestAdapter, B: Body, T: Deserialize + 'static {
     adpt.deserialize(&mut response)
 }
 
+// FIXME: remove the inferior version and inline this when this stabilized.
+#[cfg(feature = "nightly")]
+fn prepend_str(prepend: &str, to: &mut String) {
+    to.insert_str(0, prepend);
+}
 
+// Stable workaround that avoids unsafe code at the cost of an additional allocation.
+#[cfg(not(feature = "nightly"))]
+fn prepend_str(prepend: &str, to: &mut String) {
+    let cap = prepend.len().checked_add(to.len())
+        .expect("Overflow evaluating capacity");
+
+    let append = mem::replace(to, String::with_capacity(cap));
+
+    *to += prepend;
+    *to += &*append;
+}

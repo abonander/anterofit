@@ -14,5 +14,6 @@ script:
       cargo test --verbose --features "nightly";
     else
       cargo build --verbose;
-      cargo test --verbose;
+      # FIXME: when procedural macros stabilize
+      # cargo test --verbose;
     fi

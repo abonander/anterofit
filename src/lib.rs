@@ -1,6 +1,6 @@
 // FIXME before release
 //#![warn(missing_docs)]
-#![feature(insert_str)]
+#![cfg_attr(feature = "nightly", feature(insert_str))]
 
 #[macro_use]
 extern crate quick_error;
