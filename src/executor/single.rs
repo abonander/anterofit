@@ -58,7 +58,7 @@ impl Master {
     }
 
     fn respawn(&self) {
-        // Lock with an atomic flag so we don't attempt to spawn more than one concurrently.
+        // Lock with an atomic flag so we don't attempt to spawn more than one thread concurrently.
         if !self.respawning.compare_and_swap(false, true, Ordering::AcqRel) {
             let res = self.sender.write();
 
@@ -70,12 +70,10 @@ impl Master {
             }
 
             self.respawning.store(false, Ordering::Release);
-
-            return;
+        } else {
+            // If we didn't get to do the respawn, just block until the respawn is done.
+            let _ = self.sender.read();
         }
-
-        // If we didn't get to do the respawn, just block until the respawn is done.
-        let _ = self.sender.read();
     }
 }
 
