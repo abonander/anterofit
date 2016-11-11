@@ -8,6 +8,7 @@ extern crate quick_error;
 extern crate futures;
 
 #[macro_use]
+#[macro_reexport]
 extern crate mime as mime_;
 
 extern crate multipart;
