@@ -8,6 +8,8 @@ use std::sync::Arc;
 
 use executor::{DefaultExecutor, Executor, ExecBox};
 
+use mime::Mime;
+
 use net::body::Body;
 
 use net::intercept::{Interceptor, Chain};

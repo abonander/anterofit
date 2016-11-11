@@ -2,7 +2,7 @@ use serialize::Serialize;
 
 use net::adapter::{RequestAdapter, RequestAdapter_};
 
-use mime::Mime;
+use mime::{self, Mime};
 
 type Multipart = ::multipart::client::lazy::Multipart<'static, 'static>;
 type PreparedFields = ::multipart::client::lazy::PreparedFields<'static>;
@@ -34,7 +34,7 @@ impl<R: Read> Readable<R> {
 
     pub fn new<C: Into<Option<Mime>>>(readable: R, content_type: C) -> Self {
         Readable {
-            readable: R,
+            readable: readable,
             content_type: content_type.into(),
             _private: (),
         }
@@ -63,11 +63,11 @@ impl<B: Serialize + Send + 'static> Body for B {
 
 /// A wrapper around a type that is intended to be read directly as the request body,
 /// instead of being serialized.
-pub struct RawBody<R>(Readable<R>);
+pub struct RawBody<R: Read>(Readable<R>);
 
 impl<R: Read + Send + 'static> RawBody<R> {
     pub fn new<C: Into<Option<Mime>>>(readable: R, content_type: C) -> Self {
-        RawBody(Readable::new_ok)
+        RawBody(Readable::new(readable, content_type))
     }
 }
 
@@ -83,7 +83,7 @@ impl<R: Read + Send + 'static> Body for RawBody<R> {
 
     fn into_readable<A>(self, adapter: &A) -> ReadableResult<Self::Readable>
     where A: RequestAdapter {
-        self.0
+        Ok(self.0)
     }
 }
 
@@ -114,7 +114,7 @@ impl Body for EmptyFields {
 
     fn into_readable<A>(self, adapter: &A) -> ReadableResult<Self::Readable>
     where A: RequestAdapter {
-        Readable::new_ok(io::empty, None)
+        Readable::new_ok(io::empty(), None)
     }
 }
 
@@ -146,7 +146,7 @@ impl Fields for TextFields {
 impl Body for TextFields {
     type Readable = Cursor<String>;
 
-    fn into_readable<A>(self, adapter: &A) -> Result<Self::Readable>
+    fn into_readable<A>(self, adapter: &A) -> ReadableResult<Self::Readable>
     where A: RequestAdapter {
         let readable = Cursor::new(
             FormUrlEncoder::new(String::new())
@@ -193,7 +193,7 @@ impl Fields for MultipartFields {
 impl Body for MultipartFields {
     type Readable = PreparedFields;
 
-    fn into_readable<A>(self, adapter: &A) -> Result<Self::Readable>
+    fn into_readable<A>(self, adapter: &A) -> ReadableResult<Self::Readable>
     where A: RequestAdapter {
         use self::FileField::*;
 
@@ -223,6 +223,10 @@ impl Body for MultipartFields {
         }
 
         let prepared = try!(multipart.prepare());
+
+        let content_type = mime::formdata(prepared.boundary());
+
+        Readable::new_ok(prepared, content_type)
     }
 }
 

@@ -1,6 +1,6 @@
 extern crate serde_json;
 
-use mime::{Mime, TopLevel, SubLevel};
+use mime::{self, Mime};
 
 use std::io::{Read, Write};
 

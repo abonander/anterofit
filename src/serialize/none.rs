@@ -4,6 +4,8 @@ use std::io::{Read, Write};
 
 use super::{Serializer, Deserializer, Serialize, Deserialize};
 
+use mime::Mime;
+
 use ::Result;
 
 pub struct NoSerializer;

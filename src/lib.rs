@@ -39,9 +39,6 @@ pub use net::RawBody;
 
 pub type Result<T> = ::std::result::Result<T, Error>;
 
-use mime::{Mime, TopLevel, SubLevel};
-
-
 
 
 
