@@ -85,8 +85,6 @@ macro_rules! fields {
 /// If given, `filename` and `content_type` keys will be supplied with the request.
 /// `filename` can be a borrowed or owned string, and `content_type` should be a `Mime`
 /// value from the `mime` crate.
-///
-/// For convenience, this crate reexports the `mime!()` macro from the `mime` crate.
 #[macro_export]
 macro_rules! stream (
     ($stream:expr) => (
