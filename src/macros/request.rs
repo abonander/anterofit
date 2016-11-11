@@ -37,21 +37,29 @@ macro_rules! request_impl {
     )
 }
 
-/// Define the body of this request.
+/// Serialize `$body` as the request body using the serializer provided in the adapter.
 ///
-/// Can be invoked multiple times. View the source link for details on the macro variants.
+/// If `$body` is intended to be read directly as the request body, wrap it with `RawBody`.
+///
+/// This will overwrite any previous invocation of `body!()` or `fields!{}` for the current request.
 #[macro_export]
-macro_rules! body {
-    // Serialize `$body` as the request body using the serializer provided in the adapter.
-    //
-    // If `$body` is intended to be read directly as the request body, wrap it with `RawBody`.
+macro_rules! body (
     ($body:expr) => (
         |req| req.body($body)
     );
-    // Serialize a series of key-value pairs as the request body.
-    //
-    // By default, this will serialize to a `www-form-urlencoded` body
-    ($($key:expr => $val:expr),*) => ( {
+);
+
+/// Serialize a series of key-value pairs as the request body (form-encode them).
+///
+/// By default, this will serialize to a `www-form-urlencoded` body.'
+///
+/// However, if you use the `file!()`, `path!()`, or `stream!()` macros to define a
+/// value, it will transform the request to a `multipart/form-data` request.
+///
+/// This will overwrite any previous invocation of `body!()` or `fields!{}` for the current request.
+#[macro_export]
+macro_rules! fields {
+    ($($key:expr => $val:expr),*) => ({
         use $crate::net::{AddField, EmptyFields};
 
         let fields = $crate::net::EmptyFields;
