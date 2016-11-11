@@ -1,4 +1,4 @@
-//! Macros for sevice methods wrapping REST calls.
+//! Macros for service methods wrapping REST calls.
 
 // It'd be nice to use a macro to avoid copy-pasting but unfortunately that doesn't really work.
 
