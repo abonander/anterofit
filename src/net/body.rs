@@ -9,7 +9,6 @@ type PreparedFields = ::multipart::client::lazy::PreparedFields<'static>;
 
 use url::form_urlencoded::Serializer as FormUrlEncoder;
 
-use std::fs::File;
 use std::io::{self, Cursor, Read};
 use std::path::PathBuf;
 
@@ -209,10 +208,6 @@ impl Body for MultipartFields {
                     content_type
                 } => {
                     stream.add_self(key, filename, content_type, &mut multipart);
-                },
-                File(file) => {
-                    // FIXME: somehow get filename and type from File, not sure if doable
-                    multipart.add_stream(key, file, None as Option<String>, None);
                 },
                 Path(path) => {
                     multipart.add_file(key, path);
