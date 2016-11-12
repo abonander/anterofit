@@ -4,12 +4,16 @@ use self::threadpool::ThreadPool;
 
 use super::{ExecBox, Executor};
 
+/// An executor wrapped around a thread pool which can execute multiple tasks concurrently.
 #[derive(Clone)]
 pub struct Pooled {
     pool: ThreadPool,
 }
 
 impl Pooled {
+    /// Spawn a new thread pool with `num_threads` number of threads.
+    ///
+    /// The threads will be named such that they can be easily identified as workers for this crate.
     pub fn new(num_threads: usize) -> Self {
         Pooled {
             pool: ThreadPool::new_with_name("anterofit_worker", num_threads)

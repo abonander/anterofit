@@ -5,7 +5,7 @@ pub trait Interceptor: Send + Sync + 'static {
 }
 
 impl Interceptor for () {
-    fn intercept(&self, req: &mut RequestHead) {}
+    fn intercept(&self, _req: &mut RequestHead) {}
 }
 
 pub struct Chain<I1, I2>(I1, I2);

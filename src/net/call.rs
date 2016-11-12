@@ -1,4 +1,4 @@
-use futures::{Future, Oneshot, Canceled, Async, Poll};
+use futures::{Future, Oneshot, Async, Poll};
 use ::{Result, Error};
 
 use std::mem;
@@ -24,6 +24,14 @@ impl<T> Call<T> {
             Ok(Async::NotReady) => None,
             Err(Error::ResultTaken) => None,
             Err(e) => Some(Err(e))
+        }
+    }
+
+    pub fn is_immediate(&self) -> bool {
+        if let Call::Immediate(_) = *self {
+            true
+        } else {
+            false
         }
     }
 }

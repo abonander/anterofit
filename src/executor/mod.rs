@@ -9,12 +9,17 @@ pub use self::pool::Pooled;
 
 pub use self::single::SingleThread;
 
+/// The default executor which should be suitable for most use-cases.
 pub type DefaultExecutor = SingleThread;
 
+/// A trait describing a type which can execute tasks (in the background or otherwise).
 pub trait Executor: Send + Clone + 'static {
     fn execute(&self, exec: Box<ExecBox>);
 }
 
+/// An executor which executes all tasks immediately on the current thread (blocking).
+///
+/// Does not allocate or spawn threads.
 #[derive(Clone)]
 pub struct SyncExecutor;
 
@@ -24,7 +29,9 @@ impl Executor for SyncExecutor {
     }
 }
 
+/// A wrapper for `FnOnce() + Send + 'static` which can be invoked from a `Box`.
 pub trait ExecBox: Send + 'static {
+    /// Invoke the contained closure.
     fn exec(self: Box<Self>);
 }
 

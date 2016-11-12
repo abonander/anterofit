@@ -19,8 +19,8 @@ pub extern crate hyper;
 
 mod mime;
 
-#[macro_export]
 pub mod macros;
+
 pub mod net;
 pub mod serialize;
 

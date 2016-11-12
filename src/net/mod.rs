@@ -1,5 +1,3 @@
-
-
 pub use hyper::method::Method;
 
 pub use hyper::header::Headers;
@@ -14,6 +12,8 @@ pub use self::call::Call;
 
 pub use self::request::{RequestHead, RequestBuilder, Request};
 
+pub use self::response::{FromResponse, RawResponse};
+
 mod adapter;
 
 mod body;
@@ -22,8 +22,7 @@ mod call;
 
 mod intercept;
 
-mod request;
+pub mod request;
 
-use ::Result;
-
+pub mod response;
 

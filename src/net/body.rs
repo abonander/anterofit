@@ -1,6 +1,6 @@
 use serialize::Serialize;
 
-use net::adapter::{RequestAdapter, RequestAdapter_};
+use net::adapter::RequestAdapter;
 
 use mime::{self, Mime};
 
@@ -9,10 +9,8 @@ type PreparedFields = ::multipart::client::lazy::PreparedFields<'static>;
 
 use url::form_urlencoded::Serializer as FormUrlEncoder;
 
-use std::borrow::Cow;
 use std::fs::File;
 use std::io::{self, Cursor, Read};
-use std::mem;
 use std::path::PathBuf;
 
 use ::Result;
@@ -81,7 +79,7 @@ impl<R: AsRef<[u8]> + Send + 'static> RawBody<Cursor<R>> {
 impl<R: Read + Send + 'static> Body for RawBody<R> {
     type Readable = R;
 
-    fn into_readable<A>(self, adapter: &A) -> ReadableResult<Self::Readable>
+    fn into_readable<A>(self, _adapter: &A) -> ReadableResult<Self::Readable>
     where A: RequestAdapter {
         Ok(self.0)
     }
@@ -112,7 +110,7 @@ impl Fields for EmptyFields {
 impl Body for EmptyFields {
     type Readable = io::Empty;
 
-    fn into_readable<A>(self, adapter: &A) -> ReadableResult<Self::Readable>
+    fn into_readable<A>(self, _adapter: &A) -> ReadableResult<Self::Readable>
     where A: RequestAdapter {
         Readable::new_ok(io::empty(), None)
     }
@@ -146,7 +144,7 @@ impl Fields for TextFields {
 impl Body for TextFields {
     type Readable = Cursor<String>;
 
-    fn into_readable<A>(self, adapter: &A) -> ReadableResult<Self::Readable>
+    fn into_readable<A>(self, _adapter: &A) -> ReadableResult<Self::Readable>
     where A: RequestAdapter {
         let readable = Cursor::new(
             FormUrlEncoder::new(String::new())
@@ -193,9 +191,9 @@ impl Fields for MultipartFields {
 impl Body for MultipartFields {
     type Readable = PreparedFields;
 
-    fn into_readable<A>(self, adapter: &A) -> ReadableResult<Self::Readable>
+    fn into_readable<A>(self, _adapter: &A) -> ReadableResult<Self::Readable>
     where A: RequestAdapter {
-        use self::FileField::*;
+        use self::FileField_::*;
 
         let mut multipart = Multipart::new();
 
@@ -204,7 +202,7 @@ impl Body for MultipartFields {
         }
 
         for (key, file) in self.files {
-            match file {
+            match file.0 {
                 Stream {
                     stream,
                     filename,
@@ -230,7 +228,20 @@ impl Body for MultipartFields {
     }
 }
 
-enum FileField {
+pub struct FileField(FileField_);
+
+
+impl FileField {
+    pub fn from_stream<S: Read + Send + 'static>(stream: S, filename: Option<String>, content_type: Option<Mime>) -> Self {
+        FileField(FileField_::Stream {
+            stream: Box::new(stream),
+            filename: filename,
+            content_type: content_type
+        })
+    }
+}
+
+enum FileField_ {
     Stream {
         stream: Box<StreamField>,
         filename: Option<String>,
@@ -238,16 +249,6 @@ enum FileField {
     },
     File(File),
     Path(PathBuf),
-}
-
-impl FileField {
-    fn from_stream<S: Read + Send + 'static>(stream: S, filename: Option<String>, content_type: Option<Mime>) -> Self {
-        FileField::Stream {
-            stream: Box::new(stream),
-            filename: filename,
-            content_type: content_type
-        }
-    }
 }
 
 trait StreamField: Read + Send + 'static {

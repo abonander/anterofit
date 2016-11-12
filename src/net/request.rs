@@ -1,34 +1,23 @@
-
-use futures::Complete;
-
 use hyper::client::{Client, Response, RequestBuilder as NetRequestBuilder};
-use hyper::error::Result as HyperResult;
 use hyper::header::{Headers, Header, HeaderFormat, ContentType};
 use hyper::method::Method;
 
-use multipart::client::lazy::Multipart;
-
-use url::{self, Url};
+use url::Url;
 use url::form_urlencoded::Serializer as FormUrlEncoded;
 
 use std::borrow::Cow;
 use std::fmt::{self, Write};
-use std::io::{self, Empty, Read};
 use std::mem;
 
-use std::panic;
-
-use net::adapter::{Adapter, RequestAdapter, RequestAdapter_};
+use net::adapter::RequestAdapter;
 
 use net::body::{Body, EmptyFields};
 
 use net::call::Call;
 
-use net::intercept::Interceptor;
+use net::response::FromResponse;
 
 use executor::ExecBox;
-
-use serialize::{Serialize, Deserialize};
 
 use ::Result;
 
@@ -86,8 +75,13 @@ impl RequestHead {
         self
     }
 
-    pub fn init_request<'c>(self, base_url: &Url, client: &'c Client) -> Result<NetRequestBuilder<'c>> {
-        let mut url = try!(base_url.join(&self.url));
+    pub fn init_request<'c>(self, base_url: Option<&Url>, client: &'c Client) -> Result<NetRequestBuilder<'c>> {
+        let mut url = if let Some(base_url) = base_url {
+            try!(base_url.join(&self.url))
+        } else {
+            try!(Url::parse(&self.url))
+        };
+
         url.set_query(Some(&self.query));
 
         Ok(client.request(self.method, url).headers(self.headers))
@@ -133,6 +127,9 @@ pub struct Request<'a, A: 'a, T> {
 }
 
 impl<'a, A: 'a, T> Request<'a, A, T> {
+    /// Construct a `Result` wrapping an immediate return of `res`.
+    ///
+    /// No network or activity will occur when this request is invoked.
     pub fn immediate(adapter: &'a A, res: Result<T>) -> Self {
         Request {
             adapter: adapter,
@@ -140,39 +137,52 @@ impl<'a, A: 'a, T> Request<'a, A, T> {
             call: super::call::immediate(res),
         }
     }
-}
 
-impl<'a, A: 'a, T> Request<'a, A, T> where A: RequestAdapter {
-    pub fn async(self) -> Call<T> {
-        self.adapter.execute(self.exec);
-        self.call
-    }
-
+    /// Execute this request here, blocking until the result is available.
+    ///
+    /// Does not require a valid adapter type.
     pub fn here(self) -> Result<T> {
         self.exec.exec();
         self.call.block()
     }
-}
 
-pub fn new<A, B, T>(adpt: &A, builder: RequestBuilder<B>) -> Request<A, T>
-where A: RequestAdapter, B: Body, T: Deserialize + Send + 'static {
-    let adpt_ = adpt.clone();
-
-    let (tx, rx) = ::futures::oneshot();
-
-    let exec = Box::new(move || {
-        tx.complete(exec_request(&adpt_, builder))
-    });
-
-    Request {
-        adapter: adpt,
-        exec: exec,
-        call: super::call::from_oneshot(rx),
+    /// Returns `true` if a result is immediately available (`.here()` will not block).
+    pub fn is_immediate(&self) -> bool {
+        self.call.is_immediate()
     }
 }
 
-fn exec_request<A, B, T>(adpt: &A, mut builder: RequestBuilder<B>) -> Result<T>
-where A: RequestAdapter, B: Body, T: Deserialize + 'static {
+impl<'a, A: 'a, T> Request<'a, A, T> where A: RequestAdapter, T: FromResponse {
+    pub fn ready<B>(adpt: &A, builder: RequestBuilder<B>) -> Request<A, T>
+        where B: Body {
+
+        let adpt_ = adpt.clone();
+
+        let (tx, rx) = ::futures::oneshot();
+
+        let exec = Box::new(move ||
+            tx.complete(
+                exec_request(&adpt_, builder)
+                    .and_then(|response| T::from_response(&adpt_, response))
+            )
+        );
+
+        Request {
+            adapter: adpt,
+            exec: exec,
+            call: super::call::from_oneshot(rx),
+        }
+    }
+
+    /// Execute
+    pub fn async(self) -> Call<T> {
+        self.adapter.execute(self.exec);
+        self.call
+    }
+}
+
+fn exec_request<A, B>(adpt: &A, mut builder: RequestBuilder<B>) -> Result<Response>
+where A: RequestAdapter, B: Body{
 
     adpt.intercept(&mut builder.head);
 
@@ -184,9 +194,7 @@ where A: RequestAdapter, B: Body, T: Deserialize + 'static {
 
     let request = try!(adpt.request_builder(builder.head));
 
-    let mut response = try!(request.body(&mut readable.readable).send());
-
-    adpt.deserialize(&mut response)
+    request.body(&mut readable.readable).send().map_err(Into::into)
 }
 
 // FIXME: remove the inferior version and inline this when this stabilized.

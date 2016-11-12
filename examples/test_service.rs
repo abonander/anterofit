@@ -39,7 +39,8 @@ service! {
 fn main() {
     let url = Url::parse("https://jsonplaceholder.typicode.com").unwrap();
 
-    let adapter = Adapter::builder(url)
+    let adapter = Adapter::builder()
+        .base_url(url)
         .deserialize(anterofit::serialize::json::Deserializer)
         .build();
 

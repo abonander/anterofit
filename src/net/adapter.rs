@@ -1,9 +1,7 @@
 use hyper::Url;
 use hyper::client::{Client, RequestBuilder as NetRequestBuilder};
 
-use std::error::Error;
 use std::io::{Read, Write};
-use std::panic::UnwindSafe;
 use std::sync::Arc;
 
 use executor::{DefaultExecutor, Executor, ExecBox};
@@ -14,14 +12,17 @@ use net::body::Body;
 
 use net::intercept::{Interceptor, Chain};
 
-use net::request::{self, Request, RequestHead, RequestBuilder};
+use net::request::{Request, RequestHead, RequestBuilder};
+
+use net::response::FromResponse;
 
 use serialize::{Serializer, Deserializer, NoSerializer, NoDeserializer, Serialize, Deserialize};
 
 use ::Result;
 
+/// A builder for `Adapter`. Call `Adapter::builder()` to get an instance.
 pub struct AdapterBuilder<E, I, S, D> {
-    base_url: Url,
+    base_url: Option<Url>,
     client: Option<Client>,
     executor: E,
     interceptor: I,
@@ -30,9 +31,9 @@ pub struct AdapterBuilder<E, I, S, D> {
 }
 
 impl AdapterBuilder<DefaultExecutor, (), NoSerializer, NoDeserializer> {
-    fn new(url: Url) -> Self {
+    fn new() -> Self {
         AdapterBuilder {
-            base_url: url,
+            base_url: None,
             client: None,
             executor: DefaultExecutor::new(),
             interceptor: (),
@@ -43,6 +44,13 @@ impl AdapterBuilder<DefaultExecutor, (), NoSerializer, NoDeserializer> {
 }
 
 impl<E, I, S, D> AdapterBuilder<E, I, S, D> {
+    /// Set the base url that this adapter will use for all requests.
+    ///
+    ///
+    pub fn base_url(self, url: Url) -> Self {
+        AdapterBuilder { base_url: Some(url), .. self }
+    }
+
     pub fn interceptor<I_>(self, interceptor: I_) -> AdapterBuilder<E, I_, S, D>
     where I_: Interceptor {
         AdapterBuilder {
@@ -133,8 +141,8 @@ pub struct Adapter<E, I, S, D> {
 }
 
 impl Adapter<DefaultExecutor, (), NoSerializer, NoDeserializer> {
-    pub fn builder(url: Url) -> AdapterBuilder<DefaultExecutor, (), NoSerializer, NoDeserializer> {
-        AdapterBuilder::new(url)
+    pub fn builder() -> AdapterBuilder<DefaultExecutor, (), NoSerializer, NoDeserializer> {
+        AdapterBuilder::new()
     }
 }
 
@@ -149,26 +157,17 @@ impl<E: Clone, I, S, D> Clone for Adapter<E, I, S, D> {
 
 #[derive(Debug)]
 struct Adapter_<I, S, D> {
-    base_url: Url,
+    base_url: Option<Url>,
     client: Client,
     interceptor: I,
     serializer: S,
     deserializer: D,
 }
 
-pub trait RequestAdapter: RequestAdapter_ {
+pub trait RequestAdapter: Send + Clone + 'static {
     fn request<B, T>(&self, builder: RequestBuilder<B>) -> Request<Self, T>
-        where B: Body, T: Deserialize + Send + 'static;
-}
+        where B: Body, T: FromResponse;
 
-impl<A> RequestAdapter for A where A: RequestAdapter_ {
-    fn request<B, T>(&self, builder: RequestBuilder<B>) -> Request<Self, T>
-        where B: Body, T: Deserialize + Send + 'static {
-        request::new(self, builder)
-    }
-}
-
-pub trait RequestAdapter_: Send + Clone + 'static {
     fn intercept(&self, head: &mut RequestHead);
 
     fn execute(&self, exec: Box<ExecBox>);
@@ -182,8 +181,13 @@ pub trait RequestAdapter_: Send + Clone + 'static {
     fn request_builder(&self, head: RequestHead) -> Result<NetRequestBuilder>;
 }
 
-impl<E, I, S, D> RequestAdapter_ for Adapter<E, I, S, D>
+impl<E, I, S, D> RequestAdapter for Adapter<E, I, S, D>
 where E: Executor, I: Interceptor, S: Serializer, D: Deserializer {
+    fn request<B, T>(&self, builder: RequestBuilder<B>) -> Request<Self, T>
+        where B: Body, T: FromResponse {
+
+        Request::ready(self, builder)
+    }
 
     fn execute(&self, exec: Box<ExecBox>) {
         self.executor.execute(exec)
@@ -206,6 +210,6 @@ where E: Executor, I: Interceptor, S: Serializer, D: Deserializer {
     }
 
     fn request_builder(&self, head: RequestHead) -> Result<NetRequestBuilder> {
-        head.init_request(&self.inner.base_url, &self.inner.client)
+        head.init_request(self.inner.base_url.as_ref(), &self.inner.client)
     }
 }

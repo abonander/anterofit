@@ -7,12 +7,18 @@ use std::thread;
 
 type Sender = mpsc::Sender<Box<ExecBox>>;
 
+/// An executor which completes all requests on a single background thread.
+///
+/// Use this for when you have a low volume of asynchronous requests.
+///
+/// If a panic occurs on the worker thread, it will automatically be restarted.
 #[derive(Clone)]
 pub struct SingleThread {
     master: Arc<Master>,
 }
 
 impl SingleThread {
+    /// Construct a new executor, spawning a new background thread which will wait for tasks.
     pub fn new() -> Self {
         SingleThread {
             master: Arc::new(Master::new()),
