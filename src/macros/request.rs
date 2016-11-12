@@ -31,10 +31,10 @@ macro_rules! request_impl {
         {
             use $crate::net::RequestBuilder;
 
-            let mut builder = RequestBuilder::new($method, url!($($urlpart)+));
+            let builder = RequestBuilder::new($method, url!($($urlpart)+));
 
             $(
-                builder = ($buildexpr)(builder);
+                let builder = ($buildexpr)(builder);
             )*
 
             $adapter.request(builder)
