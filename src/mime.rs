@@ -15,3 +15,7 @@ pub fn form_urlencoded() -> Mime {
 pub fn formdata(boundary: &str) -> Mime {
     mime!(Multipart/FormData; ("boundary")=(boundary))
 }
+
+pub fn text_plain_utf8() -> Mime {
+    mime!(Text/Plain; Charset=Utf8)
+}

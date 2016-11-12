@@ -63,6 +63,7 @@ impl<B: Serialize + Send + 'static> Body for B {
 pub struct RawBody<R: Read>(Readable<R>);
 
 impl<R: Read + Send + 'static> RawBody<R> {
+    /// Wrap a `Read` type and a content-type
     pub fn new<C: Into<Option<Mime>>>(readable: R, content_type: C) -> Self {
         RawBody(Readable::new(readable, content_type))
     }
@@ -70,8 +71,28 @@ impl<R: Read + Send + 'static> RawBody<R> {
 
 impl<R: AsRef<[u8]> + Send + 'static> RawBody<Cursor<R>> {
     /// Wrap anything `Cursor` can work with (such as `String` or `Vec<u8>`) as a raw request body.
+    ///
+    /// Assumes `application/octet-stream` as the content-type.
     pub fn bytes(bytes: R) -> Self {
         RawBody::new(Cursor::new(bytes), mime::octet_stream())
+    }
+}
+
+impl RawBody<Cursor<String>> {
+    /// Wrap a `String` as a plain text body.
+    ///
+    /// Assumes `text/plain; charset=utf8` as the content-type.
+    pub fn text(text: String) -> Self {
+        RawBody::new(Cursor::new(text), mime::text_plain_utf8())
+    }
+}
+
+impl RawBody<Cursor<&'static str>> {
+    /// Wrap an `&'static str` as a plain text body.
+    ///
+    /// Assumes `text/plain; charset=utf8` as the content-type.
+    pub fn text(text: &'static str) -> Self {
+        RawBody::new(Cursor::new(text), mime::text_plain())
     }
 }
 
