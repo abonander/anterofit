@@ -239,6 +239,10 @@ impl FileField {
             content_type: content_type
         })
     }
+
+    pub fn from_path<P: Into<PathBuf>>(path: P) -> Self {
+        FileField(FileField_::Path(path.into()))
+    }
 }
 
 enum FileField_ {
@@ -247,7 +251,6 @@ enum FileField_ {
         filename: Option<String>,
         content_type: Option<Mime>,
     },
-    File(File),
     Path(PathBuf),
 }
 

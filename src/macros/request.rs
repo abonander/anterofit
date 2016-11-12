@@ -116,7 +116,7 @@ macro_rules! stream (
 #[macro_export]
 macro_rules! file (
     ($path:expr) => (
-        $crate::net::FileField::Path($path.into())
+        $crate::net::FileField::from_path($path)
     )
 );
 
