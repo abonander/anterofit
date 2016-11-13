@@ -8,12 +8,6 @@ use ::Result;
 
 mod none;
 
-#[cfg(feature = "json")]
-pub mod json;
-
-#[cfg(feature = "xml")]
-pub mod xml;
-
 pub use self::none::*;
 
 pub trait Serializer: Send + Sync + 'static {
@@ -24,4 +18,26 @@ pub trait Serializer: Send + Sync + 'static {
 
 pub trait Deserializer: Send + Sync + 'static {
     fn deserialize<T: Deserialize, R: Read>(&self, read: &mut R) -> Result<T>;
+}
+
+macro_rules! modules {
+    ($($name:ident = $strname:expr),*) => (
+        $(
+            #[cfg(feature = $strname)]
+            pub mod $name;
+
+            #[cfg(not(feature = $strname))]
+            pub mod $name {
+                /// Empty error type to fill the associated variant of `error::Error`.
+                quick_error! {
+                    #[derive(Debug)]
+                    pub enum Error {}
+                }
+            }
+        )*
+    )
+}
+
+modules! {
+    json = "json", xml = "xml"
 }

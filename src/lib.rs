@@ -1,5 +1,4 @@
-// FIXME before release
-//#![warn(missing_docs)]
+#![warn(missing_docs)]
 #![cfg_attr(feature = "nightly", feature(insert_str))]
 
 #[macro_use]
@@ -37,6 +36,10 @@ pub use net::Adapter;
 
 pub use net::RawBody;
 
+/// The result type for this crate; used frequently in public APIs.
+///
+/// Recommended to be used as `anterofit::Result` to avoid confusing
+/// shadowing of `std::result::Result`.
 pub type Result<T> = ::std::result::Result<T, Error>;
 
 
