@@ -129,7 +129,7 @@ pub struct Request<'a, A: 'a, T> {
 impl<'a, A: 'a, T> Request<'a, A, T> {
     /// Construct a `Result` wrapping an immediate return of `res`.
     ///
-    /// No network or activity will occur when this request is invoked.
+    /// No network or activity will occur when this request is executed.
     pub fn immediate(adapter: &'a A, res: Result<T>) -> Self {
         Request {
             adapter: adapter,
@@ -138,21 +138,26 @@ impl<'a, A: 'a, T> Request<'a, A, T> {
         }
     }
 
-    /// Execute this request here, blocking until the result is available.
+    /// Execute this request on the current thread, **blocking** until the result is available.
     ///
     /// Does not require a valid adapter type.
-    pub fn here(self) -> Result<T> {
+    pub fn exec_here(self) -> Result<T> {
         self.exec.exec();
         self.call.block()
     }
 
-    /// Returns `true` if a result is immediately available (`.here()` will not block).
+    /// Returns `true` if a result is immediately available (`exec_here()` will not block).
     pub fn is_immediate(&self) -> bool {
         self.call.is_immediate()
     }
 }
 
 impl<'a, A: 'a, T> Request<'a, A, T> where A: RequestAdapter, T: FromResponse {
+    /// Create a `Request` which is ready to be executed based on the parameters in `builder`
+    /// and using the given adapter.
+    ///
+    /// This request will need to be executed (using `exec()` or `exec_here()`) before anything
+    /// else is done. As much work as possible will be relegated to the adapter's executor.
     pub fn ready<B>(adpt: &A, builder: RequestBuilder<B>) -> Request<A, T>
         where B: Body {
 
@@ -174,8 +179,9 @@ impl<'a, A: 'a, T> Request<'a, A, T> where A: RequestAdapter, T: FromResponse {
         }
     }
 
-    /// Execute
-    pub fn async(self) -> Call<T> {
+    /// Execute this request on the adapter's executor, returning a type which can
+    /// be polled for the result.
+    pub fn exec(self) -> Call<T> {
         self.adapter.execute(self.exec);
         self.call
     }
@@ -197,7 +203,7 @@ where A: RequestAdapter, B: Body{
     request.body(&mut readable.readable).send().map_err(Into::into)
 }
 
-// FIXME: remove the inferior version and inline this when this stabilized.
+// FIXME: remove the inferior version and inline this when this is stabilized.
 #[cfg(feature = "nightly")]
 fn prepend_str(prepend: &str, to: &mut String) {
     to.insert_str(0, prepend);

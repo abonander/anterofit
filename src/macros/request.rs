@@ -1,7 +1,7 @@
 /// A `try!()` macro replacement for service method bodies.
 ///
 /// Instead of returning the error in a method returning `Result`,
-/// this returns a `Request<T>` which will immediate return the error when it is invoked;
+/// this returns a `Request<T>` which will immediate return the error when it is executed;
 /// no network or disk activity will occur.
 #[macro_export]
 macro_rules! try_request (

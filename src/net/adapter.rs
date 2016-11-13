@@ -77,7 +77,7 @@ impl<E, I, S, D> AdapterBuilder<E, I, S, D> {
         }
     }
 
-    /// Set a new executor for the adaptor.
+    /// Set a new executor for the adapter.
     pub fn executor<E_>(self, executor: E_) -> AdapterBuilder<E_, I, S, D>
     where E: Executor {
         AdapterBuilder {
@@ -90,6 +90,7 @@ impl<E, I, S, D> AdapterBuilder<E, I, S, D> {
         }
     }
 
+    /// Set a new `Serializer` impl for this adapter.
     pub fn serialize<S_>(self, serialize: S_) -> AdapterBuilder<E, I, S_, D>
     where S_: Serializer {
         AdapterBuilder {
@@ -102,6 +103,7 @@ impl<E, I, S, D> AdapterBuilder<E, I, S, D> {
         }
     }
 
+    /// Set a new `Deserializer` impl for this adapter.
     pub fn deserialize<D_>(self, deserialize: D_) -> AdapterBuilder<E, I, S, D_>
     where D_: Deserializer {
         AdapterBuilder {
@@ -113,6 +115,10 @@ impl<E, I, S, D> AdapterBuilder<E, I, S, D> {
             deserializer: deserialize,
         }
     }
+
+    /// Set a `hyper::Client` instance to use with this adapter.
+    ///
+    /// If not supplied, a default instance will be constructed.
     pub fn client(mut self, client: Client) -> Self {
         self.client = Some(client);
         self
@@ -121,6 +127,8 @@ impl<E, I, S, D> AdapterBuilder<E, I, S, D> {
 
 impl<E, I, S, D> AdapterBuilder<E, I, S, D>
 where E: Executor, I: Interceptor, S: Serializer, D: Deserializer {
+
+    /// Using the supplied types, complete the adapter.
     pub fn build(self) -> Adapter<E, I, S, D> {
         Adapter {
             executor: self.executor,
@@ -137,6 +145,9 @@ where E: Executor, I: Interceptor, S: Serializer, D: Deserializer {
     }
 }
 
+/// The starting point of all Anterofit requests.
+///
+/// Use `builder()` to start constructing an instance.
 #[derive(Debug)]
 pub struct Adapter<E, I, S, D> {
     executor: E,
@@ -144,6 +155,7 @@ pub struct Adapter<E, I, S, D> {
 }
 
 impl Adapter<DefaultExecutor, (), NoSerializer, NoDeserializer> {
+    /// Start building an instance of `Adapter` using the default inner types.
     pub fn builder() -> AdapterBuilder<DefaultExecutor, (), NoSerializer, NoDeserializer> {
         AdapterBuilder::new()
     }
@@ -167,20 +179,30 @@ struct Adapter_<I, S, D> {
     deserializer: D,
 }
 
+/// A trait describing an adapter which can be used to execute a request.
+///
+/// Mainly used to simplify generics.
 pub trait RequestAdapter: Send + Clone + 'static {
+    /// Create a new `Request` using `builder`.
     fn request<B, T>(&self, builder: RequestBuilder<B>) -> Request<Self, T>
         where B: Body, T: FromResponse;
 
+    /// Pass `head` to this adapter's interceptor for modification.
     fn intercept(&self, head: &mut RequestHead);
 
+    /// Execute `exec` on this adapter's executor.
     fn execute(&self, exec: Box<ExecBox>);
 
+    /// Use this adapter's `Serializer` to serialize `val` into `to`.
     fn serialize<T: Serialize, W: Write>(&self, val: &T, to: &mut W) -> Result<()>;
 
+    /// Return the MIME type for this adapter's serializer, if applicable.
     fn serializer_content_type(&self) -> Option<Mime>;
 
+    /// Use this adapter's `Deserializer` to read `T` from `from`.
     fn deserialize<T: Deserialize, R: Read>(&self, from: &mut R) -> Result<T>;
 
+    /// Initialize a `hyper::client::RequestBuilder` from `head`.
     fn request_builder(&self, head: RequestHead) -> Result<NetRequestBuilder>;
 }
 

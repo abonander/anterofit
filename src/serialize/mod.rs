@@ -1,3 +1,5 @@
+//! Types used to serialize and deserialize request and response bodies, respectively.
+
 pub use serde::{Serialize, Deserialize};
 
 use mime::Mime;
