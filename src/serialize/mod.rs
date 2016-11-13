@@ -11,6 +11,9 @@ mod none;
 #[cfg(feature = "json")]
 pub mod json;
 
+#[cfg(feature = "xml")]
+pub mod xml;
+
 pub use self::none::*;
 
 pub trait Serializer: Send + Sync + 'static {

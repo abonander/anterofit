@@ -14,13 +14,15 @@ url = "1.0"
 
 threadpool = { version = "*", optional = true }
 
-serde_json = {version = "0.8.3", optional = true }
+serde_json = { version = "0.8.3", optional = true }
+serde_xml = { version = "0.9.1", optional = true }
 
 serde_derive = { version = "0.8", optional = true }
 
 [features]
 default = ["json"]
 json = ["serde_json"]
+xml = ["serde_xml"]
 pool = ["threadpool"]
 nightly = ["serde_derive"]
 
