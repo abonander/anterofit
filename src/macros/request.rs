@@ -47,6 +47,9 @@ macro_rules! request_impl {
 /// If `$body` is intended to be read directly as the request body, wrap it with `RawBody`.
 ///
 /// This will overwrite any previous invocation of `body!()` or `fields!{}` for the current request.
+///
+/// ##Panics
+/// If the request is a GET request (cannot have a body).
 #[macro_export]
 macro_rules! body (
     ($body:expr) => (
@@ -62,6 +65,9 @@ macro_rules! body (
 /// value, it will transform the request to a `multipart/form-data` request.
 ///
 /// This will overwrite any previous invocation of `body!()` or `fields!{}` for the current request.
+///
+/// ##Panics
+/// If the request is a GET request (cannot have a body).
 #[macro_export]
 macro_rules! fields {
     ($($key:expr => $val:expr),*) => ({

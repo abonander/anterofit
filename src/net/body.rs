@@ -14,10 +14,14 @@ use std::path::PathBuf;
 
 use ::Result;
 
+/// The result type for `Body::into_readable()`.
 pub type ReadableResult<T> = Result<Readable<T>>;
 
+/// The result of serializing the request body; ready to be sent over the network.
 pub struct Readable<R: Read> {
+    /// The inner `Read` impl which will be copied into the request body.
     pub readable: R,
+    /// The MIME type of the request body, if applicable.
     pub content_type: Option<Mime>,
     // Throwaway private field for backwards compatibility.
     _private: (),
@@ -29,6 +33,8 @@ impl<R: Read> Readable<R> {
         Ok(Self::new(readable, content_type))
     }
 
+    /// Create a new `Readable` with the given `Read` and MIME type (can be an `Option` or a bare
+    /// `Mime` value).
     pub fn new<C: Into<Option<Mime>>>(readable: R, content_type: C) -> Self {
         Readable {
             readable: readable,
@@ -38,9 +44,14 @@ impl<R: Read> Readable<R> {
     }
 }
 
+/// A trait describing a type which can be serialized into a request body.
+///
+/// Implemented for `T: Serialize + Send + 'static`.
 pub trait Body: Send + 'static {
+    /// The readable request body.
     type Readable: Read + 'static;
 
+    /// Serialize `self` with the given adapter into a request body.
     fn into_readable<A>(self, adapter: &A) -> ReadableResult<Self::Readable>
     where A: RequestAdapter;
 }
@@ -105,14 +116,20 @@ impl<R: Read + Send + 'static> Body for RawBody<R> {
     }
 }
 
+/// A builder trait describing collections of key-value pairs to be serialized into a request body.
 pub trait Fields {
+    /// The type that results from adding a text field; may or may not change depending on the
+    /// initial type.
     type WithText: Fields;
 
+    /// Add a key-text value pair to this fields collection, returning the resulting type.
     fn with_text<K: ToString, V: ToString>(self, key: K, val: V) -> Self::WithText;
 
+    /// Add a key-file vale pair to this fields collection, returning the resulting type.
     fn with_file<K: ToString>(self, key: K, file: FileField) -> MultipartFields;
 }
 
+/// An empty fields collection, will serialize to nothing.
 pub struct EmptyFields;
 
 impl Fields for EmptyFields {
@@ -136,6 +153,9 @@ impl Body for EmptyFields {
     }
 }
 
+/// A collection of key-string value pairs to be serialized as fields in the request.
+///
+/// Will be serialized as form/percent-encoded pairs.
 pub struct TextFields(Vec<(String, String)>);
 
 impl TextFields {
@@ -176,6 +196,9 @@ impl Body for TextFields {
     }
 }
 
+/// A collection of key-value pairs where the values may be string fields or file fields.
+///
+/// Will be serialized as a `multipart/form-data` request.
 pub struct MultipartFields {
     text: TextFields,
     files: Vec<(String, FileField)>,
@@ -244,10 +267,12 @@ impl Body for MultipartFields {
     }
 }
 
+
+/// A file field, can be a generic `Read` impl or a `Path`.
 pub struct FileField(FileField_);
 
-
 impl FileField {
+    /// Wrap a `Read` impl with an optional filename and MIME type to be serialized as a file field.
     pub fn from_stream<S: Read + Send + 'static>(stream: S, filename: Option<String>, content_type: Option<Mime>) -> Self {
         FileField(FileField_::Stream {
             stream: Box::new(stream),
@@ -256,6 +281,7 @@ impl FileField {
         })
     }
 
+    /// Wrap a `Path` to be serialized as a file field, inferring its filename and MIME type.
     pub fn from_path<P: Into<PathBuf>>(path: P) -> Self {
         FileField(FileField_::Path(path.into()))
     }
@@ -280,6 +306,7 @@ impl<T> StreamField for T where T: Read + Send + 'static {
     }
 }
 
+#[doc(hidden)]
 pub trait AddField<F> {
     type Output: Fields;
 
