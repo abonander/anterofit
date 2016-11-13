@@ -1,6 +1,7 @@
 //! Integration with the `serde_xml` crate providing XML serialization.
 //!
-//! **N.B.**: as of November 2016, only deserialization is supported by `serde_xml`.
+//! ##Note
+//! As of November 2016, only deserialization is supported by `serde_xml`.
 
 extern crate serde_xml;
 
