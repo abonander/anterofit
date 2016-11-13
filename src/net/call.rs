@@ -5,7 +5,9 @@ use std::mem;
 
 #[must_use = "Response is being ignored"]
 //#[derive(Debug)]
-pub enum Call<T> {
+pub struct Call<T>(Call_<T>);
+
+enum Call_<T> {
     Waiting(Oneshot<Result<T>>),
     Immediate(Result<T>),
     Taken
@@ -28,7 +30,7 @@ impl<T> Call<T> {
     }
 
     pub fn is_immediate(&self) -> bool {
-        if let Call::Immediate(_) = *self {
+        if let Call_::Immediate(_) = self.0 {
             true
         } else {
             false
@@ -41,13 +43,13 @@ impl<T> Future for Call<T> {
     type Error = Error;
 
     fn poll(&mut self) -> Poll<T, Error> {
-        match *self {
-            Call::Waiting(ref mut oneshot) => return poll_for_result(oneshot),
-            Call::Taken => return Err(Error::ResultTaken),
+        match self.0 {
+            Call_::Waiting(ref mut oneshot) => return poll_for_result(oneshot),
+            Call_::Taken => return Err(Error::ResultTaken),
             _ => (),
         }
 
-        if let Call::Immediate(res) = mem::replace(self, Call::Taken) {
+        if let Call_::Immediate(res) = mem::replace(&mut self.0, Call_::Taken) {
             res.map(Async::Ready)
         } else {
             unreachable!()
@@ -56,11 +58,11 @@ impl<T> Future for Call<T> {
 }
 
 pub fn from_oneshot<T>(oneshot: Oneshot<Result<T>>) -> Call<T> {
-    Call::Waiting(oneshot)
+    Call(Call_::Waiting(oneshot))
 }
 
 pub fn immediate<T>(res: Result<T>) -> Call<T> {
-    Call::Immediate(res)
+    Call(Call_::Immediate(res))
 }
 
 fn poll_for_result<T>(oneshot: &mut Oneshot<Result<T>>) -> Poll<T, Error> {
