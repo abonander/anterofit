@@ -51,7 +51,7 @@ fn main() {
 
 fn fetch_posts<T: TestService>(test_service: &T) {
     let posts = test_service.get_posts()
-        .here()
+        .exec_here()
         .unwrap();
 
     for post in posts.into_iter().take(3) {
