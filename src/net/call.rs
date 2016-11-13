@@ -3,7 +3,12 @@ use ::{Result, Error};
 
 use std::mem;
 
-#[must_use = "Response is being ignored"]
+/// A handle representing a pending result to an executed request.
+///
+/// May be polled for its status (compatible with `futures`) or blocked on.
+///
+/// Depending on the stage of the request, this may return immediately.
+#[must_use = "Result of request is unknown unless polled for"]
 //#[derive(Debug)]
 pub struct Call<T>(Call_<T>);
 
@@ -14,12 +19,28 @@ enum Call_<T> {
 }
 
 impl<T> Call<T> {
+    /// Ignore the result of this call.
+    ///
+    /// Equivalent to `let _ = self` but more friendly for method-chaining.
     pub fn ignore(self) {}
 
+    /// Ignore the result of this call, returning `Ok(())` so it can be used
+    /// in a `try!()`.
+    pub fn ignore_ok(self) -> Result<()> { Ok(()) }
+
+    /// Block on this call until a result is available.
     pub fn block(self) -> Result<T> {
         self.wait()
     }
 
+    /// Poll this call for a result.
+    ///
+    /// Convenience method for those that don't want to take on the complexity of `futures`.
+    ///
+    /// Returns `None` in two cases:
+    ///
+    /// * The result is not ready yet
+    /// * The result has already been taken
     pub fn check(&mut self) -> Option<Result<T>> {
         match self.poll() {
             Ok(Async::Ready(val)) => Some(Ok(val)),
@@ -29,8 +50,19 @@ impl<T> Call<T> {
         }
     }
 
+    /// Return `true` if a result is immediately available
+    /// (a call to `check()` will return the result).
     pub fn is_immediate(&self) -> bool {
         if let Call_::Immediate(_) = self.0 {
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Returns `true` if the result has already been taken.
+    pub fn result_taken(&self) -> bool {
+        if let Call_::Taken = self.0 {
             true
         } else {
             false
@@ -57,10 +89,12 @@ impl<T> Future for Call<T> {
     }
 }
 
+/// Implementation detail
 pub fn from_oneshot<T>(oneshot: Oneshot<Result<T>>) -> Call<T> {
     Call(Call_::Waiting(oneshot))
 }
 
+/// Implementation detail
 pub fn immediate<T>(res: Result<T>) -> Call<T> {
     Call(Call_::Immediate(res))
 }
