@@ -39,3 +39,60 @@ macro_rules! post {
         }
     );
 }
+
+/// Create a service method wrapping a PUT request.
+#[macro_export]
+macro_rules! put {
+    (
+        $(#[$meta:meta])*
+        fn $fnname:ident $(<$($generics:tt)*>)* (&self $($args:tt)*) -> $ret:ty {
+                $($body:tt)+
+        }
+    ) => (
+        $(#[$meta])*
+        fn $fnname $(<$($generics)*>)* (&self $($args)*) -> $crate::net::Request<Self, $ret> {
+            request_impl! {
+                self; $crate::net::Method::Put;
+                $($body)+
+            }
+        }
+    );
+}
+
+/// Create a service method wrapping a PATCH request.
+#[macro_export]
+macro_rules! patch {
+    (
+        $(#[$meta:meta])*
+        fn $fnname:ident $(<$($generics:tt)*>)* (&self $($args:tt)*) -> $ret:ty {
+                $($body:tt)+
+        }
+    ) => (
+        $(#[$meta])*
+        fn $fnname $(<$($generics)*>)* (&self $($args)*) -> $crate::net::Request<Self, $ret> {
+            request_impl! {
+                self; $crate::net::Method::Patch;
+                $($body)+
+            }
+        }
+    );
+}
+
+/// Create a service method wrapping a DELETE request.
+#[macro_export]
+macro_rules! delete {
+    (
+        $(#[$meta:meta])*
+        fn $fnname:ident $(<$($generics:tt)*>)* (&self $($args:tt)*) -> $ret:ty {
+                $($body:tt)+
+        }
+    ) => (
+        $(#[$meta])*
+        fn $fnname $(<$($generics)*>)* (&self $($args)*) -> $crate::net::Request<Self, $ret> {
+            request_impl! {
+                self; $crate::net::Method::Delete;
+                $($body)+
+            }
+        }
+    );
+}
