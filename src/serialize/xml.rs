@@ -19,7 +19,7 @@ impl super::Serializer for Serializer {
     }
 
     fn content_type(&self) -> Option<Mime> {
-        Some(mime::json())
+        Some(mime::xml())
     }
 }
 
@@ -31,7 +31,7 @@ impl super::Serializer for PrettySerializer {
     }
 
     fn content_type(&self) -> Option<Mime> {
-        Some(mime::json())
+        Some(mime::xml())
     }
 }
 
