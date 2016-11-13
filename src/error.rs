@@ -1,11 +1,21 @@
+//! Assorted error types and helper functions used by this crate.
+
+/// Error type from the `hyper` crate.
+///
+/// Associated with errors from connection issues or I/O issues with sockets.
 pub use hyper::Error as HyperError;
 
-pub use url::ParseError as UrlError;
-//pub use hyper::error::ParseError as UrlError;
+/// Error type from the `url` crate.
+///
+/// Associated with errors with URL string parsing or concatenation.
+pub use hyper::error::ParseError as UrlError;
+
+/// Error type from the `multipart` crate.
+///
+/// Associated with errors writing out `multipart/form-data` requests.
+pub type MultipartError = ::multipart::client::lazy::LazyIoError<'static>;
 
 use serialize::{NoSerializerError, NoDeserializerError};
-
-pub type MultipartError = ::multipart::client::lazy::LazyIoError<'static>;
 
 use std::io::Error as IoError;
 use std::error::Error as StdError;

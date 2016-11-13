@@ -13,7 +13,12 @@ pub use self::single::SingleThread;
 pub type DefaultExecutor = SingleThread;
 
 /// A trait describing a type which can execute tasks (in the background or otherwise).
+///
+/// It is up to the implementing type to decide how to handle panics.
 pub trait Executor: Send + Clone + 'static {
+    /// Execute `exec` on this executor.
+    ///
+    /// This may or may not block the current thread, but documenting this behavior is preferable.
     fn execute(&self, exec: Box<ExecBox>);
 }
 

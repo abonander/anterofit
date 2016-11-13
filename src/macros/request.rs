@@ -82,7 +82,7 @@ macro_rules! fields {
 /// Adding a stream field to the request will turn it into a `multipart/form-data` request
 /// and treat it as a file field.
 ///
-/// If given, `filename` and `content_type` keys will be supplied with the request.
+/// If given, the `filename` and `content_type` keys will be supplied with the request.
 /// `filename` can be a borrowed or owned string, and `content_type` should be a `Mime`
 /// value from the `mime` crate.
 #[macro_export]

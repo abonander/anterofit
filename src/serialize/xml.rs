@@ -14,6 +14,7 @@ use ::Result;
 
 pub use self::serde_xml::Error;
 
+/// Deserializer for pulling values from XML responses.
 pub struct Deserializer;
 
 impl super::Deserializer for Deserializer {

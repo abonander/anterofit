@@ -44,13 +44,14 @@ impl AdapterBuilder<DefaultExecutor, (), NoSerializer, NoDeserializer> {
 }
 
 impl<E, I, S, D> AdapterBuilder<E, I, S, D> {
-    /// Set the base url that this adapter will use for all requests.
+    /// Set the base URL that this adapter will use for all requests.
     ///
-    ///
+    /// If a base URL is not provided, then all service method URLs are assumed to be absolute.
     pub fn base_url(self, url: Url) -> Self {
         AdapterBuilder { base_url: Some(url), .. self }
     }
 
+    /// Set a new interceptor for the adapter.
     pub fn interceptor<I_>(self, interceptor: I_) -> AdapterBuilder<E, I_, S, D>
     where I_: Interceptor {
         AdapterBuilder {
@@ -63,6 +64,7 @@ impl<E, I, S, D> AdapterBuilder<E, I, S, D> {
         }
     }
 
+    /// Chain a new interceptor with the current one. They will be called in-order.
     pub fn chain_interceptor<I_>(self, next: I_) -> AdapterBuilder<E, Chain<I, I_>, S, D>
     where I_: Interceptor {
         AdapterBuilder {
@@ -75,6 +77,7 @@ impl<E, I, S, D> AdapterBuilder<E, I, S, D> {
         }
     }
 
+    /// Set a new executor for the adaptor.
     pub fn executor<E_>(self, executor: E_) -> AdapterBuilder<E_, I, S, D>
     where E: Executor {
         AdapterBuilder {

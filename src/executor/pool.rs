@@ -5,6 +5,9 @@ use self::threadpool::ThreadPool;
 use super::{ExecBox, Executor};
 
 /// An executor wrapped around a thread pool which can execute multiple tasks concurrently.
+///
+/// Requests which cause a panic on their worker thread will be lost but subsequent jobs
+/// will be completed as normally.
 #[derive(Clone)]
 pub struct Pooled {
     pool: ThreadPool,

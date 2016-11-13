@@ -1,3 +1,5 @@
+//! The nitty-gritty implementation details of Anterofit.
+
 pub use hyper::method::Method;
 
 pub use hyper::header::Headers;
