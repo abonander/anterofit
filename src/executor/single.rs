@@ -1,11 +1,10 @@
 use super::{ExecBox, Executor};
 
-use std::sync::{Arc, RwLock};
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::mpsc::{self, SendError};
-use std::thread;
+use std::sync::mpsc;
+use std::thread::{self, Builder};
 
 type Sender = mpsc::Sender<Box<ExecBox>>;
+type Receiver = mpsc::Receiver<Box<ExecBox>>;
 
 /// An executor which completes all requests on a single background thread.
 ///
@@ -14,99 +13,50 @@ type Sender = mpsc::Sender<Box<ExecBox>>;
 /// If a panic occurs on the worker thread, it will automatically be restarted.
 #[derive(Clone)]
 pub struct SingleThread {
-    master: Arc<Master>,
+    sender: Sender,
 }
 
 impl SingleThread {
     /// Construct a new executor, spawning a new background thread which will wait for tasks.
     pub fn new() -> Self {
+        let (tx, rx) = mpsc::channel::<Box<ExecBox>>();
+
+        spawn_thread(rx);
+
         SingleThread {
-            master: Arc::new(Master::new()),
+            sender: tx,
         }
-    }
-
-    fn sender(&self) -> Sender {
-        self.master.sender()
-    }
-
-    fn respawn(&self) {
-        self.master.respawn();
     }
 }
 
 impl Executor for SingleThread {
-    fn execute(&self, mut exec: Box<ExecBox>) {
-        while let Err(SendError(exec_)) = self.sender().send(exec) {
-            exec = exec_;
-            self.respawn();
-        }
+    fn execute(&self, exec: Box<ExecBox>) {
+        self.sender.send(exec)
+            .expect("Worker thread unavailable for an unknown reason.");
     }
 }
 
-struct Master {
-    sender: RwLock<SenderCell>,
-    respawning: AtomicBool,
-}
+struct Sentinel(Option<Receiver>);
 
-impl Master {
-    fn new() -> Self {
-        Master {
-            sender: RwLock::new(SenderCell(spawn_thread())),
-            respawning: AtomicBool::new(false),
-        }
-    }
-
-    fn sender(&self) -> Sender {
-        match self.sender.read() {
-            Ok(sender) => sender.get(),
-            Err(poisoned) => poisoned.into_inner().get(),
-        }
-    }
-
-    fn respawn(&self) {
-        // Lock with an atomic flag so we don't attempt to spawn more than one thread concurrently.
-        if !self.respawning.compare_and_swap(false, true, Ordering::AcqRel) {
-            let res = self.sender.write();
-
-            let tx = spawn_thread();
-
-            match res {
-                Ok(mut sender) => sender.set(tx),
-                Err(poisoned) => poisoned.into_inner().set(tx),
+impl Drop for Sentinel {
+    fn drop(&mut self) {
+        if thread::panicking() {
+            if let Some(rx) = self.0.take() {
+                spawn_thread(rx);
             }
-
-            self.respawning.store(false, Ordering::Release);
-        } else {
-            // If we didn't get to do the respawn, just block until the respawn is done.
-            let _ = self.sender.read();
         }
     }
 }
 
-fn spawn_thread() -> Sender {
-    let (tx, rx) = mpsc::channel::<Box<ExecBox>>();
+fn spawn_thread(rx: Receiver) {
+    let sentinel = Sentinel(Some(rx));
 
-    thread::spawn(move ||
-        for exec in rx {
-            exec.exec();
-        }
-    );
-
-    tx
-}
-
-struct SenderCell(Sender);
-
-// `Sender` is not `Sync` for various other reasons. `Sender::clone()` is safe to call concurrently
-// because it simply calls `Arc<_>::clone()`.
-unsafe impl Sync for SenderCell {}
-
-impl SenderCell {
-    fn get(&self) -> Sender {
-        self.0.clone()
-    }
-
-    fn set(&mut self, sender: Sender) {
-        self.0 = sender;
-    }
+    Builder::new()
+        .name("anterofit_worker".into())
+        .spawn(move ||
+            for exec in sentinel.0.as_ref().unwrap() {
+                exec.exec();
+            }
+        )
+        .expect("Failed to spawn worker thread");
 }
