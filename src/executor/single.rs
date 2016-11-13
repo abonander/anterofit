@@ -41,9 +41,7 @@ struct Sentinel(Option<Receiver>);
 impl Drop for Sentinel {
     fn drop(&mut self) {
         if thread::panicking() {
-            if let Some(rx) = self.0.take() {
-                spawn_thread(rx);
-            }
+            self.0.take().map(spawn_thread);
         }
     }
 }
