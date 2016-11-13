@@ -1,39 +1,17 @@
+//! Integration with the `serde_xml` crate providing XML serialization.
+//!
+//! **N.B.**: as of November 2016, only deserialization is supported by `serde_xml`.
+
 extern crate serde_xml;
 
-use mime::{self, Mime};
+use std::io::Read;
 
-use std::io::{Read, Write};
-
-use super::{Serialize, Deserialize};
+use super::Deserialize;
 
 use ::error::map_res;
 use ::Result;
 
 pub use self::serde_xml::Error;
-
-pub struct Serializer;
-
-impl super::Serializer for Serializer {
-    fn serialize<T: Serialize, W: Write>(&self, val: &T, write: &mut W) -> Result<()> {
-        map_res(self::serde_xml::to_writer(write, val))
-    }
-
-    fn content_type(&self) -> Option<Mime> {
-        Some(mime::xml())
-    }
-}
-
-pub struct PrettySerializer;
-
-impl super::Serializer for PrettySerializer {
-    fn serialize<T: Serialize, W: Write>(&self, val: &T, write: &mut W) -> Result<()> {
-        map_res(self::serde_xml::to_writer_pretty(write, val))
-    }
-
-    fn content_type(&self) -> Option<Mime> {
-        Some(mime::xml())
-    }
-}
 
 pub struct Deserializer;
 
