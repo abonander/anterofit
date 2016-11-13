@@ -1,5 +1,6 @@
 #![warn(missing_docs)]
 #![cfg_attr(feature = "nightly", feature(insert_str))]
+#![recursion_limit="100"]
 
 #[macro_use]
 extern crate quick_error;
