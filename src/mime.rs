@@ -19,7 +19,3 @@ pub fn formdata(boundary: &str) -> Mime {
 pub fn text_plain_utf8() -> Mime {
     mime!(Text/Plain; Charset=Utf8)
 }
-
-pub fn xml() -> Mime {
-    mime!(Application/Xml)
-}
