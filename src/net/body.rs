@@ -92,7 +92,7 @@ impl RawBody<Cursor<&'static str>> {
     ///
     /// Assumes `text/plain; charset=utf8` as the content-type.
     pub fn text(text: &'static str) -> Self {
-        RawBody::new(Cursor::new(text), mime::text_plain())
+        RawBody::new(Cursor::new(text), mime::text_plain_utf8())
     }
 }
 
