@@ -10,7 +10,7 @@ use mime::Mime;
 
 use net::body::Body;
 
-use net::intercept::{Interceptor, Chain};
+use net::intercept::{Interceptor, NoIntercept, Chain};
 
 use net::request::{Request, RequestHead, RequestBuilder};
 
@@ -30,13 +30,13 @@ pub struct AdapterBuilder<E, I, S, D> {
     deserializer: D,
 }
 
-impl AdapterBuilder<DefaultExecutor, (), NoSerializer, NoDeserializer> {
+impl AdapterBuilder<DefaultExecutor, NoIntercept, NoSerializer, NoDeserializer> {
     fn new() -> Self {
         AdapterBuilder {
             base_url: None,
             client: None,
             executor: DefaultExecutor::new(),
-            interceptor: (),
+            interceptor: NoIntercept,
             serializer: NoSerializer,
             deserializer: NoDeserializer,
         }
@@ -66,12 +66,12 @@ impl<E, I, S, D> AdapterBuilder<E, I, S, D> {
 
     /// Chain a new interceptor with the current one. They will be called in-order.
     pub fn chain_interceptor<I_>(self, next: I_) -> AdapterBuilder<E, Chain<I, I_>, S, D>
-    where I_: Interceptor {
+    where I: Interceptor, I_: Interceptor {
         AdapterBuilder {
             base_url: self.base_url,
             client: self.client,
             executor: self.executor,
-            interceptor: Chain::new(self.interceptor, next),
+            interceptor: self.interceptor.chain(next),
             serializer: self.serializer,
             deserializer: self.deserializer,
         }
@@ -154,9 +154,9 @@ pub struct Adapter<E, I, S, D> {
     inner: Arc<Adapter_<I, S, D>>,
 }
 
-impl Adapter<DefaultExecutor, (), NoSerializer, NoDeserializer> {
+impl Adapter<DefaultExecutor, NoIntercept, NoSerializer, NoDeserializer> {
     /// Start building an instance of `Adapter` using the default inner types.
-    pub fn builder() -> AdapterBuilder<DefaultExecutor, (), NoSerializer, NoDeserializer> {
+    pub fn builder() -> AdapterBuilder<DefaultExecutor, NoIntercept, NoSerializer, NoDeserializer> {
         AdapterBuilder::new()
     }
 }
