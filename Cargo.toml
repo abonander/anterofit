@@ -21,6 +21,7 @@ serde_derive = { version = "0.8", optional = true }
 
 [features]
 default = []
+all = ["json", "xml", "pool", "nightly"]
 json = ["serde_json"]
 xml = ["serde_xml"]
 pool = ["threadpool"]

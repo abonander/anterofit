@@ -16,7 +16,7 @@ impl Pooled {
     /// The threads will be named such that they can be easily identified as workers for this crate.
     pub fn new(num_threads: usize) -> Self {
         Pooled {
-            pool: ThreadPool::new_with_name("anterofit_worker", num_threads)
+            pool: ThreadPool::new_with_name("anterofit_worker".into(), num_threads)
         }
     }
 }

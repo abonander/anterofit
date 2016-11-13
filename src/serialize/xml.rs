@@ -18,6 +18,6 @@ pub struct Deserializer;
 
 impl super::Deserializer for Deserializer {
     fn deserialize<T: Deserialize, R: Read>(&self, read: &mut R) -> Result<T> {
-        map_res(self::serde_xml::from_reader(read))
+        map_res(self::serde_xml::de::from_iter(read.bytes()))
     }
 }
