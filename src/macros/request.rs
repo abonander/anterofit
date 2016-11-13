@@ -48,7 +48,7 @@ macro_rules! request_impl {
 ///
 /// This will overwrite any previous invocation of `body!()` or `fields!{}` for the current request.
 ///
-/// ##Panics
+/// ## Panics
 /// If the request is a GET request (cannot have a body).
 #[macro_export]
 macro_rules! body (
@@ -66,7 +66,7 @@ macro_rules! body (
 ///
 /// This will overwrite any previous invocation of `body!()` or `fields!{}` for the current request.
 ///
-/// ##Panics
+/// ## Panics
 /// If the request is a GET request (cannot have a body).
 #[macro_export]
 macro_rules! fields {
