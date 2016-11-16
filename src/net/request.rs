@@ -43,6 +43,11 @@ impl RequestHead {
         self
     }
 
+    pub fn headers(&mut self, headers: &Headers) {
+        self.headers.extend(headers.iter());
+        self
+    }
+
     pub fn append_url<A: AsRef<str>>(&mut self, append: A) -> &mut Self {
         *self.url.to_mut() += append.as_ref();
         self
@@ -53,13 +58,14 @@ impl RequestHead {
         self
     }
 
-    pub fn append_query(&mut self, query: &[(&fmt::Display, &fmt::Display)]) -> &mut Self {
+    pub fn append_query<Q, K, V>(&mut self, query: Q) -> &mut Self
+    where Q: IntoIterator<Item=(K, V)>, K: fmt::Display, V: fmt::Display {
         let mut query_out = FormUrlEncoded::new(mem::replace(&mut self.query, String::new()));
 
         let mut kbuf = String::new();
         let mut vbuf = String::new();
 
-        for &(key, val) in query {
+        for (key, val) in query {
             kbuf.clear();
             vbuf.clear();
 

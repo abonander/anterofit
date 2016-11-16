@@ -24,6 +24,8 @@ mod call;
 
 mod intercept;
 
+pub mod interceptor;
+
 pub mod request;
 
 pub mod response;
