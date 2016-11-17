@@ -43,7 +43,7 @@ impl RequestHead {
         self
     }
 
-    pub fn headers(&mut self, headers: &Headers) {
+    pub fn headers(&mut self, headers: &Headers) -> &mut Self {
         self.headers.extend(headers.iter());
         self
     }
