@@ -29,8 +29,8 @@ impl<T> Call<T> {
     pub fn ignore_ok(self) -> Result<()> { Ok(()) }
 
     /// Block on this call until a result is available.
-    pub fn block(self) -> Result<T> {
-        self.wait()
+    pub fn wait(self) -> Result<T> {
+        <Self as Future>::wait(self)
     }
 
     /// Poll this call for a result.

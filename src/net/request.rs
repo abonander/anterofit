@@ -178,21 +178,6 @@ impl RequestBuilder<EmptyFields> {
             body: EmptyFields,
         }
     }
-
-    /// Set a body to be sent with the request.
-    ///
-    /// ##Panics
-    /// If this is a GET request.
-    pub fn body<B>(self, body: B) -> RequestBuilder<B> {
-        if let Method::Get = self.head.method {
-            panic!("Cannot supply a body with GET requests!");
-        }
-
-        RequestBuilder {
-            head: self.head,
-            body: body,
-        }
-    }
 }
 
 impl<B> RequestBuilder<B> {
@@ -202,6 +187,21 @@ impl<B> RequestBuilder<B> {
     /// sent with the request.
     pub fn head_mut(&mut self) -> &mut RequestHead {
         &mut self.head
+    }
+
+    /// Set a body to be sent with the request.
+    ///
+    /// ##Panics
+    /// If this is a GET request.
+    pub fn body<B_>(self, body: B_) -> RequestBuilder<B_> {
+        if let Method::Get = self.head.method {
+            panic!("Cannot supply a body with GET requests!");
+        }
+
+        RequestBuilder {
+            head: self.head,
+            body: body,
+        }
     }
 }
 
@@ -236,7 +236,7 @@ impl<'a, A: 'a, T> Request<'a, A, T> {
     /// Does not require a valid adapter type.
     pub fn exec_here(self) -> Result<T> {
         self.exec.exec();
-        self.call.block()
+        self.call.wait()
     }
 
     /// Returns `true` if a result is immediately available (`exec_here()` will not block).
@@ -260,7 +260,7 @@ impl<'a, A: 'a, T> Request<'a, A, T> where A: RequestAdapter, T: FromResponse {
 
         let exec = Box::new(move ||
             tx.complete(
-                exec_request(&adpt_, builder)
+                exec_request(&adpt_, builder.head, builder.body)
                     .and_then(|response| T::from_response(&adpt_, response))
             )
         );
@@ -278,20 +278,50 @@ impl<'a, A: 'a, T> Request<'a, A, T> where A: RequestAdapter, T: FromResponse {
         self.adapter.execute(self.exec);
         self.call
     }
+
+    /// Add a callback to be executed with the request's return value, on the adapter's executor.
+    ///
+    /// ## Note
+    /// `on_complete` should not be long-running in order to not block other requests waiting
+    /// on the executor.
+    pub fn on_complete<F, R>(self, on_complete: F) -> Request<'a, A, R>
+    where F: FnOnce(T) -> R + Send + 'static, R: Send + 'static {
+        let Request {
+            adapter,
+            exec,
+            call,
+        } = self;
+
+        let (tx, rx) = ::futures::oneshot();
+
+        let new_exec = Box::new(move || {
+            exec.exec();
+
+            tx.complete(
+                call.wait().map(on_complete)
+            );
+        });
+
+        Request {
+            adapter: adapter,
+            exec: new_exec,
+            call: super::call::from_oneshot(rx),
+        }
+    }
 }
 
-fn exec_request<A, B>(adpt: &A, mut builder: RequestBuilder<B>) -> Result<Response>
+fn exec_request<A, B>(adpt: &A, mut head: RequestHead, body: B) -> Result<Response>
 where A: RequestAdapter, B: Body{
 
-    adpt.intercept(&mut builder.head);
+    adpt.intercept(&mut head);
 
-    let mut readable = try!(builder.body.into_readable(adpt));
+    let mut readable = try!(body.into_readable(adpt));
 
     if let Some(content_type) = readable.content_type {
-        builder.head.header(ContentType(content_type));
+        head.header(ContentType(content_type));
     }
 
-    let request = try!(adpt.request_builder(builder.head));
+    let request = try!(adpt.request_builder(head));
 
     request.body(&mut readable.readable).send().map_err(Into::into)
 }

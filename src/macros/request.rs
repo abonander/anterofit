@@ -4,6 +4,7 @@
 /// this returns a `Request<T>` which will immediate return the error when it is executed;
 /// no network or disk activity will occur.
 #[macro_export]
+#[doc(hidden)]
 macro_rules! try_request (
     ($adpt:expr, $try:expr) => (
         match $try {
@@ -34,7 +35,7 @@ macro_rules! request_impl {
             let builder = RequestBuilder::new($method, url!($($urlpart)+));
 
             $(
-                let builder = ($buildexpr)(builder);
+                let builder = try_request!(($buildexpr)(builder));
             )*
 
             $adapter.request(builder)
@@ -53,7 +54,7 @@ macro_rules! request_impl {
 #[macro_export]
 macro_rules! body (
     ($body:expr) => (
-        |req| req.body($body)
+        |req| Ok(req.body($body))
     );
 );
 
@@ -91,7 +92,7 @@ macro_rules! fields {
             fields = (field!($($tt)*)) (fields);
         )*;
 
-        |req| req.body(fields)
+        |req| Ok(req.body(fields))
     )
 }
 
@@ -154,8 +155,8 @@ macro_rules! file (
 #[macro_export]
 macro_rules! query {
     ($($key:expr => $val:expr),+) => (
-        |req| req.query(&[
+        |req| Ok(req.query(&[
             $(&$key as &::std::fmt::Display, &$val as &::std::fmt::Display),+
-        ])
+        ]))
     )
 }
