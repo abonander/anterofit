@@ -84,7 +84,7 @@ pub extern crate hyper;
 
 mod mime;
 
-pub mod macros;
+mod macros;
 
 pub mod net;
 pub mod serialize;
