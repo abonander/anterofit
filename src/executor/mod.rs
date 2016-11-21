@@ -1,3 +1,4 @@
+//! Types which can take a boxed closure and execute it, preferably in the background.
 
 #[cfg(feature = "pool")]
 mod pool;

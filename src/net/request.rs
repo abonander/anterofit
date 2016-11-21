@@ -160,7 +160,9 @@ impl RequestHead {
     }
 }
 
+/// A container for a request header and body.
 ///
+/// Used in the body of service methods to construct a request.
 pub struct RequestBuilder<B> {
     head: RequestHead,
     body: B,

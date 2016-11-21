@@ -72,7 +72,7 @@ macro_rules! post {
     );
 }
 
-/// Create a service method wrapping a PUT request.
+/// Create a service method wrapping a PUT request. Use like `post!{}`.
 #[macro_export]
 macro_rules! put {
     (
@@ -91,7 +91,7 @@ macro_rules! put {
     );
 }
 
-/// Create a service method wrapping a PATCH request.
+/// Create a service method wrapping a PATCH request. Use like `post!{}`.
 #[macro_export]
 macro_rules! patch {
     (
@@ -110,7 +110,7 @@ macro_rules! patch {
     );
 }
 
-/// Create a service method wrapping a DELETE request.
+/// Create a service method wrapping a DELETE request. Use like `get!{}`.
 #[macro_export]
 macro_rules! delete {
     (

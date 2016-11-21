@@ -42,9 +42,9 @@ macro_rules! request_impl {
     )
 }
 
-/// Serialize `$body` as the request body using the serializer provided in the adapter.
+/// Serialize the given value as the request body using the serializer provided in the adapter.
 ///
-/// If `$body` is intended to be read directly as the request body, wrap it with `RawBody`.
+/// If the value is intended to be read directly as the request body, wrap it with `RawBody`.
 ///
 /// This will overwrite any previous invocation of `body!()` or `fields!{}` for the current request.
 ///
