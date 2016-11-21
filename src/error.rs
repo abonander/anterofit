@@ -15,7 +15,7 @@ pub use hyper::error::ParseError as UrlError;
 /// Associated with errors writing out `multipart/form-data` requests.
 pub type MultipartError = ::multipart::client::lazy::LazyIoError<'static>;
 
-use serialize::{NoSerializerError, NoDeserializerError};
+use serialize::none::{NoSerializerError, NoDeserializerError};
 
 use std::io::Error as IoError;
 use std::error::Error as StdError;
@@ -43,17 +43,21 @@ quick_error! {
             cause(e)
             description(e.description())
         }
+
         /// Error type from the `serde_json` crate.
         ///
         /// Associated with JSON (de)serialization errors.
+        #[cfg_attr(not(feature = "json"), doc(hidden))]
         Json(e: ::serialize::json::Error) {
             from()
             cause(e)
             description(e.description())
         }
+
         /// Error type from the `serde_xml` crate.
         ///
         /// Associated with XML (de)serialization errors.
+        #[cfg_attr(not(feature = "xml"), doc(hidden))]
         Xml(e: ::serialize::xml::Error) {
             from()
             cause(e)

@@ -16,7 +16,8 @@ use net::request::{Request, RequestHead, RequestBuilder};
 
 use net::response::FromResponse;
 
-use serialize::{Serializer, Deserializer, NoSerializer, NoDeserializer, Serialize, Deserialize};
+use serialize::{Serializer, Deserializer, Serialize, Deserialize};
+use serialize::none::{NoDeserializer, NoSerializer};
 
 use ::Result;
 

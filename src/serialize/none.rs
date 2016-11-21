@@ -1,3 +1,5 @@
+//! No-op serializers which return errors when invoked.
+
 use std::error::Error;
 use std::fmt;
 use std::io::{Read, Write};
@@ -13,7 +15,7 @@ pub struct NoSerializer;
 
 /// Returned by `<NoSerializer as Serializer>::serialize()`.
 ///
-/// Usually means you tried to serialize a type as a request body without supplying
+/// This usually means you tried to serialize a type as a request body without supplying
 /// a serializer when building the adapter you used.
 #[derive(Debug)]
 pub struct NoSerializerError(());
@@ -45,7 +47,7 @@ pub struct NoDeserializer;
 
 /// Returned by `<NoDeserializer as Deerializer>::deserialize()`.
 ///
-/// Usually means you tried to deserialize a type from a response body without supplying
+/// This usually means you tried to deserialize a type from a response body without supplying
 /// a deserializer when building the adapter you used.
 #[derive(Debug)]
 pub struct NoDeserializerError(());

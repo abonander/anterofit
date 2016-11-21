@@ -8,9 +8,7 @@ use std::io::{Read, Write};
 
 use ::Result;
 
-mod none;
-
-pub use self::none::*;
+pub mod none;
 
 /// A trait describing types which can concurrently serialize other types into byte-streams.
 pub trait Serializer: Send + Sync + 'static {
@@ -31,12 +29,13 @@ pub trait Deserializer: Send + Sync + 'static {
 }
 
 macro_rules! modules {
-    ($($name:ident = $strname:expr),*) => (
+    ($($name:ident = $strname:expr),* ) => (
         $(
             #[cfg(feature = $strname)]
             pub mod $name;
 
             #[cfg(not(feature = $strname))]
+            #[doc(hidden)]
             pub mod $name {
                 /// Empty error type to fill the associated variant of `error::Error`.
                 quick_error! {
@@ -49,5 +48,6 @@ macro_rules! modules {
 }
 
 modules! {
-    json = "json", xml = "xml"
+    json = "json",
+    xml = "xml"
 }
