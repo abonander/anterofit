@@ -62,7 +62,7 @@ quick_error! {
         /// The `std::io::Error` type.
         ///
         /// Associated with miscellaneous errors dealing with I/O streams.
-        Io(e: IoError){
+        StdIo(e: IoError){
             from()
             cause(e)
             description(e.description())
