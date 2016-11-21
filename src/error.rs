@@ -109,7 +109,8 @@ quick_error! {
             description("The result has already been taken from this Call.")
         }
         /// This error type should never occur. This is only present to satisfy the type-checker.
-        __Never(e: Never) {
+        #[doc(hidden)]
+        Never(e: Never) {
             from()
             cause(e)
             description(e.description())
