@@ -1,3 +1,5 @@
+//! Types for constructing and issuing HTTP requests.
+
 use hyper::client::{Client, Response, RequestBuilder as NetRequestBuilder};
 use hyper::header::{Headers, Header, HeaderFormat, ContentType};
 use hyper::method::Method;

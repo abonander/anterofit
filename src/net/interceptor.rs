@@ -71,7 +71,7 @@ impl AppendQuery {
         AppendQuery(Vec::new())
     }
 
-    /// Add a query key-value pair to this interceptor, returning `self` for builder-style usage.
+    /// Add a query key-value pair to this interceptor. Returns `self` for builder-style usage.
     ///
     /// `key` and `val` can be any of: `String`, `&'static str` or `Cow<'static, str>`.
     pub fn pair<K, V>(mut self, key: K, val: V) -> Self
@@ -80,6 +80,9 @@ impl AppendQuery {
         self
     }
 
+    /// Add a query key-value pair to this interceptor. Returns `&mut self` for builder-style usage.
+    ///
+    /// `key` and `val` can be any of: `String`, `&'static str` or `Cow<'static, str>`.
     pub fn pair_mut<K, V>(&mut self, key: K, val: V) -> &mut Self
     where K: Into<StaticCowStr>, V: Into<StaticCowStr> {
         self.0.push((key.into(), val.into()));

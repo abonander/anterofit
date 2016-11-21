@@ -59,6 +59,8 @@ macro_rules! body (
 
 /// Serialize a series of key-value pairs as the request body (form-encode them).
 ///
+/// If passed a list of identifiers
+///
 /// By default, this will serialize to a `www-form-urlencoded` body.
 ///
 /// However, if you use the `file!()` or `stream!()` macros to define a
@@ -66,21 +68,41 @@ macro_rules! body (
 ///
 /// This will overwrite any previous invocation of `body!()` or `fields!{}` for the current request.
 ///
+/// ##Example
+/// ```notest
+/// fields! {
+///     // Use key-value pair
+///     "username" => username,
+///     // Stringify the identifier as the key, use its value as the value
+///     password
+/// }
+/// ```
+///
 /// ## Panics
 /// If the request is a GET request (cannot have a body).
 #[macro_export]
 macro_rules! fields {
-    ($($key:expr => $val:expr),*) => ({
+    ($($($tt:tt)*),*) => (
         use $crate::net::{AddField, EmptyFields};
 
         let fields = $crate::net::EmptyFields;
 
         $(
-            fields = $val.add_to($key, fields);
+            fields = (field!($($tt)*)) (fields);
         )*;
 
         |req| req.body(fields)
-    });
+    )
+}
+
+#[doc(hidden)]
+macro_rules! field {
+    ($key:expr => $val:expr) => (
+        move |fields| $crate::net::AddField::add_to($val, $key, fields)
+    );
+    ($keyval:ident) => (
+        move |fields| $crate::net::AddField::add_to($val, stringify!($key), fields)
+    )
 }
 
 /// A field value for anything that is `Read + Send + 'static`.

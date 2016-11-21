@@ -9,6 +9,7 @@ type PreparedFields = ::multipart::client::lazy::PreparedFields<'static>;
 
 use url::form_urlencoded::Serializer as FormUrlEncoder;
 
+use std::borrow::Borrow;
 use std::io::{self, Cursor, Read};
 use std::path::PathBuf;
 
@@ -17,7 +18,8 @@ use ::Result;
 /// The result type for `Body::into_readable()`.
 pub type ReadableResult<T> = Result<Readable<T>>;
 
-/// The result of serializing the request body; ready to be sent over the network.
+/// The result of serializing the request body, ready to be sent over the network.
+#[derive(Debug)]
 pub struct Readable<R: Read> {
     /// The inner `Read` impl which will be copied into the request body.
     pub readable: R,
@@ -71,6 +73,7 @@ impl<B: Serialize + Send + 'static> Body for B {
 
 /// A wrapper around a type that is intended to be read directly as the request body,
 /// instead of being serialized.
+#[derive(Debug)]
 pub struct RawBody<R: Read>(Readable<R>);
 
 impl<R: Read + Send + 'static> RawBody<R> {
@@ -90,19 +93,21 @@ impl<R: AsRef<[u8]> + Send + 'static> RawBody<Cursor<R>> {
 }
 
 impl RawBody<Cursor<String>> {
-    /// Wrap a `String` as a plain text body.
+    /// Convert the `ToString` value to a `String` and wrap it.
     ///
     /// Assumes `text/plain; charset=utf8` as the content-type.
-    pub fn text(text: String) -> Self {
-        RawBody::new(Cursor::new(text), mime::text_plain_utf8())
+    pub fn display<T: ToString>(text: &T) -> Self {
+        RawBody::text(text.to_string())
     }
 }
 
-impl RawBody<Cursor<&'static str>> {
-    /// Wrap an `&'static str` as a plain text body.
+impl<T: Borrow<str> + AsRef<[u8]> + Send + 'static> RawBody<Cursor<T>> {
+    /// Wrap anything `Send + 'static` that can deref to `str`
+    /// (`String`, `&'static str`, `Box<str>`, etc)
+    /// as a plain text body.
     ///
     /// Assumes `text/plain; charset=utf8` as the content-type.
-    pub fn text(text: &'static str) -> Self {
+    pub fn text(text: T) -> Self {
         RawBody::new(Cursor::new(text), mime::text_plain_utf8())
     }
 }
