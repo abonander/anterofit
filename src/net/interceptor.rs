@@ -89,6 +89,6 @@ impl AppendQuery {
 
 impl Interceptor for AppendQuery {
     fn intercept(&self, req: &mut RequestHead) {
-        req.append_query(self.0.iter().map(|&(ref k, ref v)| (k, v)));
+        req.query(self.0.iter());
     }
 }

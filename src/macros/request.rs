@@ -132,7 +132,7 @@ macro_rules! file (
 #[macro_export]
 macro_rules! query {
     ($($key:expr => $val:expr),+) => (
-        |req| req.append_query(&[
+        |req| req.query(&[
             $(&$key as &::std::fmt::Display, &$val as &::std::fmt::Display),+
         ])
     )
