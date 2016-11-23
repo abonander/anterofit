@@ -157,8 +157,3 @@ impl fmt::Display for Never {
 pub fn flatten_res<T, E>(res: Result<Result<T, Error>, E>) -> Result<T, Error> where Error: From<E> {
     try!(res)
 }
-
-/// Map a `Result` whose error type is convertible to `anterofit::error::Error`, to `anterofit::Result`.
-pub fn map_res<T, E>(res: Result<T, E>) -> Result<T, Error> where Error: From<E> {
-    res.map_err(|e| e.into())
-}

@@ -9,16 +9,15 @@ use std::io::Read;
 
 use super::Deserialize;
 
-use ::error::map_res;
-use ::Result;
+use serialize;
+use ::{Error, Result};
 
-pub use self::serde_xml::Error;
 
 /// Deserializer for pulling values from XML responses.
 pub struct Deserializer;
 
-impl super::Deserializer for Deserializer {
+impl serialize::Deserializer for Deserializer {
     fn deserialize<T: Deserialize, R: Read>(&self, read: &mut R) -> Result<T> {
-        map_res(self::serde_xml::de::from_iter(read.bytes()))
+        Error::map_deserialize(self::serde_xml::de::from_iter(read.bytes()))
     }
 }
