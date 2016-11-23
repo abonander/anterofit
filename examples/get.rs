@@ -1,19 +1,16 @@
-// N.B.: this requires nightly to build because of the `proc_macro` feature. However,
-// this is only necessary for the sake of brevity: on the stable and beta channels,
-// you can use `serde_codegen` and a build script to generate a `Deserialize` impl
-// as described here: https://serde.rs/codegen-stable.html.
-#![feature(proc_macro)]
+// This example assumes the `rustc-serialize` feature.
+//
+// If you are using the `serde` feature, use `#[derive(Deserialize)]`
+// and `serialize::serde::json::Deserializer` instead at the appropriate places.
 
 #[macro_use]
 extern crate anterofit;
 
-// If you get a "not found" error here, enable the `nightly` feature (nightly channel required)
-#[macro_use]
-extern crate serde_derive;
+extern crate rustc_serialize;
 
 use anterofit::*;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, RustcDecodable)]
 pub struct Post {
     pub userid: Option<u64>,
     pub id: u64,
@@ -42,8 +39,7 @@ fn main() {
 
     let adapter = Adapter::builder()
         .base_url(url)
-        // If you get a "not found" error from the compiler here, enable the `json` feature.
-        .deserialize(anterofit::serialize::json::Deserializer)
+        .deserialize(serialize::rustc::json::Deserializer)
         .build();
 
     fetch_posts(&adapter);

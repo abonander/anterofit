@@ -2,29 +2,26 @@
 //! 
 //! ##Example
 //! ```rust
-//! // N.B.: this requires nightly to build because of the `proc_macro` feature. However,
-//! // this is only necessary for the sake of brevity: on the stable and beta channels,
-//! // you can use `serde_codegen` and a build script to generate a `Deserialize` impl
-//! // as described here: https://serde.rs/codegen-stable.html.
-//! #![feature(proc_macro)]
-//! 
+//! // This example assumes the `rustc-serialize` feature.
+//! //
+//! // If you are using the `serde` feature, use `#[derive(Deserialize)]`
+//! // and `serialize::serde::json::Deserializer` instead at the appropriate places.
+//!
 //! #[macro_use]
 //! extern crate anterofit;
-//! 
-//! // If you get a "not found" error here, enable the `nightly` feature (nightly channel required)
-//! #[macro_use]
-//! extern crate serde_derive;
-//! 
+//!
+//! extern crate rustc_serialize;
+//!
 //! use anterofit::*;
-//! 
-//! #[derive(Debug, Deserialize)]
+//!
+//! #[derive(Debug, RustcDecodable)]
 //! pub struct Post {
 //!     pub userid: Option<u64>,
 //!     pub id: u64,
 //!     pub title: String,
 //!     pub body: String
 //! }
-//! 
+//!
 //! service! {
 //!     pub trait TestService {
 //!         get! {
@@ -32,7 +29,7 @@
 //!                 url = "/posts/{}", id
 //!             }
 //!         }
-//! 
+//!
 //!         get! {
 //!             fn get_posts(&self) -> Vec<Post> {
 //!                 url = "/posts"
@@ -40,24 +37,23 @@
 //!         }
 //!     }
 //! }
-//! 
+//!
 //! fn main() {
-//!     let url = Url::parse("https://jsonplaceholder.typicode.com").unwrap();
-//! 
+//!     let url = Url::parse("https://! jsonplaceholder.typicode.com").unwrap();
+//!
 //!     let adapter = Adapter::builder()
 //!         .base_url(url)
-//!         // If you get a "not found" error from the compiler here, enable the `json` feature.
-//!         .deserialize(anterofit::serialize::json::Deserializer)
+//!         .deserialize(serialize::rustc::json::Deserializer)
 //!         .build();
-//! 
+//!
 //!     fetch_posts(&adapter);
 //! }
-//! 
+//!
 //! fn fetch_posts<T: TestService>(test_service: &T) {
 //!     let posts = test_service.get_posts()
 //!         .exec_here()
 //!         .unwrap();
-//! 
+//!
 //!     for post in posts.into_iter().take(3) {
 //!         println!("{:?}", post);
 //!     }
@@ -76,7 +72,6 @@ extern crate futures;
 extern crate mime as mime_;
 
 extern crate multipart;
-extern crate serde;
 
 extern crate url;
 
@@ -87,6 +82,7 @@ mod mime;
 mod macros;
 
 pub mod net;
+
 pub mod serialize;
 
 pub mod executor;

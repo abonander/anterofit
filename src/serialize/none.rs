@@ -1,7 +1,5 @@
 //! No-op serializers which return errors when invoked.
 
-use std::error::Error;
-use std::fmt;
 use std::io::{Read, Write};
 
 use super::{Serializer, Deserializer, Serialize, Deserialize};
@@ -13,16 +11,9 @@ use ::Result;
 /// A no-op serializer which returns an error when attempting to use it.
 pub struct NoSerializer;
 
-/// Returned by `<NoSerializer as Serializer>::serialize()`.
-///
-/// This usually means you tried to serialize a type as a request body without supplying
-/// a serializer when building the adapter you used.
-#[derive(Debug)]
-pub struct NoSerializerError(());
-
 impl Serializer for NoSerializer {
     fn serialize<T: Serialize, W: Write>(&self, _: &T, _: &mut W) -> Result<()> {
-        Err(NoSerializerError(()).into())
+        Err(NoSerializeError::Serialize.into())
     }
 
     fn content_type(&self) -> Option<Mime> {
@@ -30,42 +21,26 @@ impl Serializer for NoSerializer {
     }
 }
 
-impl Error for NoSerializerError {
-    fn description(&self) -> &str {
-        "No serializer was provided in the RequestAdapter."
-    }
-}
-
-impl fmt::Display for NoSerializerError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.write_str(self.description())
-    }
-}
-
 /// A no-op deserializer which returns an error when attempting to use it.
 pub struct NoDeserializer;
 
-/// Returned by `<NoDeserializer as Deerializer>::deserialize()`.
-///
-/// This usually means you tried to deserialize a type from a response body without supplying
-/// a deserializer when building the adapter you used.
-#[derive(Debug)]
-pub struct NoDeserializerError(());
-
-impl Error for NoDeserializerError {
-    fn description(&self) -> &str {
-        "No deserializer was provided in the RequestAdapter."
-    }
-}
-
-impl fmt::Display for NoDeserializerError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.write_str(self.description())
-    }
-}
-
 impl Deserializer for NoDeserializer {
     fn deserialize<T: Deserialize, R: Read>(&self, _: &mut R) -> Result<T> {
-        Err(NoDeserializerError(()).into())
+        Err(NoSerializeError::Deserialize.into())
+    }
+}
+
+quick_error! {
+    /// Error returned by `NoSerializer` and `NoDeserializer`
+    #[derive(Debug)]
+    pub enum NoSerializeError {
+        /// "A request method requested serialization, but no serializer was provided"
+        Serialize {
+            description("A request method requested serialization, but no serializer was provided")
+        }
+        /// "A request method requested deserialization, but no deserializer was provided"
+        Deserialize {
+            description("A request method requested deserialization, but no deserializer was provided")
+        }
     }
 }

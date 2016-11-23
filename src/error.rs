@@ -15,7 +15,7 @@ pub use hyper::error::ParseError as UrlError;
 /// Associated with errors writing out `multipart/form-data` requests.
 pub type MultipartError = ::multipart::client::lazy::LazyIoError<'static>;
 
-use serialize::none::{NoSerializerError, NoDeserializerError};
+use serialize::none::NoSerializeError;
 
 use std::io::Error as IoError;
 use std::error::Error as StdError;
@@ -43,24 +43,15 @@ quick_error! {
             cause(e)
             description(e.description())
         }
-
-        /// Error type from the `serde_json` crate.
-        ///
-        /// Associated with JSON (de)serialization errors.
-        #[cfg_attr(not(feature = "json"), doc(hidden))]
-        Json(e: ::serialize::json::Error) {
-            from()
-            cause(e)
+        /// Errors that occur during serialization.
+        Serialize(e: Box<StdError + Send + 'static>) {
+            cause(&**e)
             description(e.description())
         }
 
-        /// Error type from the `serde_xml` crate.
-        ///
-        /// Associated with XML (de)serialization errors.
-        #[cfg_attr(not(feature = "xml"), doc(hidden))]
-        Xml(e: ::serialize::xml::Error) {
-            from()
-            cause(e)
+        /// Errors that occur during deserialization.
+        Deserialize(e: Box<StdError + Send + 'static>) {
+            cause(&**e)
             description(e.description())
         }
         /// The `std::io::Error` type.
@@ -79,24 +70,16 @@ quick_error! {
             cause(e)
             description(e.description())
         }
-        /// The no-serializer error type.
+        /// Returned when a service method requests (de)serialization, but no (de)serializer was provided.
         ///
-        /// Returned when a service method requests serialization, but no serializer was provided.
-        NoSerializer(e: NoSerializerError) {
-            from()
-            cause(e)
-            description(e.description())
-        }
-        /// The no-deserializer error type.
-        ///
-        /// Returned when a service method requests deserialization, but no deserializer was provided.
-        NoDeserializer(e: NoDeserializerError) {
+        /// Check the error description for which.
+        NoSerialize(e: NoSerializeError) {
             from()
             cause(e)
             description(e.description())
         }
         /// The miscellaneous error type, can be anything.
-        Other(e: Box<StdError + Send>){
+        Other(e: Box<StdError + Send + 'static>){
             from()
             cause(&**e)
             description(e.description())
@@ -119,6 +102,18 @@ quick_error! {
             cause(e)
             description(e.description())
         }
+    }
+}
+
+impl Error {
+    /// Map the result, boxing and wrapping the error as `Error::Serialize`
+    pub fn map_serialize<T, E: StdError + Send + 'static>(res: Result<T, E>) -> Result<T, Self> {
+        res.map_err(|e| Error::Serialize(Box::new(e)))
+    }
+
+    /// Map the result, boxing and wrapping the error as `Error::Deserialize`
+    pub fn map_deserialize<T, E: StdError + Send + 'static>(res: Result<T, E>) -> Result<T, Self> {
+        res.map_err(|e| Error::Deserialize(Box::new(e)))
     }
 }
 

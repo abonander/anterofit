@@ -1,6 +1,8 @@
 //! Types used to serialize and deserialize request and response bodies, respectively.
-
-pub use serde::{Serialize, Deserialize};
+//!
+//! ## Note
+//! If you get an error about duplicate types in this module, make sure you don't have both the
+//! `rustc-serialize` and `serde` features enabled
 
 use mime::Mime;
 
@@ -9,6 +11,26 @@ use std::io::{Read, Write};
 use ::Result;
 
 pub mod none;
+
+// Until we have a way to describe these features as mutually exclusive, this will
+// have to do.
+#[cfg(feature = "serde")]
+pub mod serde;
+
+#[cfg(feature = "serde")]
+pub use self::serde::*;
+
+#[cfg(feature = "rustc-serialize")]
+pub mod rustc;
+
+#[cfg(feature = "rustc-serialize")]
+pub use self::rustc::*;
+
+// It'd be nice to support both of these at once but unfortunately that's incredibly
+// unwieldy without HKT (trust me, I tried).
+
+// Fortunately the traits in both crates have the same signatures (at least for now)
+// so they can be used interchangeably.
 
 /// A trait describing types which can concurrently serialize other types into byte-streams.
 pub trait Serializer: Send + Sync + 'static {
@@ -26,28 +48,4 @@ pub trait Serializer: Send + Sync + 'static {
 pub trait Deserializer: Send + Sync + 'static {
     /// Deserialize `T` from `read`, returning the result.
     fn deserialize<T: Deserialize, R: Read>(&self, read: &mut R) -> Result<T>;
-}
-
-macro_rules! modules {
-    ($($name:ident = $strname:expr),* ) => (
-        $(
-            #[cfg(feature = $strname)]
-            pub mod $name;
-
-            #[cfg(not(feature = $strname))]
-            #[doc(hidden)]
-            pub mod $name {
-                /// Empty error type to fill the associated variant of `error::Error`.
-                quick_error! {
-                    #[derive(Debug)]
-                    pub enum Error {}
-                }
-            }
-        )*
-    )
-}
-
-modules! {
-    json = "json",
-    xml = "xml"
 }

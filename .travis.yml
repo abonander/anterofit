@@ -9,11 +9,9 @@ os:
   # - osx
 script:
   - if [ ${TRAVIS_RUST_VERSION} = "nightly" ]; then
-      cargo build --verbose --features all;
-      cargo test --verbose --features all;
-    else
-      cargo build --verbose;
+      cargo build --verbose --features "nightly";
+      cargo build --verbose --no-default-features --features "serde nightly"
     fi
-      # FIXME: when procedural macros stabilize
-      # cargo test --verbose;
-    #fi
+  - cargo build --verbose;
+  - cargo test --verbose;
+  - cargo build --verbose --no-default-features "serde pool"
