@@ -1,7 +1,7 @@
 //! Wrap REST calls with Rust traits.
 //! 
 //! ##Example
-//! ```rust
+//! ```rust,no_run
 //! // This example assumes the `rustc-serialize` feature.
 //! //
 //! // If you are using the `serde` feature, use `#[derive(Deserialize)]`
