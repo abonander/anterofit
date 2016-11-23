@@ -70,7 +70,7 @@ macro_rules! body (
 /// This will overwrite any previous invocation of `body!()` or `fields!{}` for the current request.
 ///
 /// ##Example
-/// ```notest
+/// ```rust,ignore
 /// fields! {
 ///     // Use key-value pair
 ///     "username" => username,
@@ -83,26 +83,27 @@ macro_rules! body (
 /// If the request is a GET request (cannot have a body).
 #[macro_export]
 macro_rules! fields {
-    ($($($tt:tt)*),*) => (
+    ($($key:expr $(=> $val:expr)*),*) => ({
         use $crate::net::{AddField, EmptyFields};
 
         let fields = $crate::net::EmptyFields;
 
         $(
-            fields = (field!($($tt)*)) (fields);
+            fields = (field!($key, $($val)*)) (fields);
         )*;
 
-        |req| Ok(req.body(fields))
-    )
+        move |req| Ok(req.body(fields))
+    })
 }
 
 #[doc(hidden)]
+#[macro_export]
 macro_rules! field {
-    ($key:expr => $val:expr) => (
+    ($key:expr, $val:expr) => (
         move |fields| $crate::net::AddField::add_to($val, $key, fields)
     );
-    ($keyval:ident) => (
-        move |fields| $crate::net::AddField::add_to($val, stringify!($key), fields)
+    ($keyval:expr, ) => (
+        move |fields| $crate::net::AddField::add_to($keyval, stringify!($keyval), fields)
     )
 }
 
