@@ -151,7 +151,7 @@ macro_rules! body_map {
 /// ## Overwrites Body
 /// Setting a new body will overwrite any previous body on the request.
 #[macro_export]
-macro_rules! body_map {
+macro_rules! body_map_eager {
     ($($key:expr => $val:expr),+) => ({
         let mut pairs = $crate::serialize::KeyValuePairs::new();
 
@@ -159,7 +159,7 @@ macro_rules! body_map {
             pairs.insert($key, $val);
         )+;
 
-        move |req| Ok($crate::net::RequestBuilder::body(req, pairs))
+        move |req| Ok($crate::net::RequestBuilder::body_eager(req, pairs))
     })
 }
 
