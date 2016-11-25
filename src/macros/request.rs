@@ -67,26 +67,28 @@ macro_rules! body_eager (
     );
 );
 
-/// Serialize a series of key-value pairs as the request body (form-encode them).
+/// Serialize a series of fields as the request body (form-encode them).
 ///
-/// If passed a list of identifiers
+/// Each field can be a key-value pair, or a single identifier. The key (field name) should be a
+/// string literal, and the value can be anything that is `Display`.
 ///
-/// By default, this will serialize to a `www-form-urlencoded` body.
+/// For a single identifier, the identifier will be stringified for the field name, and its
+/// value will become the field value:
 ///
-/// However, if you use the `path!()` or `stream!()` macros to define a
-/// value, it will transform the request to a `multipart/form-data` request.
-///
-/// This will overwrite any previous invocation of `body!()` or `fields!{}` for the current request.
-///
-/// ##Example
 /// ```rust,ignore
 /// fields! {
-///     // Use key-value pair
 ///     "username" => username,
-///     // Stringify the identifier as the key, use its value as the value
+///     // Equivalent to "password" => password
 ///     password
 /// }
 /// ```
+///
+/// By default, this will serialize to a `www-form-urlencoded` body.
+///
+/// However, if you use the `path!()` or `stream!()` macros as a value expression,
+/// it will transform the request to a `multipart/form-data` request.
+///
+/// This will overwrite any previous invocation of `body!()` or `fields!{}` for the current request.
 ///
 /// ## Panics
 /// If the request is a GET request (cannot have a body).
@@ -140,7 +142,6 @@ macro_rules! stream (
     );
 );
 
-
 /// A field value that resolves to a path on the filesystem.
 ///
 /// The value can be anything that implements `Into<PathBuf>`, such as `&Path` or `&str`.
@@ -149,7 +150,7 @@ macro_rules! stream (
 /// that this path points to.
 ///
 /// The filename and `Content-Type` header to be supplied with the field will be inferred from
-/// the file name and extension, respectably.
+/// the file name and extension, respectively.
 ///
 /// To supply these values yourself, and/or your own opened file handle, see the `stream!()` macro.
 #[macro_export]
