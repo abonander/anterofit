@@ -41,6 +41,8 @@ service! {
         fn new_post(&self, userid: u64, title: &str, body: &str) -> Post {
             POST("/posts/");
             // We use body_eager! so we can use borrowed values in the body.
+            // This serializes the body value immediately instead of waiting to serialize
+            // it on the executor.
             body_eager!(NewPost {
                 userid: userid,
                 title: title,
@@ -80,7 +82,7 @@ fn create_post<T: PostService>(post_service: &T) {
 }
 
 /// Fetch the top 3 posts in the database.
-// Service traits are object-safe, but you can't concatenate them arbitrarily.
+// Service traits are object-safe, but you can't concatenate them arbitrarily (language limitation).
 // If you use multiple services in the same scope, it might help clarify your intent
 // to coerce the same adapter reference into different service trait objects.
 fn fetch_posts(post_service: &PostService) {
