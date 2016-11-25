@@ -20,10 +20,10 @@ extern crate url;
 
 pub extern crate hyper;
 
-mod mime;
-
 #[macro_use]
 mod macros;
+
+pub mod mime;
 
 pub mod net;
 
@@ -37,17 +37,14 @@ pub use error::Error;
 
 pub use hyper::Url;
 
-pub use net::Adapter;
+pub use net::adapter::{Adapter, AbsAdapter};
 
 pub use net::body::RawBody;
+
+pub use net::request::Request;
 
 /// The result type for this crate; used frequently in public APIs.
 ///
 /// Recommended to be used as `anterofit::Result` to avoid confusing
 /// shadowing of `std::result::Result`.
 pub type Result<T> = ::std::result::Result<T, Error>;
-
-
-
-
-

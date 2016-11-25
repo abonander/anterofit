@@ -7,7 +7,11 @@
 
 extern crate rustc_serialize;
 
-use anterofit::*;
+// The minimum imports needed to get this example working.
+//
+// You can glob-import if you like, but know that it will shadow `Result`
+// which may cause some confusing type-mismatch errors.
+use anterofit::{Adapter, Url};
 
 #[derive(Debug, RustcDecodable)]
 struct Post {
