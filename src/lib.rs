@@ -1,4 +1,24 @@
 //! Wrap REST calls with Rust traits.
+//!
+//! ```rust,ignore
+//! service! {
+//!     pub trait MyService {
+//!         /// Get the version of this API.
+//!         fn api_version(&self) -> String {
+//!             GET("/version")
+//!         }
+//!
+//!         /// Register a user with the API.
+//!         fn register(&self, username: &str, password: &str) {
+//!             POST("/register");
+//!             fields! {
+//!                 username, password
+//!             }
+//!         }
+//!     }
+//! }
+//! ```
+
 #![warn(missing_docs)]
 #![cfg_attr(feature = "nightly", feature(insert_str))]
 #![recursion_limit="100"]
