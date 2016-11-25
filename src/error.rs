@@ -19,7 +19,6 @@ use serialize::none::NoSerializeError;
 
 use std::io::Error as IoError;
 use std::error::Error as StdError;
-use std::fmt;
 
 quick_error! {
     /// The error type for this crate.
@@ -95,13 +94,6 @@ quick_error! {
         ResultTaken {
             description("The result has already been taken from this Call.")
         }
-        /// This error type should never occur. This is only present to satisfy the type-checker.
-        #[doc(hidden)]
-        Never(e: Never) {
-            from()
-            cause(e)
-            description(e.description())
-        }
     }
 }
 
@@ -114,42 +106,6 @@ impl Error {
     /// Map the result, boxing and wrapping the error as `Error::Deserialize`
     pub fn map_deserialize<T, E: StdError + Send + 'static>(res: Result<T, E>) -> Result<T, Self> {
         res.map_err(|e| Error::Deserialize(Box::new(e)))
-    }
-}
-
-macro_rules! never (
-    ($self_:expr) => (
-        unreachable!(
-        "Method called on `anterofit::error::Never`, which simply shouldn't be possible.
-        Sounds like you probably screwed up somewhere with `unsafe`. `&self`: {:p}", $self_
-        );
-    )
-);
-
-/// An error type which cannot be instantiated.
-///
-/// Used in methods which are bound by API contract to return `Result` but which are actually infallible.
-pub enum Never {}
-
-impl StdError for Never {
-    fn description(&self) -> &str {
-        never!(self);
-    }
-
-    fn cause(&self) -> Option<&StdError> {
-        never!(self);
-    }
-}
-
-impl fmt::Debug for Never {
-    fn fmt(&self, _: &mut fmt::Formatter) -> fmt::Result {
-        never!(self);
-    }
-}
-
-impl fmt::Display for Never {
-    fn fmt(&self, _: &mut fmt::Formatter) -> fmt::Result {
-        never!(self);
     }
 }
 

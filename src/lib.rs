@@ -34,7 +34,6 @@ pub mod executor;
 pub mod error;
 
 pub use error::Error;
-pub use error::Never as NeverError;
 
 pub use hyper::Url;
 
