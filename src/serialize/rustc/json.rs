@@ -10,6 +10,7 @@ use std::io::{self, Read, Write};
 use std::fmt;
 
 /// Compact-format JSON serializer.
+#[derive(Clone, Debug, Default)]
 pub struct Serializer;
 
 impl ::serialize::Serializer for Serializer {
@@ -31,17 +32,24 @@ impl ::serialize::Serializer for Serializer {
 }
 
 /// Pretty-printing JSON serializer with configurable indent.
-pub struct PrettySerializer(Option<u32>);
+#[derive(Clone, Debug, Default)]
+pub struct PrettySerializer {
+    indent: Option<u32>
+}
 
 impl PrettySerializer {
     /// Create a new pretty-printer with the default indent style.
     pub fn new() -> Self {
-        PrettySerializer(None)
+        PrettySerializer {
+            indent: None
+        }
     }
 
     /// Create a new pretty-printer which indents by the given number of spaces each level.
     pub fn with_indent(num_spaces: u32) -> Self {
-        PrettySerializer(Some(num_spaces))
+        PrettySerializer {
+            indent: Some(num_spaces)
+        }
     }
 }
 
@@ -52,7 +60,7 @@ impl ::serialize::Serializer for PrettySerializer {
         {
             let mut encoder = Encoder::new_pretty(&mut adapter);
 
-            if let Some(num_spaces) = self.0 {
+            if let Some(num_spaces) = self.indent {
                 encoder.set_indent(num_spaces)
                     .expect("Make sure the line above this is `new_pretty()`");
             }
@@ -105,6 +113,7 @@ impl<'a, W: Write + 'a> fmt::Write for FmtAdapter<'a, W> {
 }
 
 /// JSON deserializer.
+#[derive(Clone, Debug, Default)]
 pub struct Deserializer;
 
 impl ::serialize::Deserializer for Deserializer {

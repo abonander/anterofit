@@ -14,6 +14,7 @@ use ::{Error, Result};
 
 
 /// Deserializer for pulling values from XML responses.
+#[derive(Clone, Debug, Default)]
 pub struct Deserializer;
 
 impl serialize::Deserializer for Deserializer {

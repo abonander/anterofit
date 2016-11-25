@@ -135,6 +135,17 @@ impl<E, I, S, D> AdapterBuilder<E, I, S, D> {
     }
 }
 
+#[cfg(any(feature = "rustc-serialize", feature = "serde-json"))]
+impl<E, I, S, D> AdapterBuilder<E, I, S, D> {
+    /// Convenience method for using JSON serialization.
+    ///
+    /// Enabled with either the `rust-serialize` feature or the `serde-json` feature.
+    pub fn serialize_json(self) -> AdapterBuilder<E, I, ::serialize::json::Serializer, ::serialize::json::Deserializer> {
+        self.serializer(::serialize::json::Serializer)
+            .deserializer(::serialize::json::Deserializer)
+    }
+}
+
 impl<E, I, S, D> AdapterBuilder<E, I, S, D>
 where E: Executor, I: Interceptor, S: Serializer, D: Deserializer {
 
@@ -249,20 +260,21 @@ where E: Executor, I: Interceptor, S: Serializer, D: Deserializer {
     }
 }
 
+/// A `RequestAdapter` with all the methods left unimplemented.
 pub const NOOP: &'static RequestAdapter = &NoopAdapter;
 
 struct NoopAdapter;
 
 impl RequestAdapter for NoopAdapter {
-    fn intercept(&self, head: &mut RequestHead) {
+    fn intercept(&self, _: &mut RequestHead) {
         unimplemented!()
     }
 
-    fn execute(&self, exec: Box<ExecBox>) {
+    fn execute(&self, _: Box<ExecBox>) {
         unimplemented!()
     }
 
-    fn request_builder(&self, head: RequestHead) -> Result<NetRequestBuilder> {
+    fn request_builder(&self, _: RequestHead) -> Result<NetRequestBuilder> {
         unimplemented!()
     }
 }

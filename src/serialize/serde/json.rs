@@ -12,6 +12,7 @@ use serialize;
 use ::{Error, Result};
 
 /// Serializer for JSON request bodies with compact output.
+#[derive(Clone, Debug, Default)]
 pub struct Serializer;
 
 impl serialize::Serializer for Serializer {
@@ -26,6 +27,7 @@ impl serialize::Serializer for Serializer {
 }
 
 /// Serializer for JSON request bodies which pretty-prints its output.
+#[derive(Clone, Debug, Default)]
 pub struct PrettySerializer;
 
 impl serialize::Serializer for PrettySerializer {
@@ -39,6 +41,7 @@ impl serialize::Serializer for PrettySerializer {
 }
 
 /// Deserializer for pulling values from JSON response bodies.
+#[derive(Clone, Debug, Default)]
 pub struct Deserializer;
 
 impl serialize::Deserializer for Deserializer {
