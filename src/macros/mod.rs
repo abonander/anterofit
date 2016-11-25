@@ -36,7 +36,7 @@ macro_rules! service {
         trait $servicenm:ident {
             $(
                 $(#[$meta:meta])*
-                fn $fnname:ident $(<$($generics:tt)*>)* (&self $($args:tt)*) -> $ret:ty
+                fn $fnname:ident $(<$($generics:tt)*>)* (&self $($args:tt)*) $(-> $ret:ty)*
                 $(where $($whereclause:tt)+)* {
                     $($body:tt)+
                 }
@@ -46,7 +46,7 @@ macro_rules! service {
         trait $servicenm {
             $(
                 $(#[$meta])*
-                fn $fnname $(<$($generics)*>)* (&self $($args)*) -> $crate::net::Request<$ret>
+                fn $fnname $(<$($generics)*>)* (&self $($args)*) -> $crate::net::Request<$($ret)*>
                 $(where $($whereclause)+)*;
             )*
         }
@@ -54,7 +54,7 @@ macro_rules! service {
         impl<T: $crate::net::AbsAdapter> $servicenm for T {
             $(
                 $(#[$meta])*
-                fn $fnname $(<$($generics)*>)* (&self $($args)*) -> $crate::net::Request<$ret>
+                fn $fnname $(<$($generics)*>)* (&self $($args)*) -> $crate::net::Request<$($ret)*>
                 $(where $($whereclause)+)* {
                     request_impl! {
                         self; $($body)+
@@ -67,7 +67,7 @@ macro_rules! service {
         pub trait $servicenm:ident {
             $(
                 $(#[$meta:meta])*
-                fn $fnname:ident $(<$($generics:tt)*>)* (&self $($args:tt)*) -> $ret:ty
+                fn $fnname:ident $(<$($generics:tt)*>)* (&self $($args:tt)*) $(-> $ret:ty)*
                 $(where $($whereclause:tt)+)* {
                     $($body:tt)+
                 }
@@ -77,7 +77,7 @@ macro_rules! service {
         pub trait $servicenm {
             $(
                 $(#[$meta])*
-                fn $fnname $(<$($generics)*>)* (&self $($args)*) -> $crate::net::Request<$ret>
+                fn $fnname $(<$($generics)*>)* (&self $($args)*) -> $crate::net::Request<$($ret)*>
                 $(where $($whereclause)+)*;
             )*
         }
@@ -85,7 +85,7 @@ macro_rules! service {
         impl<T: $crate::net::AbsAdapter> $servicenm for T {
             $(
                 $(#[$meta])*
-                fn $fnname $(<$($generics)*>)* (&self $($args)*) -> $crate::net::Request<$ret>
+                fn $fnname $(<$($generics)*>)* (&self $($args)*) -> $crate::net::Request<$($ret)*>
                 $(where $($whereclause)+)* {
                     request_impl! {
                         self; $($body)+

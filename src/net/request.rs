@@ -263,7 +263,7 @@ impl<'a, A, B> RequestBuilder<'a, A, B> where A: AbsAdapter {
 /// If an error occurred during initialization of the request, it will be immediately
 /// returned when the request is executed; no network or disk activity will occur.
 #[must_use = "Request has not been sent yet"]
-pub struct Request<'a, T> {
+pub struct Request<'a, T = ()> {
     adapter: &'a ObjSafeAdapter,
     exec: Box<ExecBox>,
     call: Call<T>,
