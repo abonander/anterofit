@@ -68,7 +68,9 @@ fn main() {
 fn create_post<T: PostService>(post_service: &T) {
     let post = post_service.new_post(42, "Hello", "World!")
         // If you don't want to block, the return value of exec() can be used as a Future
-        // to poll for the result.
+        // to poll for the result. However, it does shadow a couple methods of Future
+        // so that you don't have to import the trait to use them.
+        // See the docs of Call for more info.
         .exec().wait()
         .unwrap();
 
