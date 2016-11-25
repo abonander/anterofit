@@ -4,7 +4,7 @@ pub use hyper::method::Method;
 
 pub use hyper::header::Headers;
 
-pub use self::adapter::{Adapter, AbsAdapter};
+pub use self::adapter::{Adapter, AbsAdapter, AdapterBuilder};
 
 pub use self::intercept::{Interceptor, Chain};
 

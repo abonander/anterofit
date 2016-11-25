@@ -38,7 +38,7 @@ impl AdapterBuilder<DefaultExecutor, NoIntercept, NoSerializer, NoDeserializer> 
 }
 
 impl<E, I, S, D> AdapterBuilder<E, I, S, D> {
-    /// Set the base URL that this adapter will use for all requests.
+    /// Set the base URL that the adapter will use for all requests.
     ///
     /// If a base URL is not provided, then all service method URLs are assumed to be absolute.
     pub fn base_url(self, url: Url) -> Self {
@@ -58,7 +58,7 @@ impl<E, I, S, D> AdapterBuilder<E, I, S, D> {
         }
     }
 
-    /// Box this adapter's `Interceptor`.
+    /// Box the adapter's `Interceptor`.
     pub fn box_interceptor(self) -> AdapterBuilder<E, Box<Interceptor>, S, D>
     where I: Interceptor {
         // Necessary to force coercion to trait object
@@ -100,7 +100,7 @@ impl<E, I, S, D> AdapterBuilder<E, I, S, D> {
         }
     }
 
-    /// Set a new `Serializer` impl for this adapter.
+    /// Set a new `Serializer` impl for the adapter.
     pub fn serializer<S_>(self, serialize: S_) -> AdapterBuilder<E, I, S_, D>
     where S_: Serializer {
         AdapterBuilder {
@@ -113,7 +113,7 @@ impl<E, I, S, D> AdapterBuilder<E, I, S, D> {
         }
     }
 
-    /// Set a new `Deserializer` impl for this adapter.
+    /// Set a new `Deserializer` impl for the adapter.
     pub fn deserializer<D_>(self, deserialize: D_) -> AdapterBuilder<E, I, S, D_>
     where D_: Deserializer {
         AdapterBuilder {
@@ -126,7 +126,7 @@ impl<E, I, S, D> AdapterBuilder<E, I, S, D> {
         }
     }
 
-    /// Set a `hyper::Client` instance to use with this adapter.
+    /// Set a `hyper::Client` instance to use with the adapter.
     ///
     /// If not supplied, a default instance will be constructed.
     pub fn client(mut self, client: Client) -> Self {
