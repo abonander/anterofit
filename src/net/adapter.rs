@@ -58,6 +58,22 @@ impl<E, I, S, D> AdapterBuilder<E, I, S, D> {
         }
     }
 
+    /// Box this adapter's `Interceptor`.
+    pub fn box_interceptor(self) -> AdapterBuilder<E, Box<Interceptor>, S, D>
+    where I: Interceptor {
+        // Necessary to force coercion to trait object
+        let boxed: Box<Interceptor> = Box::new(self.interceptor);
+
+        AdapterBuilder {
+            base_url: self.base_url,
+            client: self.client,
+            executor: self.executor,
+            interceptor: boxed,
+            serializer: self.serializer,
+            deserializer: self.deserializer,
+        }
+    }
+
     /// Chain a new interceptor with the current one. They will be called in-order.
     pub fn chain_interceptor<I_>(self, next: I_) -> AdapterBuilder<E, Chain<I, I_>, S, D>
     where I: Interceptor, I_: Interceptor {
@@ -85,7 +101,7 @@ impl<E, I, S, D> AdapterBuilder<E, I, S, D> {
     }
 
     /// Set a new `Serializer` impl for this adapter.
-    pub fn serialize<S_>(self, serialize: S_) -> AdapterBuilder<E, I, S_, D>
+    pub fn serializer<S_>(self, serialize: S_) -> AdapterBuilder<E, I, S_, D>
     where S_: Serializer {
         AdapterBuilder {
             base_url: self.base_url,
@@ -98,7 +114,7 @@ impl<E, I, S, D> AdapterBuilder<E, I, S, D> {
     }
 
     /// Set a new `Deserializer` impl for this adapter.
-    pub fn deserialize<D_>(self, deserialize: D_) -> AdapterBuilder<E, I, S, D_>
+    pub fn deserializer<D_>(self, deserialize: D_) -> AdapterBuilder<E, I, S, D_>
     where D_: Deserializer {
         AdapterBuilder {
             base_url: self.base_url,

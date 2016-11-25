@@ -33,7 +33,7 @@ fn main() {
 
     let adapter = Adapter::builder()
         .base_url(url)
-        .deserialize(serialize::rustc::json::Deserializer)
+        .deserializer(serialize::rustc::json::Deserializer)
         .build();
 
     fetch_posts(&adapter);
