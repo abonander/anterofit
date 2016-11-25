@@ -7,11 +7,9 @@ use executor::{DefaultExecutor, Executor, ExecBox};
 
 use net::intercept::{Interceptor, NoIntercept, Chain};
 
-use net::request::{Request, RequestHead, RequestBuilder};
+use net::request::RequestHead;
 
-use net::response::FromResponse;
-
-use serialize::{Serializer, Deserializer, Serialize, Deserialize};
+use serialize::{Serializer, Deserializer};
 use serialize::none::{NoDeserializer, NoSerializer};
 
 use ::Result;
@@ -175,39 +173,40 @@ struct Adapter_<I, S, D> {
     deserializer: D,
 }
 
-/// A trait describing an adapter which can be used to execute a request.
+/// A `RequestAdapter` that is cloneable and provides access to a serializer and deserializer.
 ///
-/// Mainly used to simplify generics.
-pub trait RequestAdapter: Send + Clone + 'static {
+/// Not object-safe.
+pub trait SerializeAdapter: RequestAdapter + Clone {
     /// The adapter's serializer type.
     type Serializer: Serializer;
     /// The adapter's deserializer type.
     type Deserializer: Deserializer;
-
-    /// Pass `head` to this adapter's interceptor for modification.
-    fn intercept(&self, head: &mut RequestHead);
-
-    /// Execute `exec` on this adapter's executor.
-    fn execute(&self, exec: Box<ExecBox>);
 
     /// Get a reference to the adapter's `Serializer`.
     fn serializer(&self) -> &Self::Serializer;
 
     /// Get a reference to the adapter's `Deserializer`.
     fn deserializer(&self) -> &Self::Deserializer;
+}
+
+/// A trait describing an adapter which can be used to execute a request.
+///
+/// Mainly used to simplify generics. Object-safe.
+pub trait RequestAdapter: Send + 'static {
+    /// Pass `head` to this adapter's interceptor for modification.
+    fn intercept(&self, head: &mut RequestHead);
+
+    /// Execute `exec` on this adapter's executor.
+    fn execute(&self, exec: Box<ExecBox>);
 
     /// Initialize a `hyper::client::RequestBuilder` from `head`.
     fn request_builder(&self, head: RequestHead) -> Result<NetRequestBuilder>;
 }
 
-impl<E, I, S, D> RequestAdapter for Adapter<E, I, S, D>
+impl<E, I, S, D> SerializeAdapter for Adapter<E, I, S, D>
 where E: Executor, I: Interceptor, S: Serializer, D: Deserializer {
     type Serializer = S;
     type Deserializer = D;
-
-    fn execute(&self, exec: Box<ExecBox>) {
-        self.executor.execute(exec)
-    }
 
     fn serializer(&self) -> &S {
         &self.inner.serializer
@@ -215,6 +214,14 @@ where E: Executor, I: Interceptor, S: Serializer, D: Deserializer {
 
     fn deserializer(&self) -> &D {
         &self.inner.deserializer
+    }
+}
+
+impl<E, I, S, D> RequestAdapter for Adapter<E, I, S, D>
+where E: Executor, I: Interceptor, S: Serializer, D: Deserializer {
+
+    fn execute(&self, exec: Box<ExecBox>) {
+        self.executor.execute(exec)
     }
 
     fn intercept(&self, head: &mut RequestHead) {

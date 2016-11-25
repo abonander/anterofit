@@ -24,17 +24,11 @@
 //!
 //! service! {
 //!     pub trait TestService {
-//!         get! {
-//!             fn get_post(&self, id: u64) -> Post {
-//!                 url("/posts/{}", id)
-//!             }
-//!         }
+//!         #[GET("/posts/{}", id)]
+//!         fn get_post(&self, id: u64) -> Post;
 //!
-//!         get! {
-//!             fn get_posts(&self) -> Vec<Post> {
-//!                 url("/posts")
-//!             }
-//!         }
+//!         #[GET("/posts")]
+//!         fn get_posts(&self) -> Vec<Post>;
 //!     }
 //! }
 //!

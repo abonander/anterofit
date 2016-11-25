@@ -12,17 +12,15 @@ use std::borrow::{Borrow, Cow};
 use std::fmt::{self, Write};
 use std::mem;
 
-use net::adapter::RequestAdapter;
+use net::adapter::{RequestAdapter, SerializeAdapter};
 
-use net::body::{self, Body, EmptyFields, EagerBody, RawBody};
+use net::body::{Body, EmptyFields, EagerBody, RawBody};
 
 use net::call::Call;
 
 use net::response::FromResponse;
 
 use executor::ExecBox;
-
-use serialize::Serialize;
 
 use ::Result;
 
@@ -218,7 +216,7 @@ impl<'a, A, B> RequestBuilder<'a, A, B> {
         }
     }
 }
-impl<'a, A, B> RequestBuilder<'a, A, B> where A: RequestAdapter {
+impl<'a, A, B> RequestBuilder<'a, A, B> where A: SerializeAdapter {
     /// Immediately serialize `body` on the current thread and set the result as the body
     /// of this request.
     ///
@@ -265,13 +263,13 @@ impl<'a, A, B> RequestBuilder<'a, A, B> where A: RequestAdapter {
 /// If an error occurred during initialization of the request, it will be immediately
 /// returned when the request is executed; no network or disk activity will occur.
 #[must_use = "Request has not been sent yet"]
-pub struct Request<'a, A: 'a, T> {
+pub struct Request<'a, A: ?Sized + 'a, T> {
     adapter: &'a A,
     exec: Box<ExecBox>,
     call: Call<T>,
 }
 
-impl<'a, A, T> Request<'a, A, T> {
+impl<'a, A: ?Sized, T> Request<'a, A, T> {
     /// Construct a `Result` wrapping an immediate return of `res`.
     ///
     /// No network or disk activity will occur when this request is executed.
@@ -297,7 +295,7 @@ impl<'a, A, T> Request<'a, A, T> {
     }
 }
 
-impl<'a, A, T> Request<'a, A, T> where A: RequestAdapter, T: FromResponse {
+impl<'a, A: ?Sized, T> Request<'a, A, T> where A: RequestAdapter {
     /// Execute this request on the adapter's executor, returning a type which can
     /// be polled for the result.
     pub fn exec(self) -> Call<T> {
@@ -311,7 +309,7 @@ impl<'a, A, T> Request<'a, A, T> where A: RequestAdapter, T: FromResponse {
     /// `on_complete` should not be long-running in order to not block other requests waiting
     /// on the executor.
     pub fn on_complete<F, R>(self, on_complete: F) -> Request<'a, A, R>
-    where F: FnOnce(T) -> R + Send + 'static, R: Send + 'static {
+    where F: FnOnce(T) -> R + Send + 'static, R: Send + 'static, T: Send + 'static {
         let Request {
             adapter,
             exec,
@@ -337,7 +335,7 @@ impl<'a, A, T> Request<'a, A, T> where A: RequestAdapter, T: FromResponse {
 }
 
 fn exec_request<A, B>(adpt: &A, mut head: RequestHead, body: B) -> Result<Response>
-where A: RequestAdapter, B: Body {
+where A: SerializeAdapter, B: Body {
 
     adpt.intercept(&mut head);
 

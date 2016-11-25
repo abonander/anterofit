@@ -2,7 +2,7 @@
 
 use serialize::{Serialize, Serializer};
 
-use net::adapter::RequestAdapter;
+use net::adapter::SerializeAdapter;
 
 use mime::{self, Mime};
 
@@ -57,13 +57,13 @@ pub trait Body: Send + 'static {
 
     /// Serialize `self` with the given adapter into a request body.
     fn into_readable<A>(self, adapter: &A) -> ReadableResult<Self::Readable>
-    where A: RequestAdapter;
+    where A: SerializeAdapter;
 }
 
 impl<B: EagerBody + Send + 'static> Body for B {
     type Readable = <B as EagerBody>::Readable;
 
-    fn into_readable<A>(self, adapter: &A) -> ReadableResult<Self::Readable> where A: RequestAdapter {
+    fn into_readable<A>(self, adapter: &A) -> ReadableResult<Self::Readable> where A: SerializeAdapter {
         <B as EagerBody>::into_readable(self, adapter)
     }
 }
@@ -77,14 +77,14 @@ pub trait EagerBody {
 
     /// Serialize `self` with the given adapter into a request body.
     fn into_readable<A>(self, adapter: &A) -> ReadableResult<Self::Readable>
-        where A: RequestAdapter;
+        where A: SerializeAdapter;
 }
 
 impl<B: Serialize> EagerBody for B {
     type Readable = Cursor<Vec<u8>>;
 
     fn into_readable<A>(self, adapter: &A) -> ReadableResult<Self::Readable>
-        where A: RequestAdapter {
+        where A: SerializeAdapter {
         let mut buf = Vec::new();
 
         let serializer = adapter.serializer();
@@ -128,7 +128,7 @@ impl RawBody<Cursor<String>> {
 impl RawBody<Cursor<Vec<u8>>> {
     /// Use the serializer in `adapter` to serialize `val` as a raw body immediately.
     pub fn serialize_now<A, T>(adapter: &A, val: &T) -> Result<Self>
-    where A: RequestAdapter, T: Serialize {
+    where A: SerializeAdapter, T: Serialize {
         let mut buf: Vec<u8> = Vec::new();
         let serializer = adapter.serializer();
         try!(serializer.serialize(val, &mut buf));
@@ -151,7 +151,7 @@ impl<R: Read + Send + 'static> Body for RawBody<R> {
     type Readable = R;
 
     fn into_readable<A>(self, _adapter: &A) -> ReadableResult<Self::Readable>
-    where A: RequestAdapter {
+    where A: SerializeAdapter {
         Ok(self.0)
     }
 }
@@ -197,7 +197,7 @@ impl Body for EmptyFields {
     type Readable = io::Empty;
 
     fn into_readable<A>(self, _adapter: &A) -> ReadableResult<Self::Readable>
-    where A: RequestAdapter {
+    where A: SerializeAdapter {
         Readable::new_ok(io::empty(), None)
     }
 }
@@ -234,7 +234,7 @@ impl Body for TextFields {
     type Readable = Cursor<String>;
 
     fn into_readable<A>(self, _adapter: &A) -> ReadableResult<Self::Readable>
-    where A: RequestAdapter {
+    where A: SerializeAdapter {
         let readable = Cursor::new(
             FormUrlEncoder::new(String::new())
                 .extend_pairs(self.0)
@@ -284,7 +284,7 @@ impl Body for MultipartFields {
     type Readable = PreparedFields;
 
     fn into_readable<A>(self, _adapter: &A) -> ReadableResult<Self::Readable>
-    where A: RequestAdapter {
+    where A: SerializeAdapter {
         use self::FileField_::*;
 
         let mut multipart = Multipart::new();

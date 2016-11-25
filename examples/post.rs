@@ -26,17 +26,15 @@ pub struct NewPost<'a> {
 
 service! {
     pub trait PostService {
-        post! {
-            fn new_post(&self, userid: u64, title: &str, body: &str) -> Post {
-                url("/posts/");
-                // We use body_eager! so we can use borrowed values in the body.
-                // It requires access to the adapter, so we pass `self` as the first argument.
-                body_eager!(NewPost {
-                    userid: userid,
-                    title: title,
-                    body: body
-                })
-            }
+        #[POST("/posts/")]
+        fn new_post(&self, userid: u64, title: &str, body: &str) -> Post {
+            // We use body_eager! so we can use borrowed values in the body.
+            // It requires access to the adapter, so we pass `self` as the first argument.
+            body_eager!(NewPost {
+                userid: userid,
+                title: title,
+                body: body
+            })
         }
     }
 }

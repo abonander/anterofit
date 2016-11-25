@@ -28,10 +28,12 @@ macro_rules! url (
 #[macro_export]
 #[doc(hidden)]
 macro_rules! request_impl {
-    ($adapter:ident; $method:expr; url($($urlpart:tt)+) $(; $buildexpr:expr)*) => ({
+    ($adapter:ident; $method:ident; url($($urlpart:tt)+) $(; $buildexpr:expr)*) => ({
         use $crate::net::RequestBuilder;
 
-        let builder = RequestBuilder::new($adapter, $method, url!($($urlpart)+).into());
+        let builder = RequestBuilder::new(
+            $adapter, http_verb!($method), url!($($urlpart)+).into()
+        );
 
         $(
             let builder = try_request!($adapter, ($buildexpr)(builder));
@@ -42,6 +44,8 @@ macro_rules! request_impl {
 }
 
 /// Serialize the given value as the request body using the serializer provided in the adapter.
+///
+/// Serialization will be performed on the adapter's executor when the request is submitted.
 ///
 /// If the value is intended to be read directly as the request body, wrap it with `RawBody`.
 ///
@@ -170,4 +174,14 @@ macro_rules! query {
             $(&$key as &::std::fmt::Display, &$val as &::std::fmt::Display),+
         ]))
     )
+}
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! http_verb {
+    (GET) => ($crate::net::Method::Get);
+    (POST) => ($crate::net::Method::Post);
+    (PUT) => ($crate::net::Method::Put);
+    (PATCH) => ($crate::net::Method::Patch);
+    (DELETE) => ($crate::net::Method::Delete);
 }

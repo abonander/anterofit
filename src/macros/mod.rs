@@ -1,13 +1,12 @@
 //! Macros for Anterofit.
-#[macro_use]
-mod method;
+
 #[macro_use]
 mod request;
 
 /// Define a service trait whose methods make HTTP requests.
 ///
 /// ##Example
-/// ```notest
+/// ```rust,ignore
 ///
 /// service! {
 ///     pub trait MyService {
@@ -35,13 +34,41 @@ mod request;
 macro_rules! service {
     (
         pub trait $servicenm:ident {
-            $($methods:tt)*
+            $(
+                #[$verb:ident($($urlpart:tt)+)]
+                $(#[$meta:meta])*
+                fn $fnname:ident $(<$($generics:tt)*>)* (&self $($args:tt)*) -> $ret:ty $({
+                    $($body:tt)+
+                })* $(;)*
+            )*
         }
     ) => (
-        pub trait $servicenm : $crate::net::RequestAdapter {
-            $($methods)*
+        pub trait $servicenm {
+            $(
+                $(#[$meta:meta])*
+                fn $fnname $(<$($generics)*>)* (&self $($args)*) -> $crate::net::Request<Self, $ret>;
+            )*
         }
 
-        impl<T: $crate::net::RequestAdapter> $servicenm for T {}
+        impl<T: $crate::net::SerializeAdapter> $servicenm for T {
+            $(
+                fn $fnname $(<$($generics)*>)* (&self $($args)*) -> $crate::net::Request<Self, $ret> {
+                        request_impl! {
+                            self; $verb; url($($urlpart)+)
+                            $(; $($body)+)*
+                        }
+                }
+            )*
+        }
     )
+}
+
+#[macro_export]
+#[doc(hidden)]
+macro_rules! method {
+    (
+        #[$verb:ident($($urlpart:tt)+)]
+        $(#[$meta:meta])*
+        fn $fnname:ident $(<$($generics:tt)*>)* (&self $($args:tt)*) -> $ret:ty
+    ) => ();
 }
