@@ -107,12 +107,21 @@ impl<R: Read> RawBody<R> {
     }
 }
 
-impl<R: AsRef<[u8]>> RawBody<Cursor<R>> {
+impl<T: AsRef<[u8]>> RawBody<Cursor<T>> {
     /// Wrap anything `Cursor` can work with (such as `String` or `Vec<u8>`) as a raw request body.
     ///
     /// Assumes `application/octet-stream` as the content-type.
-    pub fn bytes(bytes: R) -> Self {
+    pub fn bytes(bytes: T) -> Self {
         RawBody::new(Cursor::new(bytes), mime::octet_stream())
+    }
+
+    /// Wrap anything `Send + 'static` that can deref to `str`
+    /// (`String`, `&'static str`, `Box<str>`, etc)
+    /// as a plain text body.
+    ///
+    /// Assumes `text/plain; charset=utf8` as the content-type.
+    pub fn text(text: T) -> Self where T: Borrow<str> {
+        RawBody::new(Cursor::new(text), mime::text_plain_utf8())
     }
 }
 
@@ -136,22 +145,11 @@ impl RawBody<Cursor<Vec<u8>>> {
     }
 }
 
-impl<T: Borrow<str> + AsRef<[u8]>> RawBody<Cursor<T>> {
-    /// Wrap anything `Send + 'static` that can deref to `str`
-    /// (`String`, `&'static str`, `Box<str>`, etc)
-    /// as a plain text body.
-    ///
-    /// Assumes `text/plain; charset=utf8` as the content-type.
-    pub fn text(text: T) -> Self {
-        RawBody::new(Cursor::new(text), mime::text_plain_utf8())
-    }
-}
-
-impl<R: Read + Send + 'static> Body for RawBody<R> {
+impl<R: Read + Send + 'static> EagerBody for RawBody<R> {
     type Readable = R;
 
     fn into_readable<A>(self, _adapter: &A) -> ReadableResult<Self::Readable>
-    where A: AbsAdapter {
+        where A: AbsAdapter {
         Ok(self.0)
     }
 }
