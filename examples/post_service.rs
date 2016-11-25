@@ -65,6 +65,8 @@ fn main() {
 }
 
 /// Create a new Post.
+// Since the same adapter will implement all service traits, you can arbitrarily concatenate them
+// in generic bounds.
 fn create_post<T: PostService>(post_service: &T) {
     let post = post_service.new_post(42, "Hello", "World!")
         // If you don't want to block, the return value of exec() can be used as a Future
@@ -78,7 +80,9 @@ fn create_post<T: PostService>(post_service: &T) {
 }
 
 /// Fetch the top 3 posts in the database.
-// Service traits are object-safe.
+// Service traits are object-safe, but you can't concatenate them arbitrarily.
+// If you use multiple services in the same scope, it might help clarify your intent
+// to coerce the same adapter reference into different service trait objects.
 fn fetch_posts(post_service: &PostService) {
     let posts = post_service.get_posts()
         // Shorthand for .exec().wait(), but executes the request on the current thread.

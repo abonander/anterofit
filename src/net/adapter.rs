@@ -175,19 +175,19 @@ pub struct Adapter<E, I, S, D> {
     inner: Arc<Adapter_<I, S, D>>,
 }
 
-impl Adapter<DefaultExecutor, NoIntercept, NoSerializer, NoDeserializer> {
-    /// Start building an instance of `Adapter` using the default inner types.
-    pub fn builder() -> AdapterBuilder<DefaultExecutor, NoIntercept, NoSerializer, NoDeserializer> {
-        AdapterBuilder::new()
-    }
-}
-
 impl<E: Clone, I, S, D> Clone for Adapter<E, I, S, D> {
     fn clone(&self) -> Self {
         Adapter {
             executor: self.executor.clone(),
             inner: self.inner.clone(),
         }
+    }
+}
+
+impl Adapter<DefaultExecutor, NoIntercept, NoSerializer, NoDeserializer> {
+    /// Start building an impl of `Adapter` using the default inner types.
+    pub fn builder() -> AdapterBuilder<DefaultExecutor, NoIntercept, NoSerializer, NoDeserializer> {
+        AdapterBuilder::new()
     }
 }
 
@@ -200,10 +200,10 @@ struct Adapter_<I, S, D> {
     deserializer: D,
 }
 
-/// A `RequestAdapter` that is cloneable and provides access to a serializer and deserializer.
+/// Implemented by `Adapter`. Mainly used to simplify generics.
 ///
 /// Not object-safe.
-pub trait SerializeAdapter: RequestAdapter + Clone {
+pub trait AbsAdapter: ObjSafeAdapter + Clone {
     /// The adapter's serializer type.
     type Serializer: Serializer;
     /// The adapter's deserializer type.
@@ -216,10 +216,8 @@ pub trait SerializeAdapter: RequestAdapter + Clone {
     fn deserializer(&self) -> &Self::Deserializer;
 }
 
-/// A trait describing an adapter which can be used to execute a request.
-///
-/// Mainly used to simplify generics. Object-safe.
-pub trait RequestAdapter: Send + 'static {
+/// Object-safe subset of the adapter API.
+pub trait ObjSafeAdapter: Send + 'static {
     /// Pass `head` to this adapter's interceptor for modification.
     fn intercept(&self, head: &mut RequestHead);
 
@@ -230,7 +228,7 @@ pub trait RequestAdapter: Send + 'static {
     fn request_builder(&self, head: RequestHead) -> Result<NetRequestBuilder>;
 }
 
-impl<E, I, S, D> SerializeAdapter for Adapter<E, I, S, D>
+impl<E, I, S, D> AbsAdapter for Adapter<E, I, S, D>
 where E: Executor, I: Interceptor, S: Serializer, D: Deserializer {
     type Serializer = S;
     type Deserializer = D;
@@ -244,7 +242,7 @@ where E: Executor, I: Interceptor, S: Serializer, D: Deserializer {
     }
 }
 
-impl<E, I, S, D> RequestAdapter for Adapter<E, I, S, D>
+impl<E, I, S, D> ObjSafeAdapter for Adapter<E, I, S, D>
 where E: Executor, I: Interceptor, S: Serializer, D: Deserializer {
 
     fn execute(&self, exec: Box<ExecBox>) {
@@ -261,11 +259,11 @@ where E: Executor, I: Interceptor, S: Serializer, D: Deserializer {
 }
 
 /// A `RequestAdapter` with all the methods left unimplemented.
-pub const NOOP: &'static RequestAdapter = &NoopAdapter;
+pub const NOOP: &'static ObjSafeAdapter = &NoopAdapter;
 
 struct NoopAdapter;
 
-impl RequestAdapter for NoopAdapter {
+impl ObjSafeAdapter for NoopAdapter {
     fn intercept(&self, _: &mut RequestHead) {
         unimplemented!()
     }

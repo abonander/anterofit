@@ -51,7 +51,7 @@ macro_rules! service {
             )*
         }
 
-        impl<T: $crate::net::SerializeAdapter> $servicenm for T {
+        impl<T: $crate::net::AbsAdapter> $servicenm for T {
             $(
                 $(#[$meta])*
                 fn $fnname $(<$($generics)*>)* (&self $($args)*) -> $crate::net::Request<$ret>
@@ -82,7 +82,7 @@ macro_rules! service {
             )*
         }
 
-        impl<T: $crate::net::SerializeAdapter> $servicenm for T {
+        impl<T: $crate::net::AbsAdapter> $servicenm for T {
             $(
                 $(#[$meta])*
                 fn $fnname $(<$($generics)*>)* (&self $($args)*) -> $crate::net::Request<$ret>

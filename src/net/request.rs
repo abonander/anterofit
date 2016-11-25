@@ -12,7 +12,7 @@ use std::borrow::{Borrow, Cow};
 use std::fmt::{self, Write};
 use std::mem;
 
-use net::adapter::{RequestAdapter, SerializeAdapter};
+use net::adapter::{ObjSafeAdapter, AbsAdapter};
 
 use net::body::{Body, EmptyFields, EagerBody, RawBody};
 
@@ -216,7 +216,7 @@ impl<'a, A, B> RequestBuilder<'a, A, B> {
         }
     }
 }
-impl<'a, A, B> RequestBuilder<'a, A, B> where A: SerializeAdapter {
+impl<'a, A, B> RequestBuilder<'a, A, B> where A: AbsAdapter {
     /// Immediately serialize `body` on the current thread and set the result as the body
     /// of this request.
     ///
@@ -264,7 +264,7 @@ impl<'a, A, B> RequestBuilder<'a, A, B> where A: SerializeAdapter {
 /// returned when the request is executed; no network or disk activity will occur.
 #[must_use = "Request has not been sent yet"]
 pub struct Request<'a, T> {
-    adapter: &'a RequestAdapter,
+    adapter: &'a ObjSafeAdapter,
     exec: Box<ExecBox>,
     call: Call<T>,
 }
@@ -335,7 +335,7 @@ impl<'a, T> Request<'a, T> {
 }
 
 fn exec_request<A, B>(adpt: &A, mut head: RequestHead, body: B) -> Result<Response>
-where A: SerializeAdapter, B: Body {
+where A: AbsAdapter, B: Body {
 
     adpt.intercept(&mut head);
 

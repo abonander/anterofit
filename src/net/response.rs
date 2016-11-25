@@ -6,7 +6,7 @@ use std::io::{self, Read};
 
 use serialize::{Deserialize, Deserializer};
 
-use super::adapter::SerializeAdapter;
+use super::adapter::AbsAdapter;
 
 use ::Result;
 
@@ -18,12 +18,12 @@ use ::Result;
 pub trait FromResponse: Send + Sized + 'static {
     /// Deserialize or otherwise convert an instance of `Self` from `response`.
     fn from_response<A>(adpt: &A, response: Response) -> Result<Self>
-        where A: SerializeAdapter;
+        where A: AbsAdapter;
 }
 
 impl<T> FromResponse for T where T: Deserialize + Send + 'static {
     fn from_response<A>(adpt: &A, mut response: Response) -> Result<Self>
-        where A: SerializeAdapter {
+        where A: AbsAdapter {
         adpt.deserializer().deserialize(&mut response)
     }
 }
@@ -31,7 +31,7 @@ impl<T> FromResponse for T where T: Deserialize + Send + 'static {
 impl FromResponse for RawResponse {
     /// Simple wrapping operation; infallible.
     fn from_response<A>(_adpt: &A, response: Response) -> Result<Self>
-        where A: SerializeAdapter {
+        where A: AbsAdapter {
 
         Ok(RawResponse(response))
     }
