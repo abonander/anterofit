@@ -1,8 +1,8 @@
 //! Types used to serialize and deserialize request and response bodies, respectively.
 //!
 //! ## Note
-//! If you get an error about duplicate types in this module, make sure you don't have both the
-//! `rustc-serialize` and `serde` features enabled.
+//! If you get an error about duplicate types or items in this module, make sure you don't have both
+//! the `rustc-serialize` and `serde` features enabled.
 
 use mime::Mime;
 
