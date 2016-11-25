@@ -39,7 +39,8 @@ fn main() {
     fetch_posts(&adapter);
 }
 
-fn fetch_posts<T: PostService>(post_service: &T) {
+// Service traits are object-safe
+fn fetch_posts(post_service: &PostService) {
     let posts = post_service.get_posts()
         .exec_here()
         .unwrap();

@@ -231,7 +231,7 @@ impl<'a, A, B> RequestBuilder<'a, A, B> where A: SerializeAdapter {
     ///
     /// This request will need to be executed (using `exec()` or `exec_here()`) before anything
     /// else is done. As much work as possible will be relegated to the adapter's executor.
-    pub fn build<T>(self) -> Request<'a, A, T> where B: Body, T: FromResponse {
+    pub fn build<T>(self) -> Request<'a, T> where B: Body, T: FromResponse {
         let RequestBuilder {
             adapter, head, body
         } = self;
@@ -263,19 +263,19 @@ impl<'a, A, B> RequestBuilder<'a, A, B> where A: SerializeAdapter {
 /// If an error occurred during initialization of the request, it will be immediately
 /// returned when the request is executed; no network or disk activity will occur.
 #[must_use = "Request has not been sent yet"]
-pub struct Request<'a, A: ?Sized + 'a, T> {
-    adapter: &'a A,
+pub struct Request<'a, T> {
+    adapter: &'a RequestAdapter,
     exec: Box<ExecBox>,
     call: Call<T>,
 }
 
-impl<'a, A: ?Sized, T> Request<'a, A, T> {
+impl<'a, T> Request<'a, T> {
     /// Construct a `Result` wrapping an immediate return of `res`.
     ///
     /// No network or disk activity will occur when this request is executed.
-    pub fn immediate(adapter: &A, res: Result<T>) -> Request<A, T> {
+    pub fn immediate(res: Result<T>) -> Request<'static, T> {
         Request {
-            adapter: adapter,
+            adapter: super::adapter::NOOP,
             exec: ExecBox::noop(),
             call: super::call::immediate(res),
         }
@@ -295,7 +295,7 @@ impl<'a, A: ?Sized, T> Request<'a, A, T> {
     }
 }
 
-impl<'a, A: ?Sized, T> Request<'a, A, T> where A: RequestAdapter {
+impl<'a, T> Request<'a, T> {
     /// Execute this request on the adapter's executor, returning a type which can
     /// be polled for the result.
     pub fn exec(self) -> Call<T> {
@@ -308,7 +308,7 @@ impl<'a, A: ?Sized, T> Request<'a, A, T> where A: RequestAdapter {
     /// ## Note
     /// `on_complete` should not be long-running in order to not block other requests waiting
     /// on the executor.
-    pub fn on_complete<F, R>(self, on_complete: F) -> Request<'a, A, R>
+    pub fn on_complete<F, R>(self, on_complete: F) -> Request<'a, R>
     where F: FnOnce(T) -> R + Send + 'static, R: Send + 'static, T: Send + 'static {
         let Request {
             adapter,

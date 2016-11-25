@@ -232,3 +232,21 @@ where E: Executor, I: Interceptor, S: Serializer, D: Deserializer {
         head.init_request(self.inner.base_url.as_ref(), &self.inner.client)
     }
 }
+
+pub const NOOP: &'static RequestAdapter = &NoopAdapter;
+
+struct NoopAdapter;
+
+impl RequestAdapter for NoopAdapter {
+    fn intercept(&self, head: &mut RequestHead) {
+        unimplemented!()
+    }
+
+    fn execute(&self, exec: Box<ExecBox>) {
+        unimplemented!()
+    }
+
+    fn request_builder(&self, head: RequestHead) -> Result<NetRequestBuilder> {
+        unimplemented!()
+    }
+}

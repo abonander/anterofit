@@ -37,7 +37,8 @@ macro_rules! service {
             $(
                 #[$verb:ident($($urlpart:tt)+)]
                 $(#[$meta:meta])*
-                fn $fnname:ident $(<$($generics:tt)*>)* (&self $($args:tt)*) -> $ret:ty $({
+                fn $fnname:ident $(<$($generics:tt)*>)* (&self $($args:tt)*) -> $ret:ty
+                $(where $($whereclause:tt)+)* $({
                     $($body:tt)+
                 })* $(;)*
             )*
@@ -46,13 +47,15 @@ macro_rules! service {
         pub trait $servicenm {
             $(
                 $(#[$meta:meta])*
-                fn $fnname $(<$($generics)*>)* (&self $($args)*) -> $crate::net::Request<Self, $ret>;
+                fn $fnname $(<$($generics)*>)* (&self $($args)*) -> $crate::net::Request<$ret>
+                $(where $($whereclause:tt)+)*;
             )*
         }
 
         impl<T: $crate::net::SerializeAdapter> $servicenm for T {
             $(
-                fn $fnname $(<$($generics)*>)* (&self $($args)*) -> $crate::net::Request<Self, $ret> {
+                fn $fnname $(<$($generics)*>)* (&self $($args)*) -> $crate::net::Request<$ret>
+                $(where $($whereclause:tt)+)* {
                         request_impl! {
                             self; $verb; url($($urlpart)+)
                             $(; $($body)+)*

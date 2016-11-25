@@ -6,10 +6,10 @@
 #[macro_export]
 #[doc(hidden)]
 macro_rules! try_request (
-    ($adpt:expr, $try:expr) => (
+    ($try:expr) => (
         match $try {
             Ok(val) => val,
-            Err(e) => return $crate::net::Request::immediate($adpt, Err(e.into())),
+            Err(e) => return $crate::net::Request::immediate(Err(e.into())),
         }
     )
 );
@@ -36,7 +36,7 @@ macro_rules! request_impl {
         );
 
         $(
-            let builder = try_request!($adapter, ($buildexpr)(builder));
+            let builder = try_request!(($buildexpr)(builder));
         )*
 
         builder.build()
