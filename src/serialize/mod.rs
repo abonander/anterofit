@@ -2,7 +2,7 @@
 //!
 //! ## Note
 //! If you get an error about duplicate types in this module, make sure you don't have both the
-//! `rustc-serialize` and `serde` features enabled
+//! `rustc-serialize` and `serde` features enabled.
 
 use mime::Mime;
 
@@ -11,6 +11,12 @@ use std::io::{Read, Write};
 use ::Result;
 
 pub mod none;
+
+// It'd be nice to support both of these at once but unfortunately that's incredibly
+// unwieldy without HKT (trust me, I tried).
+
+// Fortunately the traits in both crates have the same signatures (at least for now)
+// so they can be used interchangeably.
 
 // Until we have a way to describe these features as mutually exclusive, this will
 // have to do.
@@ -24,13 +30,11 @@ pub use self::serde::*;
 pub mod rustc;
 
 #[cfg(feature = "rustc-serialize")]
-pub use self::rustc::*;
-
-// It'd be nice to support both of these at once but unfortunately that's incredibly
-// unwieldy without HKT (trust me, I tried).
-
-// Fortunately the traits in both crates have the same signatures (at least for now)
-// so they can be used interchangeably.
+pub use self::rustc::{
+    json,
+    Decodable as Deserialize,
+    Encodable as Serialize
+};
 
 /// A trait describing types which can concurrently serialize other types into byte-streams.
 pub trait Serializer: Send + Sync + 'static {

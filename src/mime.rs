@@ -1,3 +1,5 @@
+//! Shorthands for various MIME types.
+
 pub use mime_::Mime;
 
 /// `application/octet-stream`

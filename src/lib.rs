@@ -37,7 +37,7 @@ pub use error::Error;
 
 pub use hyper::Url;
 
-pub use net::adapter::{Adapter, AbsAdapter};
+pub use net::{Adapter, AbsAdapter};
 
 pub use net::body::RawBody;
 
