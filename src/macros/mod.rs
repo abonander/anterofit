@@ -7,24 +7,19 @@ mod request;
 ///
 /// ##Example
 /// ```rust,ignore
-///
 /// service! {
 ///     pub trait MyService {
 ///         /// Get the version of this API.
-///         #[GET("/version")]
 ///         fn api_version(&self) -> String {
-///             url = "/version"
+///             GET("/version")
 ///         }
 ///
 ///
 ///         /// Register a user with the API.
-///         #[POST("/register")]
 ///         fn register(&self, username: &str, password: &str) {
-///             url = "/register"
-///                 fields! {
-///                     "username": username,
-///                     "password": password,
-///                 }
+///             POST("/register");
+///             fields! {
+///                 username, password
 ///             }
 ///         }
 ///     }
