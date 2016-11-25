@@ -51,6 +51,16 @@ macro_rules! request_impl {
 ///
 /// This will overwrite any previous invocation of `body!()` or `fields!{}` for the current request.
 ///
+/// ## Note
+/// `$body` must be `Send + 'static` as depending on the adaptor's configuration, it most likely
+/// will be sent to another thread for serialization.
+///
+/// If you want to serialize borrowed values or other types which cannot be sent to other threads,
+/// use `body_eager!()`, which will serialize the value on the current thread.
+///
+/// ### Overwrites Body
+/// Setting a new body will overwrite any previous body on the request.
+///
 /// ## Panics
 /// If the request is a GET request (cannot have a body).
 #[macro_export]
@@ -64,6 +74,9 @@ macro_rules! body (
 /// Like `body!()`, but eagerly serializes the body on the current thread.
 ///
 /// This is useful when you have a request body that is not `Send + 'static`.
+///
+/// ### Overwrites Body
+/// Setting a new body will overwrite any previous body on the request.
 #[macro_export]
 macro_rules! body_eager (
     ($body:expr) => (
@@ -92,7 +105,8 @@ macro_rules! body_eager (
 /// However, if you use the `path!()` or `stream!()` macros as a value expression,
 /// it will transform the request to a `multipart/form-data` request.
 ///
-/// This will overwrite any previous invocation of `body!()` or `fields!{}` for the current request.
+/// ### Overwrites Body
+/// Setting a new body will overwrite any previous body on the request.
 ///
 /// ## Panics
 /// If the request is a GET request (cannot have a body).
@@ -108,6 +122,46 @@ macro_rules! fields {
         )*;
 
         move |req| Ok($crate::net::RequestBuilder::body(req, fields))
+    })
+}
+
+/// Serialize a series of key-value pairs as the request body.
+///
+/// Serialization will be done on the executor, so the key and value types must be `Send + 'static`.
+///
+/// For an eagerly serialized version, use `body_map_eager!()`.
+///
+/// ### Overwrites Body
+/// Setting a new body will overwrite any previous body on the request.
+#[macro_export]
+macro_rules! body_map {
+    ($($key:expr => $val:expr),+) => ({
+        let mut pairs = $crate::serialize::KeyValuePairs::new();
+
+        $(
+            pairs.insert($key, $val);
+        )+;
+
+        move |req| Ok($crate::net::RequestBuilder::body(req, pairs))
+    })
+}
+
+/// Eagerly serialize a series of key-value pairs as the request body.
+///
+/// Serialization will be done immediately on the current thread.
+
+/// ### Overwrites Body
+/// Setting a new body will overwrite any previous body on the request.
+#[macro_export]
+macro_rules! body_map {
+    ($($key:expr => $val:expr),+) => ({
+        let mut pairs = $crate::serialize::KeyValuePairs::new();
+
+        $(
+            pairs.insert($key, $val);
+        )+;
+
+        move |req| Ok($crate::net::RequestBuilder::body(req, pairs))
     })
 }
 

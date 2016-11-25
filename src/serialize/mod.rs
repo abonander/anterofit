@@ -53,3 +53,40 @@ pub trait Deserializer: Send + Sync + 'static {
     /// Deserialize `T` from `read`, returning the result.
     fn deserialize<T: Deserialize, R: Read>(&self, read: &mut R) -> Result<T>;
 }
+
+/// A simple series of key-value pairs that can be serialized as a map.
+///
+/// Nothing will be done with duplicate keys.
+#[derive(Clone, Debug)]
+pub struct KeyValuePairs<K, V> {
+    pairs: Vec<(K, V)>,
+}
+
+impl<K, V> KeyValuePairs<K, V> {
+    /// Create an empty series.
+    pub fn new() -> Self {
+        KeyValuePairs {
+            pairs: Vec::new()
+        }
+    }
+
+    /// Add a key-value pair to the end of this series.
+    pub fn insert(&mut self, key: K, val: V) {
+        self.pairs.push((key, val));
+    }
+
+    /// Get the current series of pairs as a slice.
+    pub fn pairs(&self) -> &[(K, V)] {
+        &self.pairs
+    }
+
+    /// Get the current series of pairs as a mutable reference to a vector.
+    pub fn pairs_mut(&mut self) -> &mut Vec<(K, V)> {
+        &mut self.pairs
+    }
+
+    /// Take the key-value pair series as a vector of 2-tuples.
+    pub fn into_pairs(self) -> Vec<(K, V)> {
+        self.pairs
+    }
+}
