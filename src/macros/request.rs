@@ -49,8 +49,6 @@ macro_rules! request_impl {
 ///
 /// If the value is intended to be read directly as the request body, wrap it with `RawBody`.
 ///
-/// This will overwrite any previous invocation of `body!()` or `fields!{}` for the current request.
-///
 /// ## Note
 /// `$body` must be `Send + 'static` as depending on the adaptor's configuration, it most likely
 /// will be sent to another thread for serialization.
@@ -58,7 +56,7 @@ macro_rules! request_impl {
 /// If you want to serialize borrowed values or other types which cannot be sent to other threads,
 /// use `body_eager!()`, which will serialize the value on the current thread.
 ///
-/// ### Overwrites Body
+/// ## Overwrites Body
 /// Setting a new body will overwrite any previous body on the request.
 ///
 /// ## Panics
@@ -75,7 +73,7 @@ macro_rules! body (
 ///
 /// This is useful when you have a request body that is not `Send + 'static`.
 ///
-/// ### Overwrites Body
+/// ## Overwrites Body
 /// Setting a new body will overwrite any previous body on the request.
 #[macro_export]
 macro_rules! body_eager (
@@ -105,7 +103,7 @@ macro_rules! body_eager (
 /// However, if you use the `path!()` or `stream!()` macros as a value expression,
 /// it will transform the request to a `multipart/form-data` request.
 ///
-/// ### Overwrites Body
+/// ## Overwrites Body
 /// Setting a new body will overwrite any previous body on the request.
 ///
 /// ## Panics
@@ -131,7 +129,7 @@ macro_rules! fields {
 ///
 /// For an eagerly serialized version, use `body_map_eager!()`.
 ///
-/// ### Overwrites Body
+/// ## Overwrites Body
 /// Setting a new body will overwrite any previous body on the request.
 #[macro_export]
 macro_rules! body_map {
@@ -150,7 +148,7 @@ macro_rules! body_map {
 ///
 /// Serialization will be done immediately on the current thread.
 
-/// ### Overwrites Body
+/// ## Overwrites Body
 /// Setting a new body will overwrite any previous body on the request.
 #[macro_export]
 macro_rules! body_map {
