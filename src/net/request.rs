@@ -6,6 +6,7 @@ use hyper::method::Method;
 
 use url::Url;
 use url::form_urlencoded::Serializer as FormUrlEncoded;
+use url::percent_encoding::{utf8_percent_encode, DEFAULT_ENCODE_SET};
 
 use std::borrow::{Borrow, Cow};
 use std::fmt::{self, Write};
@@ -13,13 +14,15 @@ use std::mem;
 
 use net::adapter::RequestAdapter;
 
-use net::body::{Body, EmptyFields};
+use net::body::{self, Body, EmptyFields, EagerBody, RawBody};
 
 use net::call::Call;
 
 use net::response::FromResponse;
 
 use executor::ExecBox;
+
+use serialize::Serialize;
 
 use ::Result;
 
@@ -33,7 +36,7 @@ pub struct RequestHead {
 }
 
 impl RequestHead {
-    fn new<U: Into<Cow<'static, str>>>(method: Method, url: U) -> Self {
+    fn new(method: Method, url: Cow<'static, str>) -> Self {
         RequestHead {
             url: url.into(),
             query: String::new(),
@@ -67,9 +70,14 @@ impl RequestHead {
     /// If this causes the request's URL to be malformed, an error will immediately
     /// be returned by `init_request()`.
     ///
-    /// Characters that are not allowed to appear in a URL should be percent-encoded *first*.
+    /// Characters that are not allowed to appear in a URL will be percent-encoded as appropriate
+    /// for the path section of a URL.
+    ///
+    /// ## Note
+    /// Adding a query segment via this method will not work as `?` and `=` will be encoded. Use
+    /// `query()` instead to add query pairs.
     pub fn append_url<A: AsRef<str>>(&mut self, append: A) -> &mut Self {
-        *self.url.to_mut() += append.as_ref();
+        self.url.to_mut().extend(utf8_percent_encode(append.as_ref(), DEFAULT_ENCODE_SET));
         self
     }
 
@@ -81,7 +89,7 @@ impl RequestHead {
     /// If this causes the request's URL to be malformed, an error will immediately
     /// be returned by `init_request()`.
     ///
-    /// Characters that are not allowed to appear in a URL should be percent-encoded *first*.
+    /// Characters that are not allowed to appear in a URL will not be automatically percent-encoded.
     pub fn prepend_url<P: AsRef<str>>(&mut self, prepend: P) -> &mut Self {
         prepend_str(prepend.as_ref(), self.url.to_mut());
         self
@@ -99,7 +107,10 @@ impl RequestHead {
     /// iterator that yields pairs or references to pairs.
     ///
     /// Example:
-    /// ```notest
+    /// ```rust,no_run
+    /// # extern crate anterofit;
+    /// # use std::collections::HashMap;
+    /// # let req: anterofit::net::RequestBuilder<_, _> = unimplemented!();
     ///
     /// // `req` is some `RequestBuilder<_>`
     /// let head = req.head_mut();
@@ -163,24 +174,26 @@ impl RequestHead {
 /// A container for a request header and body.
 ///
 /// Used in the body of service methods to construct a request.
-pub struct RequestBuilder<B> {
+pub struct RequestBuilder<'a, A: 'a, B> {
+    adapter: &'a A,
     head: RequestHead,
     body: B,
 }
 
-impl RequestBuilder<EmptyFields> {
+impl<'a, A> RequestBuilder<'a, A, EmptyFields> {
     /// Create a new request builder with the given method and URL.
     ///
     /// `url` can be `String` or `&'static str`.
-    pub fn new<U: Into<Cow<'static, str>>>(method: Method, url: U) -> Self {
+    pub fn new(adapter: &'a A, method: Method, url: Cow<'static, str>) -> Self {
         RequestBuilder {
+            adapter: adapter,
             head: RequestHead::new(method, url),
             body: EmptyFields,
         }
     }
 }
 
-impl<B> RequestBuilder<B> {
+impl<'a, A, B> RequestBuilder<'a, A, B> {
     /// Get a mutable reference to the header of the request.
     ///
     /// Can be used to change the request URL, add GET query pairs or HTTP headers to be
@@ -193,14 +206,53 @@ impl<B> RequestBuilder<B> {
     ///
     /// ##Panics
     /// If this is a GET request.
-    pub fn body<B_>(self, body: B_) -> RequestBuilder<B_> {
+    pub fn body<B_>(self, body: B_) -> RequestBuilder<'a, A, B_> {
         if let Method::Get = self.head.method {
             panic!("Cannot supply a body with GET requests!");
         }
 
         RequestBuilder {
+            adapter: self.adapter,
             head: self.head,
             body: body,
+        }
+    }
+}
+impl<'a, A, B> RequestBuilder<'a, A, B> where A: RequestAdapter {
+    /// Immediately serialize `body` on the current thread and set the result as the body
+    /// of this request.
+    ///
+    /// This is useful if you want to use a body type that is not `Send` or `'static`.
+    pub fn body_eager<B_>(self, body: B_) -> Result<RequestBuilder<'a, A, RawBody<<B_ as EagerBody>::Readable>>>
+    where B_: EagerBody {
+        let body = try!(body.into_readable(self.adapter)).into();
+        Ok(self.body(body))
+    }
+
+    /// Prepare a `Request` to be executed with the parameters supplied in this builder.
+    ///
+    /// This request will need to be executed (using `exec()` or `exec_here()`) before anything
+    /// else is done. As much work as possible will be relegated to the adapter's executor.
+    pub fn build<T>(self) -> Request<'a, A, T> where B: Body, T: FromResponse {
+        let RequestBuilder {
+            adapter, head, body
+        } = self;
+
+        let adapter_ = adapter.clone();
+
+        let (tx, rx) = ::futures::oneshot();
+
+        let exec = Box::new(move ||
+            tx.complete(
+                exec_request(&adapter_, head, body)
+                    .and_then(|response| T::from_response(&adapter_, response))
+            )
+        );
+
+        Request {
+            adapter: adapter,
+            exec: exec,
+            call: super::call::from_oneshot(rx),
         }
     }
 }
@@ -219,11 +271,11 @@ pub struct Request<'a, A: 'a, T> {
     call: Call<T>,
 }
 
-impl<'a, A: 'a, T> Request<'a, A, T> {
+impl<'a, A, T> Request<'a, A, T> {
     /// Construct a `Result` wrapping an immediate return of `res`.
     ///
     /// No network or disk activity will occur when this request is executed.
-    pub fn immediate(adapter: &'a A, res: Result<T>) -> Self {
+    pub fn immediate(adapter: &A, res: Result<T>) -> Request<A, T> {
         Request {
             adapter: adapter,
             exec: ExecBox::noop(),
@@ -245,33 +297,7 @@ impl<'a, A: 'a, T> Request<'a, A, T> {
     }
 }
 
-impl<'a, A: 'a, T> Request<'a, A, T> where A: RequestAdapter, T: FromResponse {
-    /// Create a `Request` which is ready to be executed based on the parameters in `builder`
-    /// and using the given adapter.
-    ///
-    /// This request will need to be executed (using `exec()` or `exec_here()`) before anything
-    /// else is done. As much work as possible will be relegated to the adapter's executor.
-    pub fn ready<B>(adpt: &A, builder: RequestBuilder<B>) -> Request<A, T>
-        where B: Body {
-
-        let adpt_ = adpt.clone();
-
-        let (tx, rx) = ::futures::oneshot();
-
-        let exec = Box::new(move ||
-            tx.complete(
-                exec_request(&adpt_, builder.head, builder.body)
-                    .and_then(|response| T::from_response(&adpt_, response))
-            )
-        );
-
-        Request {
-            adapter: adpt,
-            exec: exec,
-            call: super::call::from_oneshot(rx),
-        }
-    }
-
+impl<'a, A, T> Request<'a, A, T> where A: RequestAdapter, T: FromResponse {
     /// Execute this request on the adapter's executor, returning a type which can
     /// be polled for the result.
     pub fn exec(self) -> Call<T> {
@@ -311,7 +337,7 @@ impl<'a, A: 'a, T> Request<'a, A, T> where A: RequestAdapter, T: FromResponse {
 }
 
 fn exec_request<A, B>(adpt: &A, mut head: RequestHead, body: B) -> Result<Response>
-where A: RequestAdapter, B: Body{
+where A: RequestAdapter, B: Body {
 
     adpt.intercept(&mut head);
 

@@ -5,15 +5,16 @@
 /// Create a service method wrapping a GET request.
 ///
 /// ##Note
-/// The `body!` and `fields!` macros are not allowed in the body of this request.
+/// The `body!` and `fields!` macros are not allowed in the body of this request. They will panic
+/// at runtime if invoked in a `get!{}` service method.
 ///
 /// ##Example
-/// ```notest
+/// ```rust,ignore
 /// service!{
 ///     pub trait UserService {
 ///         get! {
 ///             fn get_user_info(&self, username: &str) -> UserInfo {
-///                 url = "/user/{}", username
+///                 url("/user/{}", username)
 ///             }
 ///         }
 ///     }
@@ -39,12 +40,12 @@ macro_rules! get {
 /// Create a service method wrapping a POST request.
 ///
 /// ##Example
-/// ```notest
+/// ```rust,ignore
 /// service! {
 ///     pub trait RegisterService {
 ///         post! {
 ///             fn register(&self, username: &str, password: &str) -> RegisterResponse {
-///                 url = "/register";
+///                 url("/register");
 ///                 fields!{
 ///                     "username": username,
 ///                     "password": password

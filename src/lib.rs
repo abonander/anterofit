@@ -26,13 +26,13 @@
 //!     pub trait TestService {
 //!         get! {
 //!             fn get_post(&self, id: u64) -> Post {
-//!                 url = "/posts/{}", id
+//!                 url("/posts/{}", id)
 //!             }
 //!         }
 //!
 //!         get! {
 //!             fn get_posts(&self) -> Vec<Post> {
-//!                 url = "/posts"
+//!                 url("/posts")
 //!             }
 //!         }
 //!     }
@@ -73,12 +73,16 @@ extern crate mime as mime_;
 
 extern crate multipart;
 
+#[cfg(feature = "rustc-serialize")]
+extern crate rustc_serialize;
+
 extern crate url;
 
 pub extern crate hyper;
 
 mod mime;
 
+#[macro_use]
 mod macros;
 
 pub mod net;
@@ -96,7 +100,7 @@ pub use hyper::Url;
 
 pub use net::Adapter;
 
-pub use net::RawBody;
+pub use net::body::RawBody;
 
 /// The result type for this crate; used frequently in public APIs.
 ///

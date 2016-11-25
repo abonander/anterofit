@@ -4,7 +4,7 @@ pub use hyper::client::Response;
 
 use std::io::{self, Read};
 
-use serialize::Deserialize;
+use serialize::{Deserialize, Deserializer};
 
 use super::adapter::RequestAdapter;
 
@@ -24,7 +24,7 @@ pub trait FromResponse: Send + Sized + 'static {
 impl<T> FromResponse for T where T: Deserialize + Send + 'static {
     fn from_response<A>(adpt: &A, mut response: Response) -> Result<Self>
         where A: RequestAdapter {
-        adpt.deserialize(&mut response)
+        adpt.deserializer().deserialize(&mut response)
     }
 }
 

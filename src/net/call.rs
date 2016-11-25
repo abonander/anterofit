@@ -84,7 +84,7 @@ impl<T> Future for Call<T> {
         if let Call_::Immediate(res) = mem::replace(&mut self.0, Call_::Taken) {
             res.map(Async::Ready)
         } else {
-            unreachable!()
+            unreachable!();
         }
     }
 }

@@ -1,6 +1,7 @@
 //! Macros for Anterofit.
-
+#[macro_use]
 mod method;
+#[macro_use]
 mod request;
 
 /// Define a service trait whose methods make HTTP requests.

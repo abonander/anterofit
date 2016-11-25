@@ -1,4 +1,6 @@
-use serialize::Serialize;
+//! Types that can be serialized to bodies of HTTP requests.
+
+use serialize::{Serialize, Serializer};
 
 use net::adapter::RequestAdapter;
 
@@ -20,7 +22,7 @@ pub type ReadableResult<T> = Result<Readable<T>>;
 
 /// The result of serializing the request body, ready to be sent over the network.
 #[derive(Debug)]
-pub struct Readable<R: Read> {
+pub struct Readable<R> {
     /// The inner `Read` impl which will be copied into the request body.
     pub readable: R,
     /// The MIME type of the request body, if applicable.
@@ -58,32 +60,54 @@ pub trait Body: Send + 'static {
     where A: RequestAdapter;
 }
 
-impl<B: Serialize + Send + 'static> Body for B {
+impl<B: EagerBody + Send + 'static> Body for B {
+    type Readable = <B as EagerBody>::Readable;
+
+    fn into_readable<A>(self, adapter: &A) -> ReadableResult<Self::Readable> where A: RequestAdapter {
+        <B as EagerBody>::into_readable(self, adapter)
+    }
+}
+
+/// A trait describing a type which can be serialized into a request body.
+///
+/// Implemented for `T: Serialize + Send + 'static`.
+pub trait EagerBody {
+    /// The readable request body.
+    type Readable: Read + Send + 'static;
+
+    /// Serialize `self` with the given adapter into a request body.
+    fn into_readable<A>(self, adapter: &A) -> ReadableResult<Self::Readable>
+        where A: RequestAdapter;
+}
+
+impl<B: Serialize> EagerBody for B {
     type Readable = Cursor<Vec<u8>>;
 
     fn into_readable<A>(self, adapter: &A) -> ReadableResult<Self::Readable>
-    where A: RequestAdapter {
+        where A: RequestAdapter {
         let mut buf = Vec::new();
 
-        try!(adapter.serialize(&self, &mut buf));
+        let serializer = adapter.serializer();
 
-        Readable::new_ok(Cursor::new(buf), adapter.serializer_content_type())
+        try!(serializer.serialize(&self, &mut buf));
+
+        Readable::new_ok(Cursor::new(buf), serializer.content_type())
     }
 }
 
 /// A wrapper around a type that is intended to be read directly as the request body,
 /// instead of being serialized.
 #[derive(Debug)]
-pub struct RawBody<R: Read>(Readable<R>);
+pub struct RawBody<R>(Readable<R>);
 
-impl<R: Read + Send + 'static> RawBody<R> {
+impl<R: Read> RawBody<R> {
     /// Wrap a `Read` type and a content-type
     pub fn new<C: Into<Option<Mime>>>(readable: R, content_type: C) -> Self {
         RawBody(Readable::new(readable, content_type))
     }
 }
 
-impl<R: AsRef<[u8]> + Send + 'static> RawBody<Cursor<R>> {
+impl<R: AsRef<[u8]>> RawBody<Cursor<R>> {
     /// Wrap anything `Cursor` can work with (such as `String` or `Vec<u8>`) as a raw request body.
     ///
     /// Assumes `application/octet-stream` as the content-type.
@@ -101,7 +125,18 @@ impl RawBody<Cursor<String>> {
     }
 }
 
-impl<T: Borrow<str> + AsRef<[u8]> + Send + 'static> RawBody<Cursor<T>> {
+impl RawBody<Cursor<Vec<u8>>> {
+    /// Use the serializer in `adapter` to serialize `val` as a raw body immediately.
+    pub fn serialize_now<A, T>(adapter: &A, val: &T) -> Result<Self>
+    where A: RequestAdapter, T: Serialize {
+        let mut buf: Vec<u8> = Vec::new();
+        let serializer = adapter.serializer();
+        try!(serializer.serialize(val, &mut buf));
+        Ok(RawBody::new(Cursor::new(buf), serializer.content_type()))
+    }
+}
+
+impl<T: Borrow<str> + AsRef<[u8]>> RawBody<Cursor<T>> {
     /// Wrap anything `Send + 'static` that can deref to `str`
     /// (`String`, `&'static str`, `Box<str>`, etc)
     /// as a plain text body.
@@ -120,6 +155,15 @@ impl<R: Read + Send + 'static> Body for RawBody<R> {
         Ok(self.0)
     }
 }
+
+impl<R> From<Readable<R>> for RawBody<R> {
+    fn from(readable: Readable<R>) -> Self {
+        RawBody(readable)
+    }
+}
+
+/// Helps save some imports and typing.
+pub type RawBytesBody = RawBody<Cursor<Vec<u8>>>;
 
 /// A builder trait describing collections of key-value pairs to be serialized into a request body.
 pub trait Fields {

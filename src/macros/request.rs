@@ -28,19 +28,17 @@ macro_rules! url (
 #[macro_export]
 #[doc(hidden)]
 macro_rules! request_impl {
-    ($adapter:expr; $method:expr; url = $($urlpart:tt)+ $(;$buildexpr:expr)*) => (
-        {
-            use $crate::net::RequestBuilder;
+    ($adapter:ident; $method:expr; url($($urlpart:tt)+) $(; $buildexpr:expr)*) => ({
+        use $crate::net::RequestBuilder;
 
-            let builder = RequestBuilder::new($method, url!($($urlpart)+));
+        let builder = RequestBuilder::new($adapter, $method, url!($($urlpart)+).into());
 
-            $(
-                let builder = try_request!(($buildexpr)(builder));
-            )*
+        $(
+            let builder = try_request!($adapter, ($buildexpr)(builder));
+        )*
 
-            $adapter.request(builder)
-        }
-    )
+        builder.build()
+    })
 }
 
 /// Serialize the given value as the request body using the serializer provided in the adapter.
@@ -54,7 +52,18 @@ macro_rules! request_impl {
 #[macro_export]
 macro_rules! body (
     ($body:expr) => (
-        |req| Ok(req.body($body))
+        // UFCS is necessary as the compiler can't infer the type otherwise
+        move | req | Ok($crate::net::RequestBuilder::body(req, $body))
+    )
+);
+
+/// Like `body!()`, but eagerly serializes the body on the current thread.
+///
+/// This is useful when you have a request body that is not `Send + 'static`.
+#[macro_export]
+macro_rules! body_eager (
+    ($body:expr) => (
+        move | req | $crate::net::RequestBuilder::body_eager(req, $body)
     );
 );
 
@@ -64,7 +73,7 @@ macro_rules! body (
 ///
 /// By default, this will serialize to a `www-form-urlencoded` body.
 ///
-/// However, if you use the `file!()` or `stream!()` macros to define a
+/// However, if you use the `path!()` or `stream!()` macros to define a
 /// value, it will transform the request to a `multipart/form-data` request.
 ///
 /// This will overwrite any previous invocation of `body!()` or `fields!{}` for the current request.
@@ -92,7 +101,7 @@ macro_rules! fields {
             fields = (field!($key, $($val)*)) (fields);
         )*;
 
-        move |req| Ok(req.body(fields))
+        move |req| Ok($crate::net::RequestBuilder::body(req, fields))
     })
 }
 
@@ -144,7 +153,7 @@ macro_rules! stream (
 ///
 /// To supply these values yourself, and/or your own opened file handle, see the `stream!()` macro.
 #[macro_export]
-macro_rules! file (
+macro_rules! path (
     ($path:expr) => (
         $crate::net::FileField::from_path($path)
     )
@@ -156,7 +165,7 @@ macro_rules! file (
 #[macro_export]
 macro_rules! query {
     ($($key:expr => $val:expr),+) => (
-        |req| Ok(req.query(&[
+        |req| Ok($crate::net::RequestBuilder::query(req, &[
             $(&$key as &::std::fmt::Display, &$val as &::std::fmt::Display),+
         ]))
     )

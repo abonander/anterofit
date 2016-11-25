@@ -19,16 +19,16 @@ pub struct Post {
 }
 
 service! {
-    pub trait TestService {
+    pub trait PostService {
         get! {
             fn get_post(&self, id: u64) -> Post {
-                url = "/posts/{}", id
+                url("/posts/{}", id)
             }
         }
 
         get! {
             fn get_posts(&self) -> Vec<Post> {
-                url = "/posts"
+                url("/posts")
             }
         }
     }
@@ -45,8 +45,8 @@ fn main() {
     fetch_posts(&adapter);
 }
 
-fn fetch_posts<T: TestService>(test_service: &T) {
-    let posts = test_service.get_posts()
+fn fetch_posts<T: PostService>(post_service: &T) {
+    let posts = post_service.get_posts()
         .exec_here()
         .unwrap();
 

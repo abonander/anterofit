@@ -4,7 +4,7 @@ use ::serialize::{Serialize, Deserialize};
 use ::mime::Mime;
 use ::{Error, Result};
 
-use super::rustc_serialize::json::{Encoder, Decoder, Json};
+use rustc_serialize::json::{Encoder, Decoder, Json};
 
 use std::io::{self, Read, Write};
 use std::fmt;

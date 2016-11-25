@@ -1,14 +1,9 @@
 use hyper::Url;
 use hyper::client::{Client, RequestBuilder as NetRequestBuilder};
 
-use std::io::{Read, Write};
 use std::sync::Arc;
 
 use executor::{DefaultExecutor, Executor, ExecBox};
-
-use mime::Mime;
-
-use net::body::Body;
 
 use net::intercept::{Interceptor, NoIntercept, Chain};
 
@@ -184,9 +179,10 @@ struct Adapter_<I, S, D> {
 ///
 /// Mainly used to simplify generics.
 pub trait RequestAdapter: Send + Clone + 'static {
-    /// Create a new `Request` using `builder`.
-    fn request<B, T>(&self, builder: RequestBuilder<B>) -> Request<Self, T>
-        where B: Body, T: FromResponse;
+    /// The adapter's serializer type.
+    type Serializer: Serializer;
+    /// The adapter's deserializer type.
+    type Deserializer: Deserializer;
 
     /// Pass `head` to this adapter's interceptor for modification.
     fn intercept(&self, head: &mut RequestHead);
@@ -194,14 +190,11 @@ pub trait RequestAdapter: Send + Clone + 'static {
     /// Execute `exec` on this adapter's executor.
     fn execute(&self, exec: Box<ExecBox>);
 
-    /// Use this adapter's `Serializer` to serialize `val` into `to`.
-    fn serialize<T: Serialize, W: Write>(&self, val: &T, to: &mut W) -> Result<()>;
+    /// Get a reference to the adapter's `Serializer`.
+    fn serializer(&self) -> &Self::Serializer;
 
-    /// Return the MIME type for this adapter's serializer, if applicable.
-    fn serializer_content_type(&self) -> Option<Mime>;
-
-    /// Use this adapter's `Deserializer` to read `T` from `from`.
-    fn deserialize<T: Deserialize, R: Read>(&self, from: &mut R) -> Result<T>;
+    /// Get a reference to the adapter's `Deserializer`.
+    fn deserializer(&self) -> &Self::Deserializer;
 
     /// Initialize a `hyper::client::RequestBuilder` from `head`.
     fn request_builder(&self, head: RequestHead) -> Result<NetRequestBuilder>;
@@ -209,26 +202,19 @@ pub trait RequestAdapter: Send + Clone + 'static {
 
 impl<E, I, S, D> RequestAdapter for Adapter<E, I, S, D>
 where E: Executor, I: Interceptor, S: Serializer, D: Deserializer {
-    fn request<B, T>(&self, builder: RequestBuilder<B>) -> Request<Self, T>
-        where B: Body, T: FromResponse {
-
-        Request::ready(self, builder)
-    }
+    type Serializer = S;
+    type Deserializer = D;
 
     fn execute(&self, exec: Box<ExecBox>) {
         self.executor.execute(exec)
     }
 
-    fn serialize<T: Serialize, W: Write>(&self, val: &T, to: &mut W) -> Result<()> {
-        self.inner.serializer.serialize(val, to)
+    fn serializer(&self) -> &S {
+        &self.inner.serializer
     }
 
-    fn serializer_content_type(&self) -> Option<Mime> {
-        self.inner.serializer.content_type()
-    }
-
-    fn deserialize<T: Deserialize, R: Read>(&self, from: &mut R) -> Result<T> {
-        self.inner.deserializer.deserialize(from)
+    fn deserializer(&self) -> &D {
+        &self.inner.deserializer
     }
 
     fn intercept(&self, head: &mut RequestHead) {
