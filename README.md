@@ -13,7 +13,7 @@
 * *a Rust crate which generates type-safe REST API wrappers at compile time using macros*
 
 Anterofit is a collection of Rust macros coupled to a lightweight, self-contained HTTP framework that
-allows you to create strongly-typed wrappers around Rust APIs with ease.
+allows you to create strongly-typed Rust wrappers around REST APIs with ease.
 
 Inspired by [Square's Retrofit](https://sqaure.github.io/retrofit), as referenced in the name, Anterofit is even
 more strongly typed as everything that is feasible to check at compile-time, is. Runtime errors are,
