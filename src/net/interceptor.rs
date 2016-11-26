@@ -1,7 +1,5 @@
 //! Interceptors for common use-cases
 
-pub use hyper::header;
-
 use hyper::header::{Header, HeaderFormat};
 
 use std::borrow::Cow;
