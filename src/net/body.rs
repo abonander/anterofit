@@ -169,10 +169,10 @@ pub trait Fields {
     /// initial type.
     type WithText: Fields;
 
-    /// Add a key-text value pair to this fields collection, returning the resulting type.
+    /// Add a key/text-value pair to this fields collection, returning the resulting type.
     fn with_text<K: ToString, V: ToString>(self, key: K, val: V) -> Self::WithText;
 
-    /// Add a key-file vale pair to this fields collection, returning the resulting type.
+    /// Add a key/file-value pair to this fields collection, returning the resulting type.
     fn with_file<K: ToString>(self, key: K, file: FileField) -> MultipartFields;
 }
 

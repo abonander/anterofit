@@ -79,7 +79,7 @@
 //! * Conversely, the `Deserializer` is responsible for taking a response body in some predetermined
 //! format, such as JSON or XML, and reading out a strongly typed value.
 //!
-//! If you just want JSON serialization and deserialization and don't care about the details,
+//!     * If you just want JSON serialization and deserialization and don't care about the details,
 //! use the `serialize_json()` method of your adapter builder to set the serializer and deserializer
 //! simultaneously.
 //!
@@ -113,7 +113,20 @@
 //! This type wraps the return value of every service trait method. Unlike in Retrofit,
 //! where the request is determined to be synchronous or asynchronous at the service method
 //! declaration site, `Request` gives the power over this choice to the caller so that
-//! no change to the trait is needed to change the execution context.
+//! no change to the trait is needed to change the execution context:
+//!
+//! ```rust
+//! fn print_api_version(service: &MyService) {
+//!     service.api_version()
+//!         // This closure will be called with the `String` value on the executor
+//!         .on_complete(|api_version| println!("API version: {}", api_version))
+//!         // exec() queues the request on the executor,
+//!         // and .ignore() silences the `unused_result` lint for `Call`.
+//!         .exec().ignore();
+//!
+//!     // This function returns immediately; all the work is done on the executor.
+//! }
+//! ```
 //!
 //! ### `Call`
 //! Returned by `Request::exec()`, this type is a pollable `Future` which will yield the result
