@@ -295,7 +295,7 @@ impl<'a, T> Request<'a, T> {
     }
 }
 
-impl<'a, T> Request<'a, T> {
+impl<'a, T> Request<'a, T> where T: Send + 'static {
     /// Execute this request on the adapter's executor, returning a type which can
     /// be polled for the result.
     pub fn exec(self) -> Call<T> {
@@ -303,18 +303,42 @@ impl<'a, T> Request<'a, T> {
         self.call
     }
 
-    /// Add a callback to be executed with the request's return value, on the adapter's executor.
+    /// Add a callback to be executed with the request's return value when available, mapping
+    /// it to another value (or `()` if no return value).
+    ///
+    /// `on_complete` will always be executed on the adapter's executor because the return
+    /// value will not be available until the request is executed, whereas `on_result()`'s closure
+    /// may be executed immediately if an immediate result is available.
+    ///
+    /// If a result is immediately available, `on_complete` will be discarded.
     ///
     /// ## Note
     /// `on_complete` should not be long-running in order to not block other requests waiting
     /// on the executor.
     pub fn on_complete<F, R>(self, on_complete: F) -> Request<'a, R>
-    where F: FnOnce(T) -> R + Send + 'static, R: Send + 'static, T: Send + 'static {
-        let Request {
-            adapter,
-            exec,
-            call,
-        } = self;
+    where F: FnOnce(T) -> R + Send + 'static, R: Send + 'static {
+        self.on_result(|res| res.map(on_complete))
+    }
+
+    // RFC: add `on_error()`?
+
+    /// Add a callback to be executed with the request's result when available, mapping it to
+    /// another result (which can be `::Result<()>`).
+    ///
+    /// If a result is immediately available, `on_result` will be executed on the current thread
+    /// with the result, and the return value will be immediately available as well.
+    ///
+    /// ## Note
+    /// `on_result` should not be long-running in order to not block other requests waiting
+    /// on the executor, or block the current thread if the result is immediate.
+    pub fn on_result<F, R>(self, on_result: F) -> Request<'a, R>
+    where F: FnOnce(Result<T>) -> Result<R> + Send + 'static, R: Send + 'static {
+        let Request { adapter, exec, call } = self;
+
+        if call.is_immediate() {
+            let res = on_result(call.wait());
+            return Request::immediate(res);
+        }
 
         let (tx, rx) = ::futures::oneshot();
 
@@ -322,7 +346,7 @@ impl<'a, T> Request<'a, T> {
             exec.exec();
 
             tx.complete(
-                call.wait().map(on_complete)
+                on_result(call.wait())
             );
         });
 
