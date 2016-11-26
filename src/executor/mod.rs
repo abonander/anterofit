@@ -26,6 +26,8 @@ pub trait Executor: Send + Clone + 'static {
 /// An executor which executes all tasks immediately on the current thread (blocking).
 ///
 /// Does not allocate or spawn threads.
+///
+/// Panics are allowed to unwind back into calling code.
 #[derive(Clone)]
 pub struct SyncExecutor;
 

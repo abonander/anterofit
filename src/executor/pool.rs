@@ -6,8 +6,8 @@ use super::{ExecBox, Executor};
 
 /// An executor wrapped around a thread pool which can execute multiple tasks concurrently.
 ///
-/// Requests which cause a panic on their worker thread will be lost but subsequent jobs
-/// will be completed as normally.
+/// Worker threads are automatically restarted when panics occur; subsequent jobs are not
+/// affected.
 #[derive(Clone)]
 pub struct Pooled {
     pool: ThreadPool,

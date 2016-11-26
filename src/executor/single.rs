@@ -10,9 +10,8 @@ type Receiver = mpsc::Receiver<Box<ExecBox>>;
 ///
 /// Use this for when you have a low volume of asynchronous requests.
 ///
-/// If a panic occurs on the worker thread, it will automatically be restarted; the
-/// request which caused the panic will be lost, but subsequent scheduled jobs will be completed
-/// as normal.
+/// If a panic occurs on the worker thread, it will automatically be restarted; subsequent jobs will
+/// be completed as normal.
 #[derive(Clone)]
 pub struct SingleThread {
     sender: Sender,
