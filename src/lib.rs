@@ -24,13 +24,12 @@
 //! ### Service Traits
 //! Created with the `service!{}` macro as shown above, service traits encompass the actual request
 //! submission and response parsing. Each service trait is automatically implemented for
-//! `Adapter`, and is object-safe, so you can use generic bounds or trait object coercion to
-//! narrow the scope:
+//! `Adapter`, and is object-safe by default, so you can use generic bounds or trait object coercion
+//! to narrow the scope:
 //!
 //! ```rust,ignore
 //! fn print_api_version(service: &MyService) {
 //!     let api_version = service.api_version().exec_here().unwrap();
-//!
 //!     println!("API version: {}", api_version);
 //! }
 //!
@@ -52,7 +51,27 @@
 //! request parameters before they are submitted. This currently encompasses modifying the request
 //! URL and adding or overwriting HTTP headers. If your app requires some sort of API key or
 //! authentication header, you can add an interceptor to your adapter to automatically include
-//! the appropriate credentials with each request.
+//! the appropriate credentials with each request:
+//!
+//! ```rust,no_run
+//! # use anterofit::Adapter;
+//! use anterofit::net::interceptor::AddHeader;
+//! use anterofit::net::header::{Headers, Authorization, Bearer};
+//!
+//! let adapter = Adapter::builder()
+//!     .base_url("https://myservice.com/api")
+//!     .interceptor(AddHeader(Authorization (
+//!         Bearer {
+//!             token: "asdf1234hjkl5678"
+//!         }
+//!     ))
+//!     .build();
+//! ```
+//!
+//! `Interceptor` is also implemented for closures of the kind `Fn(&mut anterofit::net::request::RequestHead)`,
+//! but common operations are implemented as types in the `anterofit::net::interceptor` module.
+//! You can also chain interceptors together, or call `box_interceptor()` to transform
+//! it to `Box<Interceptor>` if you need to name the full type of `Adapter`.
 //!
 //! * The `Serializer` is responsible for taking a strongly typed request body and converting
 //! it to something that can be read into the HTTP stream, such as JSON or a raw byte sequence.
@@ -60,23 +79,33 @@
 //! * Conversely, the `Deserializer` is responsible for taking a response body in some predetermined
 //! format, such as JSON or XML, and reading out a strongly typed value.
 //!
-//! * The `Client` is responsible for managing proxies, DNS resolution, and
-//! bootstrapping connections. A default instance will be constructed automatically if one is not
-//! provided, but you can configure your own instance to tweak some low-level stuff like
+//! If you just want JSON serialization and deserialization and don't care about the details,
+//! use the `serialize_json()` method of your adapter builder to set the serializer and deserializer
+//! simultaneously.
+//!
+//! * The `Client` (`hyper::client::Client`) is responsible for managing proxies, DNS resolution,
+//! and bootstrapping connections. A default instance will be constructed automatically if one is
+//! not provided, but you can configure your own instance to tweak some low-level stuff like
 //! timeouts or to use a particular proxy.
 //!
 //! * Finally, the `base_url`, if provided, is automatically prepended to every request URL. This would
 //! generally be the protocol, domain and perhaps a path prefix, while request URLs can be standalone paths.
-//! That way you can easily swap between testing and production endpoints implementing the same
-//! REST API:
+//! That way you can easily swap between, for example, testing and production endpoints implementing
+//! the same REST API:
 //!
 //! ```rust,ignore
 //! let adapter = Adapter::builder()
-//!     .base_url(Url::parse("https://myservice.com/api").unwrap())
+//!     .base_url(Url::parse("https://test.myservice.com/api").unwrap())
 //!     .build();
 //!
 //! print_api_version(&adapter);
+//! register_user(&adapter, "username", "password");
 //!
+//! let adapter = Adapter::builder()
+//!     .base_url(Url::parse("https://prod.myservice.com/api").unwrap())
+//!     .build();
+//!
+//! print_api_version(&adapter);
 //! register_user(&adapter, "username", "password");
 //! ```
 //!
