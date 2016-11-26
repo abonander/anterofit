@@ -18,7 +18,80 @@
 //!     }
 //! }
 //! ```
-
+//!
+//! # Important Types
+//!
+//! ### Service Traits
+//! Created with the `service!{}` macro as shown above, service traits encompass the actual request
+//! submission and response parsing. Each service trait is automatically implemented for
+//! `Adapter`, and is object-safe, so you can use generic bounds or trait object coercion to
+//! narrow the scope:
+//!
+//! ```rust,ignore
+//! fn print_api_version(service: &MyService) {
+//!     let api_version = service.api_version().exec_here().unwrap();
+//!
+//!     println!("API version: {}", api_version);
+//! }
+//!
+//! fn register_user<S: MyService>(service: &S, username: &str, password: &str) {
+//!     service.register(username, password).exec_here().unwrap();
+//! }
+//! ```
+//!
+//! ### Adapter
+//! Built via `Adapter::builder()`, this is the starting point for all requests. It encompasses
+//! five crucial components, and one very important property:
+//!
+//! * The `Executor` is responsible for taking prepared requests and executing them. Since Anterofit
+//! is primarily designed to be asynchronous, the executor should submit jobs to be completed in the
+//! background. Several executors are provided in the `executor` module, but a sane default
+//! for low-volume asynchronous requests is provided automatically.
+//!
+//! * The `Interceptor` is a non-essential but endlessly useful component which can modify
+//! request parameters before they are submitted. This currently encompasses modifying the request
+//! URL and adding or overwriting HTTP headers. If your app requires some sort of API key or
+//! authentication header, you can add an interceptor to your adapter to automatically include
+//! the appropriate credentials with each request.
+//!
+//! * The `Serializer` is responsible for taking a strongly typed request body and converting
+//! it to something that can be read into the HTTP stream, such as JSON or a raw byte sequence.
+//!
+//! * Conversely, the `Deserializer` is responsible for taking a response body in some predetermined
+//! format, such as JSON or XML, and reading out a strongly typed value.
+//!
+//! * The `Client` is responsible for managing proxies, DNS resolution, and
+//! bootstrapping connections. A default instance will be constructed automatically if one is not
+//! provided, but you can configure your own instance to tweak some low-level stuff like
+//! timeouts or to use a particular proxy.
+//!
+//! * Finally, the `base_url`, if provided, is automatically prepended to every request URL. This would
+//! generally be the protocol, domain and perhaps a path prefix, while request URLs can be standalone paths.
+//! That way you can easily swap between testing and production endpoints implementing the same
+//! REST API:
+//!
+//! ```rust,ignore
+//! let adapter = Adapter::builder()
+//!     .base_url(Url::parse("https://myservice.com/api").unwrap())
+//!     .build();
+//!
+//! print_api_version(&adapter);
+//!
+//! register_user(&adapter, "username", "password");
+//! ```
+//!
+//! ### `Request`
+//! This type wraps the return value of every service trait method. Unlike in Retrofit,
+//! where the request is determined to be synchronous or asynchronous at the service method
+//! declaration site, `Request` gives the power over this choice to the caller so that
+//! no change to the trait is needed to change the execution context.
+//!
+//! ### `Call`
+//! Returned by `Request::exec()`, this type is a pollable `Future` which will yield the result
+//! of the request when it is ready. If there was an error in constructing the request,
+//! the result will be available immediately. `Call` shadows `Future::poll()` and `Future::wait()`
+//! with inherent methods that do not require the use of types from the `futures` crate, so you
+//! have a choice over whether you want to use futures in your app or not.
 #![warn(missing_docs)]
 #![cfg_attr(feature = "nightly", feature(insert_str))]
 #![recursion_limit="100"]
