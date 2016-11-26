@@ -29,9 +29,11 @@ pub trait Executor: Send + Clone + 'static {
 ///
 /// Panics are allowed to unwind back into calling code.
 #[derive(Clone)]
-pub struct SyncExecutor;
+pub struct Blocking;
 
-impl Executor for SyncExecutor {
+impl Executor for Blocking {
+    /// ## Blocks
+    /// Executes `exec` on the current thread, blocking until it returns.
     fn execute(&self, exec: Box<ExecBox>) {
         exec.exec();
     }
