@@ -124,6 +124,9 @@ macro_rules! fields {
 
 /// Serialize a series of key-value pairs as the request body.
 ///
+/// The series will be serialized as if it were a map, like `HashMap` or `BTreeMap`,
+/// but no extra traits besides `Serialize` are required; keys will not be deduplicated.
+///
 /// Serialization will be done on the executor, so the key and value types must be `Send + 'static`.
 ///
 /// For an eagerly serialized version, use `body_map_eager!()`.
@@ -145,8 +148,12 @@ macro_rules! body_map {
 
 /// Eagerly serialize a series of key-value pairs as the request body.
 ///
-/// Serialization will be done immediately on the current thread.
-
+/// The series will be serialized as if it were a map, like `HashMap` or `BTreeMap`,
+/// but no extra traits besides `Serialize` are required; keys will not be deduplicated.
+///
+/// Serialization will be done immediately on the current thread; neither `Send` nor `'static` is
+/// required.
+///
 /// ## Overwrites Body
 /// Setting a new body will overwrite any previous body on the request.
 #[macro_export]
