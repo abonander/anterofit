@@ -285,7 +285,7 @@ macro_rules! map_builder {
 
 /// Use in a service body to access the builder without consuming it.
 ///
-/// The expression can resolve anything, as the result is silently discarded.
+/// The expression can resolve to anything, as the result is silently discarded.
 ///
 /// ```rust
 /// # #[macro_use] extern crate anterofit;
