@@ -1,7 +1,11 @@
-use futures::{Future, Oneshot, Async, Poll};
+use futures::{Future, Complete, Oneshot, Async, Poll};
 use ::{Result, Error};
 
 use std::mem;
+
+use error::RequestPanicked;
+
+use super::request::RequestHead;
 
 /// A handle representing a pending result to an executed request.
 ///
@@ -90,13 +94,48 @@ impl<T> Future for Call<T> {
 }
 
 /// Implementation detail
-pub fn from_oneshot<T>(oneshot: Oneshot<Result<T>>) -> Call<T> {
-    Call(Call_::Waiting(oneshot))
+pub fn oneshot<T>(head: Option<RequestHead>) -> (PanicGuard<T>, Call<T>) {
+    let (tx, rx) = ::futures::oneshot();
+
+    let guard = PanicGuard {
+        head: head,
+        tx: Some(tx)
+    };
+
+    (guard, Call(Call_::Waiting(rx)))
 }
 
 /// Implementation detail
 pub fn immediate<T>(res: Result<T>) -> Call<T> {
     Call(Call_::Immediate(res))
+}
+
+/// Sends the request head on panic.
+pub struct PanicGuard<T> {
+    head: Option<RequestHead>,
+    tx: Option<Complete<Result<T>>>,
+}
+
+impl<T> PanicGuard<T> {
+    /// Get a mutable reference to the request head.
+    pub fn head_mut(&mut self) -> &mut RequestHead {
+        self.head.as_mut().expect("PanicGuard::head was None")
+    }
+
+    /// Send a result, which will prevent the head being sent on-panic.
+    pub fn complete(&mut self, res: Result<T>) {
+        if let Some(tx) = self.tx.take() {
+            tx.complete(res);
+        }
+    }
+}
+
+impl<T> Drop for PanicGuard<T> {
+    fn drop(&mut self) {
+        if let Some(head) = self.head.take() {
+            self.complete(Err(RequestPanicked(head).into()));
+        }
+    }
 }
 
 fn poll_for_result<T>(oneshot: &mut Oneshot<Result<T>>) -> Poll<T, Error> {

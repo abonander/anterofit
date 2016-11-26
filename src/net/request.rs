@@ -104,12 +104,10 @@ impl RequestHead {
     /// to an array of pairs (2-tuples), a vector of pairs, a `HashMap` or `BTreeMap`, or any other
     /// iterator that yields pairs or references to pairs.
     ///
-    /// Example:
     /// ```rust,no_run
     /// # extern crate anterofit;
     /// # use std::collections::HashMap;
     /// # let req: anterofit::net::RequestBuilder<_, _> = unimplemented!();
-    ///
     /// // `req` is some `RequestBuilder<_>`
     /// let head = req.head_mut();
     ///
@@ -118,7 +116,6 @@ impl RequestHead {
     /// let query_pairs = HashMap::new();
     ///
     /// // Add some items to the map (...)
-    ///
     /// head.query(query_pairs);
     /// ```
     ///
@@ -156,7 +153,7 @@ impl RequestHead {
     ///
     /// Finally, `client` will be used to create the `RequestBuilder` and the contained headers
     /// will be added.
-    pub fn init_request<'c>(self, base_url: Option<&Url>, client: &'c Client) -> Result<NetRequestBuilder<'c>> {
+    pub fn init_request<'c>(&self, base_url: Option<&Url>, client: &'c Client) -> Result<NetRequestBuilder<'c>> {
         let mut url = if let Some(base_url) = base_url {
             try!(base_url.join(&self.url))
         } else {
@@ -165,7 +162,34 @@ impl RequestHead {
 
         url.set_query(Some(&self.query));
 
-        Ok(client.request(self.method, url).headers(self.headers))
+        // This `.clone()` should be zero-cost, we don't expose Method::Extension at all.
+        Ok(client.request(self.method.clone(), url).headers(self.headers.clone()))
+    }
+
+    /// Get the current URL of this request.
+    pub fn get_url(&self) -> &str {
+        &self.url
+    }
+
+    /// Get the current query string of this request.
+    pub fn get_query(&self) -> &str {
+        &self.query
+    }
+
+    /// Get the HTTP method of this request.
+    pub fn get_method(&self) -> &Method {
+        &self.method
+    }
+
+    /// Get the headers of this request (may be modified later).
+    pub fn get_headers(&self) -> &Headers {
+        &self.headers
+    }
+}
+
+impl fmt::Display for RequestHead {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{} {}{}", self.method, self.url, self.query)
     }
 }
 
@@ -254,19 +278,19 @@ impl<'a, A, B> RequestBuilder<'a, A, B> where A: AbsAdapter {
 
         let adapter_ = adapter.clone();
 
-        let (tx, rx) = ::futures::oneshot();
+        let (mut guard, call) = super::call::oneshot(Some(head));
 
-        let exec = Box::new(move ||
-            tx.complete(
-                exec_request(&adapter_, head, body)
-                    .and_then(|response| T::from_response(&adapter_, response))
-            )
-        );
+        let exec = Box::new(move || {
+            let res = exec_request(&adapter_, guard.head_mut(), body)
+                .and_then(|response| T::from_response(&adapter_, response));
+
+            guard.complete(res);
+        });
 
         Request {
             adapter: adapter,
             exec: exec,
-            call: super::call::from_oneshot(rx),
+            call: call,
         }
     }
 }
@@ -329,6 +353,11 @@ impl<'a, T> Request<'a, T> where T: Send + 'static {
     /// ## Note
     /// `on_complete` should not be long-running in order to not block other requests waiting
     /// on the executor.
+    ///
+    /// ## Warning about Panics
+    /// Panics in `on_complete` will cause the return value to be lost. There is no safety
+    /// issue and subsequent requests shouldn't be affected, but it may be harder to debug
+    /// without knowing which request caused the panic.
     pub fn on_complete<F, R>(self, on_complete: F) -> Request<'a, R>
     where F: FnOnce(T) -> R + Send + 'static, R: Send + 'static {
         self.on_result(|res| res.map(on_complete))
@@ -345,6 +374,14 @@ impl<'a, T> Request<'a, T> where T: Send + 'static {
     /// ## Note
     /// `on_result` should not be long-running in order to not block other requests waiting
     /// on the executor, or block the current thread if the result is immediate.
+    ///
+    /// ## Warning about Panics
+    /// Panics in `on_result` will cause the return value to be lost. There is no safety
+    /// issue and subsequent requests shouldn't be affected, but it may be harder to debug
+    /// without knowing which request caused the panic.
+    ///
+    /// If the result is immediately available, panics in `on_result` will occur on the
+    /// current thread.
     pub fn on_result<F, R>(self, on_result: F) -> Request<'a, R>
     where F: FnOnce(Result<T>) -> Result<R> + Send + 'static, R: Send + 'static {
         let Request { adapter, exec, call } = self;
@@ -354,12 +391,12 @@ impl<'a, T> Request<'a, T> where T: Send + 'static {
             return Request::immediate(res);
         }
 
-        let (tx, rx) = ::futures::oneshot();
+        let (mut guard, new_call) = super::call::oneshot(None);
 
         let new_exec = Box::new(move || {
             exec.exec();
 
-            tx.complete(
+            guard.complete(
                 on_result(call.wait())
             );
         });
@@ -367,15 +404,15 @@ impl<'a, T> Request<'a, T> where T: Send + 'static {
         Request {
             adapter: adapter,
             exec: new_exec,
-            call: super::call::from_oneshot(rx),
+            call: new_call,
         }
     }
 }
 
-fn exec_request<A, B>(adpt: &A, mut head: RequestHead, body: B) -> Result<Response>
+fn exec_request<A, B>(adpt: &A, head: &mut RequestHead, body: B) -> Result<Response>
 where A: AbsAdapter, B: Body {
 
-    adpt.intercept(&mut head);
+    adpt.intercept(head);
 
     let mut readable = try!(body.into_readable(adpt));
 

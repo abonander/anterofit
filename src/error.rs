@@ -15,10 +15,12 @@ pub use hyper::error::ParseError as UrlError;
 /// Associated with errors writing out `multipart/form-data` requests.
 pub type MultipartError = ::multipart::client::lazy::LazyIoError<'static>;
 
+use net::request::RequestHead;
 use serialize::none::NoSerializeError;
 
 use std::io::Error as IoError;
 use std::error::Error as StdError;
+use std::fmt;
 
 quick_error! {
     /// The error type for this crate.
@@ -83,12 +85,18 @@ quick_error! {
             cause(&**e)
             description(e.description())
         }
-        /// The `futures::Canceled` error type.
+        /// Error returned when a panic occurred while completing a request.
         ///
-        /// Associated with panics on worker threads.
-        Panic {
+        /// The request head is provided for inspection.
+        Panic(e: RequestPanicked) {
+            from()
+            cause(e)
+            description(e.description())
+        }
+        /// A `Request` callback (`on_complete()` or `on_request()`) panicked.
+        UnknownPanic {
             from(::futures::Canceled)
-            description("The request could not be completed because a panic occurred on the worker thread.")
+            description("A panic occurred during a callback assigned to a request.")
         }
         /// Returned by methods on `Call` if the result was already taken.
         ResultTaken {
@@ -112,4 +120,22 @@ impl Error {
 /// Flatten a `Result` of a `Result` where the outer's error type is convertible to `anterofit::Result`.
 pub fn flatten_res<T, E>(res: Result<Result<T, Error>, E>) -> Result<T, Error> where Error: From<E> {
     try!(res)
+}
+
+/// Error returned when a panic occurred while completing a request.
+///
+/// The request head is provided for inspection.
+#[derive(Debug)]
+pub struct RequestPanicked(pub RequestHead);
+
+impl fmt::Display for RequestPanicked {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Panic while executing request: \"{}\"", self.0)
+    }
+}
+
+impl StdError for RequestPanicked {
+    fn description(&self) -> &str {
+        "A panic occurred while executing a request."
+    }
 }

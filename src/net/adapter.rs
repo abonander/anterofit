@@ -225,7 +225,7 @@ pub trait ObjSafeAdapter: Send + 'static {
     fn execute(&self, exec: Box<ExecBox>);
 
     /// Initialize a `hyper::client::RequestBuilder` from `head`.
-    fn request_builder(&self, head: RequestHead) -> Result<NetRequestBuilder>;
+    fn request_builder(&self, head: &RequestHead) -> Result<NetRequestBuilder>;
 }
 
 impl<E, I, S, D> AbsAdapter for Adapter<E, I, S, D>
@@ -253,7 +253,7 @@ where E: Executor, I: Interceptor, S: Serializer, D: Deserializer {
         self.inner.interceptor.intercept(head);
     }
 
-    fn request_builder(&self, head: RequestHead) -> Result<NetRequestBuilder> {
+    fn request_builder(&self, head: &RequestHead) -> Result<NetRequestBuilder> {
         head.init_request(self.inner.base_url.as_ref(), &self.inner.client)
     }
 }
@@ -268,7 +268,7 @@ impl ObjSafeAdapter for NoopAdapter {
 
     fn execute(&self, _: Box<ExecBox>) {}
 
-    fn request_builder(&self, _: RequestHead) -> Result<NetRequestBuilder> {
+    fn request_builder(&self, _: &RequestHead) -> Result<NetRequestBuilder> {
         unimplemented!()
     }
 }
