@@ -81,7 +81,7 @@
 //! * Conversely, the `Deserializer` is responsible for taking a response body in some predetermined
 //! format, such as JSON or XML, and reading out a strongly typed value.
 //!
-//!     * If you just want JSON serialization and deserialization and don't care about the details,
+//! If you just want JSON serialization and deserialization and don't care about the details,
 //! use the `serialize_json()` method of your adapter builder to set the serializer and deserializer
 //! simultaneously.
 //!
