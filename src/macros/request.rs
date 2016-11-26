@@ -110,12 +110,12 @@ macro_rules! body_eager (
 #[macro_export]
 macro_rules! fields {
     ($($key:expr $(=> $val:expr)*),*) => ({
-        use $crate::net::{AddField, EmptyFields};
+        use $crate::net::body::{AddField, EmptyFields};
 
-        let fields = $crate::net::EmptyFields;
+        let fields = EmptyFields;
 
         $(
-            fields = (field!($key, $($val)*)) (fields);
+            let fields = (field!($key, $($val)*)) (fields);
         )*;
 
         move |req| Ok($crate::net::RequestBuilder::body(req, fields))
@@ -133,7 +133,7 @@ macro_rules! fields {
 #[macro_export]
 macro_rules! body_map {
     ($($key:expr => $val:expr),+) => ({
-        let mut pairs = $crate::serialize::KeyValuePairs::new();
+        let mut pairs = $crate::serialize::PairMap::new();
 
         $(
             pairs.insert($key, $val);
@@ -152,7 +152,7 @@ macro_rules! body_map {
 #[macro_export]
 macro_rules! body_map_eager {
     ($($key:expr => $val:expr),+) => ({
-        let mut pairs = $crate::serialize::KeyValuePairs::new();
+        let mut pairs = $crate::serialize::PairMap::new();
 
         $(
             pairs.insert($key, $val);
@@ -166,10 +166,10 @@ macro_rules! body_map_eager {
 #[macro_export]
 macro_rules! field {
     ($key:expr, $val:expr) => (
-        move |fields| $crate::net::AddField::add_to($val, $key, fields)
+        move |fields| $crate::net::body::AddField::add_to($val, $key, fields)
     );
     ($keyval:expr, ) => (
-        move |fields| $crate::net::AddField::add_to($keyval, stringify!($keyval), fields)
+        move |fields| $crate::net::body::AddField::add_to($keyval, stringify!($keyval), fields)
     )
 }
 
@@ -184,16 +184,16 @@ macro_rules! field {
 #[macro_export]
 macro_rules! stream (
     ($stream:expr) => (
-        $crate::net::FileField::from_stream($stream, None, None)
+        $crate::net::body::FileField::from_stream($stream, None, None)
     );
     ($stream:expr, filename: $filename:expr) => (
-        $crate::net::FileField::from_stream($stream, Some($filename), None)
+        $crate::net::body::FileField::from_stream($stream, Some($filename), None)
     );
     ($stream:expr, content_type: $conttype:expr) => (
-        $crate::net::FileField::from_stream($stream, None, Some($conttype))
+        $crate::net::body::FileField::from_stream($stream, None, Some($conttype))
     );
     ($stream:expr, filename: $filename:expr, content_type: $conttype:expr) => (
-        $crate::net::FileField::from_stream($stream, Some($filename), Some($conttype))
+        $crate::net::body::FileField::from_stream($stream, Some($filename), Some($conttype))
     );
 );
 
@@ -211,7 +211,7 @@ macro_rules! stream (
 #[macro_export]
 macro_rules! path (
     ($path:expr) => (
-        $crate::net::FileField::from_path($path)
+        $crate::net::body::FileField::from_path($path)
     )
 );
 
@@ -231,7 +231,11 @@ macro_rules! query {
 
 /// Use in a service method body to perform an arbitrary transformation on the builder.
 ///
-/// ```rust,ignore
+/// ```rust
+/// # #[macro_use] extern crate anterofit;
+/// # fn main() {}
+/// use anterofit::RawBody;
+///
 /// service! {
 ///     trait MyService {
 ///         fn send_whatever(&self) {
@@ -245,7 +249,12 @@ macro_rules! query {
 ///
 /// You can even use `try!()` as long as the error type is convertible to `anterofit::Error`:
 ///
-/// ```rust,ignore
+/// ```rust
+/// # #[macro_use] extern crate anterofit;
+/// # fn main() {}
+/// use anterofit::RawBody;
+/// use std::fs::File;
+///
 /// service! {
 ///     trait MyService {
 ///         fn put_log_file(&self) {
@@ -260,17 +269,17 @@ macro_rules! query {
 /// ```
 #[macro_export]
 macro_rules! map_builder {
-    (|$buildid:ident| $expr:expr) => (
-        |$buildid:ident| Ok($expr)
+    (|$builder:ident| $expr:expr) => (
+        |$builder| Ok($expr)
     );
-    (move |$buildid:ident| $expr:expr) => (
-        move |$buildid:ident| Ok($expr)
+    (move |$builder:ident| $expr:expr) => (
+        move |$builder| Ok($expr)
     );
-    (|mut $buildid:ident| $expr:expr) => (
-        |mut $buildid:ident| Ok($expr)
+    (|mut $builder:ident| $expr:expr) => (
+        |mut $builder| Ok($expr)
     );
-    (move |mut $buildid:ident| $expr:expr) => (
-        move |mut $buildid:ident| Ok($expr)
+    (move |mut $builder:ident| $expr:expr) => (
+        move |mut $builder| Ok($expr)
     );
 }
 
@@ -278,12 +287,14 @@ macro_rules! map_builder {
 ///
 /// The expression can resolve anything, as the result is silently discarded.
 ///
-/// ```rust,ignore
+/// ```rust
+/// # #[macro_use] extern crate anterofit;
+/// # fn main() {}
 /// service! {
 ///     trait MyService {
 ///         fn get_whatever(&self) {
 ///             GET("/whatever");
-///             with_builder!(|builder| println!("Builder: {:?}", builder))
+///             with_builder!(|builder| println!("Request: {:?}", builder.head()))
 ///         }
 ///     }
 /// }
@@ -291,43 +302,53 @@ macro_rules! map_builder {
 ///
 /// You can even use `try!()` as long as the error type is convertible to `anterofit::Error`:
 ///
-/// ```rust,ignore
+/// ```rust,no_run
+/// # #[macro_use] extern crate anterofit;
+/// # fn main() {}
+/// use std::fs::OpenOptions;
+/// // Required for `write!()`
+/// use std::io::Write;
+///
 /// service! {
 ///     trait MyService {
 ///         fn get_whatever(&self) {
 ///             GET("/whatever");
 ///             with_builder!(|builder| {
-///                 let mut logfile = try!(File::create("logfile"));
-///                 try!(write!(logfile, "Builder: {:?}", builder));
+///                 let mut logfile = try!(OpenOptions::new()
+///                     .append(true).create(true).open("/etc/log"));
+///                 try!(write!(logfile, "Request: {:?}", builder.head()));
 ///             })
 ///         }
 ///     }
 /// }
 /// ```
+///
+/// (In practice, logging requests should probably be done in an `Interceptor` instead;
+/// this is merely an example demonstrating a plausible use-case.)
 #[macro_export]
 macro_rules! with_builder {
-    (|$buildid:ident| $expr:expr) => (
-        |$buildid:ident| {
+    (|$builder:ident| $expr:expr) => (
+        |$builder| {
             let _ = $expr;
-            Ok($buildid)
+            Ok($builder)
         }
     );
-    (move |$buildid:ident| $expr:expr) => (
-        move |$buildid:ident| {
+    (move |$builder:ident| $expr:expr) => (
+        move |$builder {
             let _ = $expr;
-            Ok($buildid)
+            Ok($builder)
         }
     );
-    (|mut $buildid:ident| $expr:expr) => (
-        |mut $buildid:ident| {
+    (|mut $builder:ident| $expr:expr) => (
+        |mut $builder| {
             let _ = $expr;
-            Ok($buildid)
+            Ok($builder)
         }
     );
-    (move |mut $buildid:ident| $expr:expr) => (
-        |mut $buildid:ident| {
+    (move |mut $builder:ident| $expr:expr) => (
+        |mut $builder| {
             let _ = $expr;
-            Ok($buildid)
+            Ok($builder)
         }
     );
 }

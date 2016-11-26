@@ -6,6 +6,7 @@
 
 use mime::Mime;
 
+use std::fmt;
 use std::io::{Read, Write};
 
 use ::Result;
@@ -57,15 +58,15 @@ pub trait Deserializer: Send + Sync + 'static {
 /// A simple series of key-value pairs that can be serialized as a map.
 ///
 /// Nothing will be done with duplicate keys.
-#[derive(Clone, Debug)]
-pub struct KeyValuePairs<K, V> {
+#[derive(Clone)]
+pub struct PairMap<K, V> {
     pairs: Vec<(K, V)>,
 }
 
-impl<K, V> KeyValuePairs<K, V> {
+impl<K, V> PairMap<K, V> {
     /// Create an empty series.
     pub fn new() -> Self {
-        KeyValuePairs {
+        PairMap {
             pairs: Vec::new()
         }
     }
@@ -89,4 +90,25 @@ impl<K, V> KeyValuePairs<K, V> {
     pub fn into_pairs(self) -> Vec<(K, V)> {
         self.pairs
     }
+}
+
+impl<K: fmt::Debug, V: fmt::Debug> fmt::Debug for PairMap<K, V> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut debug = f.debug_map();
+
+        for &(ref key, ref val) in &self.pairs {
+            debug.entry(key, val);
+        }
+
+        debug.finish()
+    }
+}
+
+#[test]
+fn pair_map_is_serialize() {
+    use std::io;
+
+    let pair_map: PairMap<String, String> = PairMap::new();
+
+    let _ = none::NoSerializer.serialize(&pair_map, &mut io::sink());
 }

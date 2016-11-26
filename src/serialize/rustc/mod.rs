@@ -9,7 +9,7 @@ pub use rustc_serialize::{
 
 pub mod json;
 
-impl<K: Encodable, V: Encodable> Encodable for super::KeyValuePairs<K, V> {
+impl<K: Encodable, V: Encodable> Encodable for super::PairMap<K, V> {
     fn encode<E: Encoder>(&self, en: &mut E) -> Result<(), E::Error> {
         let pairs = self.pairs();
 

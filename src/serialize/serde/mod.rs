@@ -12,7 +12,7 @@ pub mod json;
 #[cfg(feature = "serde_xml")]
 pub mod xml;
 
-impl<K: Serialize, V: Serialize> Serialize for super::KeyValuePairs<K, V> {
+impl<K: Serialize, V: Serialize> Serialize for super::PairMap<K, V> {
     fn serialize<S>(&self, s: &mut S) -> Result<(), S::Error> where S: Serializer {
         let pairs = self.pairs();
 

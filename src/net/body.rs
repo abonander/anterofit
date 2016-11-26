@@ -6,12 +6,15 @@ use net::adapter::AbsAdapter;
 
 use mime::{self, Mime};
 
+use serialize::PairMap;
+
 type Multipart = ::multipart::client::lazy::Multipart<'static, 'static>;
 type PreparedFields = ::multipart::client::lazy::PreparedFields<'static>;
 
 use url::form_urlencoded::Serializer as FormUrlEncoder;
 
 use std::borrow::Borrow;
+use std::fmt;
 use std::io::{self, Cursor, Read};
 use std::path::PathBuf;
 
@@ -177,6 +180,7 @@ pub trait Fields {
 }
 
 /// An empty fields collection, will serialize to nothing.
+#[derive(Debug)]
 pub struct EmptyFields;
 
 impl Fields for EmptyFields {
@@ -203,15 +207,16 @@ impl Body for EmptyFields {
 /// A collection of key-string value pairs to be serialized as fields in the request.
 ///
 /// Will be serialized as form/percent-encoded pairs.
-pub struct TextFields(Vec<(String, String)>);
+#[derive(Debug)]
+pub struct TextFields(PairMap<String, String>);
 
 impl TextFields {
     fn new() -> TextFields {
-        TextFields(vec![])
+        TextFields(PairMap::new())
     }
 
     fn push<K: ToString, V: ToString>(&mut self, key: K, val: V) {
-        self.0.push((key.to_string(), val.to_string()));
+        self.0.insert(key.to_string(), val.to_string());
     }
 }
 
@@ -235,7 +240,7 @@ impl Body for TextFields {
     where A: AbsAdapter {
         let readable = Cursor::new(
             FormUrlEncoder::new(String::new())
-                .extend_pairs(self.0)
+                .extend_pairs(self.0.into_pairs())
                 .finish()
         );
 
@@ -246,9 +251,10 @@ impl Body for TextFields {
 /// A collection of key-value pairs where the values may be string fields or file fields.
 ///
 /// Will be serialized as a `multipart/form-data` request.
+#[derive(Debug)]
 pub struct MultipartFields {
-    text: TextFields,
-    files: Vec<(String, FileField)>,
+    text: PairMap<String, String>,
+    files: PairMap<String, FileField>,
 }
 
 impl MultipartFields {
@@ -258,8 +264,8 @@ impl MultipartFields {
 
     fn from_text(text: TextFields) -> Self {
         MultipartFields {
-            text: text,
-            files: vec![],
+            text: text.0,
+            files: PairMap::new(),
         }
     }
 }
@@ -268,12 +274,12 @@ impl Fields for MultipartFields {
     type WithText = Self;
 
     fn with_text<K: ToString, V: ToString>(mut self, key: K, val: V) -> Self::WithText {
-        self.text.push(key, val);
+        self.text.insert(key.to_string(), val.to_string());
         self
     }
 
     fn with_file<K: ToString>(mut self, key: K, file: FileField) -> MultipartFields {
-        self.files.push((key.to_string(), file));
+        self.files.insert(key.to_string(), file);
         self
     }
 }
@@ -287,11 +293,11 @@ impl Body for MultipartFields {
 
         let mut multipart = Multipart::new();
 
-        for (key, val) in self.text.0 {
+        for (key, val) in self.text.into_pairs() {
             multipart.add_text(key, val);
         }
 
-        for (key, file) in self.files {
+        for (key, file) in self.files.into_pairs() {
             match file.0 {
                 Stream {
                     stream,
@@ -314,7 +320,6 @@ impl Body for MultipartFields {
     }
 }
 
-
 /// A file field, can be a generic `Read` impl or a `Path`.
 pub struct FileField(FileField_);
 
@@ -332,6 +337,23 @@ impl FileField {
     pub fn from_path<P: Into<PathBuf>>(path: P) -> Self {
         FileField(FileField_::Path(path.into()))
     }
+}
+
+impl fmt::Debug for FileField {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self.0 {
+            FileField_::Stream {
+                ref content_type, ref filename, ..
+            } => f.debug_struct("FileField::Stream")
+                .field("stream", &"Box<Read + Send + 'static>")
+                .field("content_type", &content_type)
+                .field("filename", filename)
+                .finish(),
+            FileField_::Path(ref path) =>
+                f.debug_tuple("FileField::Path").field(path).finish()
+        }
+    }
+
 }
 
 enum FileField_ {

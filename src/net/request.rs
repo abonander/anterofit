@@ -107,13 +107,11 @@ impl RequestHead {
     /// ```rust,no_run
     /// # extern crate anterofit;
     /// # use std::collections::HashMap;
-    /// # let req: anterofit::net::RequestBuilder<_, _> = unimplemented!();
-    /// // `req` is some `RequestBuilder<_>`
-    /// let head = req.head_mut();
-    ///
+    /// # let head: &mut anterofit::net::RequestHead = unimplemented!();
+    /// // `head` is `&mut RequestHead`
     /// head.query(&[("hello", "world"), ("id", "3")]);
     ///
-    /// let query_pairs = HashMap::new();
+    /// let query_pairs: HashMap<String, String> = HashMap::new();
     ///
     /// // Add some items to the map (...)
     /// head.query(query_pairs);
@@ -196,6 +194,7 @@ impl fmt::Display for RequestHead {
 /// A container for a request header and body.
 ///
 /// Used in the body of service methods to construct a request.
+#[derive(Debug)]
 pub struct RequestBuilder<'a, A: 'a, B> {
     adapter: &'a A,
     head: RequestHead,
@@ -216,6 +215,11 @@ impl<'a, A> RequestBuilder<'a, A, EmptyFields> {
 }
 
 impl<'a, A, B> RequestBuilder<'a, A, B> {
+    /// Get a reference to the header of the request to inspect it.
+    pub fn head(&self) -> &RequestHead {
+        &self.head
+    }
+
     /// Get a mutable reference to the header of the request.
     ///
     /// Can be used to change the request URL, add GET query pairs or HTTP headers to be
