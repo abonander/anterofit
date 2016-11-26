@@ -41,6 +41,13 @@ service! {
             GET("/posts")
         }
 
+        /// Get all posts by a specific user
+        fn posts_by_user(&self, userid: u64) -> Vec<Post> {
+            GET("/user/{}/posts", userid)
+        }
+
+        // TODO: demonstrate `query!{}`
+
         /// Create a new Post under the given user ID with the given title and body.
         fn new_post(&self, userid: u64, title: &str, body: &str) -> Post {
             POST("/posts/");
@@ -51,7 +58,7 @@ service! {
                 userid: userid,
                 title: title,
                 body: body
-            })
+            });
         }
     }
 }

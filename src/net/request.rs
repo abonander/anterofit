@@ -203,7 +203,7 @@ impl<'a, A, B> RequestBuilder<'a, A, B> {
     /// Set a body to be sent with the request.
     ///
     /// ##Panics
-    /// If this is a GET request.
+    /// If this is a GET request (cannot have a body).
     pub fn body<B_>(self, body: B_) -> RequestBuilder<'a, A, B_> {
         if let Method::Get = self.head.method {
             panic!("Cannot supply a body with GET requests!");
@@ -215,14 +215,30 @@ impl<'a, A, B> RequestBuilder<'a, A, B> {
             body: body,
         }
     }
+
+    /// Pass `self` to the closure, allowing it to mutate and transform the builder
+    /// arbitrarily.
+    ///
+    /// `try!()` will work in this closure.
+    pub fn apply<F, B_>(self, functor: F) -> Result<RequestBuilder<'a, A, B_>>
+    where F: FnOnce(Self) -> Result<RequestBuilder<'a, A, B_>> {
+        functor(self)
+    }
 }
 impl<'a, A, B> RequestBuilder<'a, A, B> where A: AbsAdapter {
     /// Immediately serialize `body` on the current thread and set the result as the body
     /// of this request.
     ///
     /// This is useful if you want to use a body type that is not `Send` or `'static`.
+    ///
+    /// ##Panics
+    /// If this is a GET request (cannot have a body).
     pub fn body_eager<B_>(self, body: B_) -> Result<RequestBuilder<'a, A, RawBody<<B_ as EagerBody>::Readable>>>
     where B_: EagerBody {
+        if let Method::Get = self.head.method {
+            panic!("Cannot supply a body with GET requests!");
+        }
+
         let body = try!(body.into_readable(self.adapter)).into();
         Ok(self.body(body))
     }

@@ -36,7 +36,7 @@ macro_rules! request_impl {
         );
 
         $(
-            let builder = try_request!(($buildexpr)(builder));
+            let builder = try_request!(builder.apply($buildexpr));
         )*
 
         builder.build()
@@ -64,8 +64,7 @@ macro_rules! request_impl {
 #[macro_export]
 macro_rules! body (
     ($body:expr) => (
-        // UFCS is necessary as the compiler can't infer the type otherwise
-        move | req | Ok($crate::net::RequestBuilder::body(req, $body))
+        move | req | Ok(req.body($body))
     )
 );
 
@@ -78,7 +77,7 @@ macro_rules! body (
 #[macro_export]
 macro_rules! body_eager (
     ($body:expr) => (
-        move | req | $crate::net::RequestBuilder::body_eager(req, $body)
+        move | req | req.body_eager($body)
     );
 );
 
@@ -159,7 +158,7 @@ macro_rules! body_map_eager {
             pairs.insert($key, $val);
         )+;
 
-        move |req| Ok($crate::net::RequestBuilder::body_eager(req, pairs))
+        move |req| req.body_eager(req, pairs)
     })
 }
 
@@ -222,10 +221,115 @@ macro_rules! path (
 #[macro_export]
 macro_rules! query {
     ($($key:expr => $val:expr),+) => (
-        |req| Ok($crate::net::RequestBuilder::query(req, &[
-            $(&$key as &::std::fmt::Display, &$val as &::std::fmt::Display),+
-        ]))
+        |req| {
+            req.head_mut().query(req, &[
+                $(&$key as &::std::fmt::Display, &$val as &::std::fmt::Display),+
+            ])
+        }
     )
+}
+
+/// Use in a service method body to perform an arbitrary transformation on the builder.
+///
+/// ```rust,ignore
+/// service! {
+///     trait MyService {
+///         fn send_whatever(&self) {
+///             POST("/whatever");
+///             // `move` and `mut` are allowed in their expected positions as well
+///             map_builder!(|builder| builder.body(RawBody::text("Hello, world!")))
+///         }
+///     }
+/// }
+/// ```
+///
+/// You can even use `try!()` as long as the error type is convertible to `anterofit::Error`:
+///
+/// ```rust,ignore
+/// service! {
+///     trait MyService {
+///         fn put_log_file(&self) {
+///             PUT("/log");
+///             map_builder!(|builder| {
+///                 let logfile = try!(File::open("/etc/log"));
+///                 builder.body(RawBody::new(logfile, None))
+///             })
+///         }
+///     }
+/// }
+/// ```
+#[macro_export]
+macro_rules! map_builder {
+    (|$buildid:ident| $expr:expr) => (
+        |$buildid:ident| Ok($expr)
+    );
+    (move |$buildid:ident| $expr:expr) => (
+        move |$buildid:ident| Ok($expr)
+    );
+    (|mut $buildid:ident| $expr:expr) => (
+        |mut $buildid:ident| Ok($expr)
+    );
+    (move |mut $buildid:ident| $expr:expr) => (
+        move |mut $buildid:ident| Ok($expr)
+    );
+}
+
+/// Use in a service body to access the builder without consuming it.
+///
+/// The expression can resolve anything, as the result is silently discarded.
+///
+/// ```rust,ignore
+/// service! {
+///     trait MyService {
+///         fn get_whatever(&self) {
+///             GET("/whatever");
+///             with_builder!(|builder| println!("Builder: {:?}", builder))
+///         }
+///     }
+/// }
+/// ```
+///
+/// You can even use `try!()` as long as the error type is convertible to `anterofit::Error`:
+///
+/// ```rust,ignore
+/// service! {
+///     trait MyService {
+///         fn get_whatever(&self) {
+///             GET("/whatever");
+///             with_builder!(|builder| {
+///                 let mut logfile = try!(File::create("logfile"));
+///                 try!(write!(logfile, "Builder: {:?}", builder));
+///             })
+///         }
+///     }
+/// }
+/// ```
+#[macro_export]
+macro_rules! with_builder {
+    (|$buildid:ident| $expr:expr) => (
+        |$buildid:ident| {
+            let _ = $expr;
+            Ok($buildid)
+        }
+    );
+    (move |$buildid:ident| $expr:expr) => (
+        move |$buildid:ident| {
+            let _ = $expr;
+            Ok($buildid)
+        }
+    );
+    (|mut $buildid:ident| $expr:expr) => (
+        |mut $buildid:ident| {
+            let _ = $expr;
+            Ok($buildid)
+        }
+    );
+    (move |mut $buildid:ident| $expr:expr) => (
+        |mut $buildid:ident| {
+            let _ = $expr;
+            Ok($buildid)
+        }
+    );
 }
 
 #[doc(hidden)]
