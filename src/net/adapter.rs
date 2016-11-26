@@ -264,13 +264,9 @@ pub const NOOP: &'static ObjSafeAdapter = &NoopAdapter;
 struct NoopAdapter;
 
 impl ObjSafeAdapter for NoopAdapter {
-    fn intercept(&self, _: &mut RequestHead) {
-        unimplemented!()
-    }
+    fn intercept(&self, _: &mut RequestHead) {}
 
-    fn execute(&self, _: Box<ExecBox>) {
-        unimplemented!()
-    }
+    fn execute(&self, _: Box<ExecBox>) {}
 
     fn request_builder(&self, _: RequestHead) -> Result<NetRequestBuilder> {
         unimplemented!()
