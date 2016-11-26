@@ -6,14 +6,15 @@ mod request;
 /// Define a service trait whose methods make HTTP requests.
 ///
 /// ##Example
-/// ```rust,ignore
+/// ```rust
+/// # #[macro_use] extern crate anterofit;
+/// # fn main() {}
 /// service! {
 ///     pub trait MyService {
 ///         /// Get the version of this API.
 ///         fn api_version(&self) -> String {
 ///             GET("/version")
 ///         }
-///
 ///
 ///         /// Register a user with the API.
 ///         fn register(&self, username: &str, password: &str) {
@@ -89,14 +90,4 @@ macro_rules! service {
             )*
         }
     )
-}
-
-#[macro_export]
-#[doc(hidden)]
-macro_rules! method {
-    (
-        #[$verb:ident($($urlpart:tt)+)]
-        $(#[$meta:meta])*
-        fn $fnname:ident $(<$($generics:tt)*>)* (&self $($args:tt)*) -> $ret:ty
-    ) => ();
 }
