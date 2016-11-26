@@ -43,9 +43,10 @@ macro_rules! request_impl {
     })
 }
 
-/// Serialize the given value as the request body using the serializer provided in the adapter.
+/// Serialize the given value as the request body.
 ///
-/// Serialization will be performed on the adapter's executor when the request is submitted.
+/// Serialization will be performed on the adapter's executor, using the adapter's serializer,
+/// when the request is submitted.
 ///
 /// If the value is intended to be read directly as the request body, wrap it with `RawBody`.
 ///
@@ -68,12 +69,19 @@ macro_rules! body (
     )
 );
 
-/// Like `body!()`, but eagerly serializes the body on the current thread.
+/// Eagerly serialize the given value as the request body on the current thread.
 ///
-/// This is useful when you have a request body that is not `Send + 'static`.
+/// Uses the adapter's serializer.
+///
+/// Use this instead of `body!()` when you have a request body that is not `Send + 'static`.
+///
+/// If the value is intended to be read directly as the request body, wrap it with `RawBody`.
 ///
 /// ## Overwrites Body
 /// Setting a new body will overwrite any previous body on the request.
+///
+/// ## Panics
+/// If the request is a GET request (cannot have a body).
 #[macro_export]
 macro_rules! body_eager (
     ($body:expr) => (
