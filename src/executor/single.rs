@@ -19,6 +19,8 @@ pub struct SingleThread {
 
 impl SingleThread {
     /// Construct a new executor, spawning a new background thread which will wait for tasks.
+    ///
+    /// The worker thread will be named such that it can be easily identified.
     pub fn new() -> Self {
         let (tx, rx) = mpsc::channel::<Box<ExecBox>>();
 
