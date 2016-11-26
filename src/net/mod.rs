@@ -1,4 +1,6 @@
-//! The nitty-gritty implementation details of Anterofit.
+//! Anterofit's HTTP client framework, built on Hyper.
+//!
+//! Works standalone, but designed to be used with the `service!{}` macro.
 
 pub use hyper::method::Method;
 
