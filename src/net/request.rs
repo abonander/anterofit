@@ -282,8 +282,6 @@ impl<'a, T> Request<'a, T> {
     }
 
     /// Execute this request on the current thread, **blocking** until the result is available.
-    ///
-    /// Does not require a valid adapter type.
     pub fn exec_here(self) -> Result<T> {
         self.exec.exec();
         self.call.wait()
