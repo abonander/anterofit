@@ -29,12 +29,14 @@
 //!
 //! ```rust,ignore
 //! fn print_api_version(service: &MyService) {
+//!     // This completes synchronously.
 //!     let api_version = service.api_version().exec_here().unwrap();
 //!     println!("API version: {}", api_version);
 //! }
 //!
 //! fn register_user<S: MyService>(service: &S, username: &str, password: &str) {
-//!     service.register(username, password).exec_here().unwrap();
+//!     // By default, this will complete asynchronously.
+//!     service.register(username, password).exec();
 //! }
 //! ```
 //!
@@ -54,17 +56,17 @@
 //! the appropriate credentials with each request:
 //!
 //! ```rust,no_run
-//! # use anterofit::Adapter;
+//! # use anterofit::{Adapter, Url};
 //! use anterofit::net::interceptor::AddHeader;
 //! use anterofit::net::header::{Headers, Authorization, Bearer};
 //!
 //! let adapter = Adapter::builder()
-//!     .base_url("https://myservice.com/api")
+//!     .base_url(Url::parse("https://myservice.com/api").unwrap())
 //!     .interceptor(AddHeader(Authorization (
 //!         Bearer {
-//!             token: "asdf1234hjkl5678"
+//!             token: "asdf1234hjkl5678".to_string()
 //!         }
-//!     ))
+//!     )))
 //!     .build();
 //! ```
 //!
@@ -115,7 +117,7 @@
 //! declaration site, `Request` gives the power over this choice to the caller so that
 //! no change to the trait is needed to change the execution context:
 //!
-//! ```rust
+//! ```rust,ignore
 //! fn print_api_version(service: &MyService) {
 //!     service.api_version()
 //!         // This closure will be called with the `String` value on the executor

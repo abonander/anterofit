@@ -58,7 +58,7 @@ service! {
                 userid: userid,
                 title: title,
                 body: body
-            });
+            })
         }
     }
 }
