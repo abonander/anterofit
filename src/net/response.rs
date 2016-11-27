@@ -14,7 +14,8 @@ use ::Result;
 ///
 /// Implemented for `T: Deserialize + Send + 'static`.
 ///
-/// Use `RawResponse` if you just want the response body.
+/// Use `response::Raw` if you just want the response body, or `WithRaw` or `TryWithRaw`
+/// if you want the response body and the deserialized value.
 pub trait FromResponse: Send + Sized + 'static {
     /// Deserialize or otherwise convert an instance of `Self` from `response`.
     fn from_response<A>(adpt: &A, response: Response) -> Result<Self>
