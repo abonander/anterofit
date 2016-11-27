@@ -25,7 +25,7 @@
 //!
 //! # Important Types
 //!
-//! ### Service Traits
+//! ## Service Traits
 //! Created with the `service!{}` macro as shown above, service traits encompass the actual request
 //! submission and response parsing. Each service trait is automatically implemented for
 //! `Adapter`, and is object-safe by default, so you can use generic bounds or trait object coercion
@@ -44,7 +44,7 @@
 //! }
 //! ```
 //!
-//! ### Adapter
+//! ## Adapter
 //! Built via `Adapter::builder()`, this is the starting point for all requests. It encompasses
 //! five crucial components, and one very important property:
 //!
@@ -122,7 +122,7 @@
 //! # }
 //! ```
 //!
-//! ### `Request`
+//! ## `Request`
 //! This type wraps the return value of every service trait method. Unlike in Retrofit,
 //! where the request is determined to be synchronous or asynchronous at the service method
 //! declaration site, `Request` gives the power over this choice to the caller so that
@@ -141,7 +141,7 @@
 //! }
 //! ```
 //!
-//! ### `Call`
+//! ## `Call`
 //! Returned by `Request::exec()`, this type is a pollable `Future` which will yield the result
 //! of the request when it is ready. If there was an error in constructing the request,
 //! the result will be available immediately. `Call` shadows `Future::poll()` and `Future::wait()`
