@@ -16,7 +16,7 @@ pub use self::call::Call;
 
 pub use self::request::{RequestHead, RequestBuilder, Request};
 
-pub use self::response::{FromResponse, RawResponse};
+pub use self::response::{FromResponse, Raw as RawResponse};
 
 mod adapter;
 
