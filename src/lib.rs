@@ -33,14 +33,19 @@
 //!
 //! ```rust,ignore
 //! fn print_api_version(service: &MyService) {
-//!     // This completes synchronously.
+//!     // This completes synchronously, blocking until the request is complete.
 //!     let api_version = service.api_version().exec_here().unwrap();
 //!     println!("API version: {}", api_version);
 //! }
 //!
 //! fn register_user<S: MyService>(service: &S, username: &str, password: &str) {
 //!     // By default, this will complete asynchronously.
-//!     service.register(username, password).exec();
+//!     service.register(username, password)
+//!         // exec() queues the request on the executor,
+//!         // and ignore() silences the `unused_result` lint for `Call`.
+//!         .exec().ignore();
+//!
+//!     // This function returns immediately; all the work is done on the executor.
 //! }
 //! ```
 //!
@@ -133,11 +138,8 @@
 //!     service.api_version()
 //!         // This closure will be called with the `String` value on the executor
 //!         .on_complete(|api_version| println!("API version: {}", api_version))
-//!         // exec() queues the request on the executor,
-//!         // and .ignore() silences the `unused_result` lint for `Call`.
+//!         // We don't care about the result since it's `()` anyway.
 //!         .exec().ignore();
-//!
-//!     // This function returns immediately; all the work is done on the executor.
 //! }
 //! ```
 //!
