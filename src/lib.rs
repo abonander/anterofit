@@ -1,8 +1,9 @@
 //! Wrap REST calls with Rust traits.
 //!
 //! ```rust
-//! # #[macro_use] extern crate anterofit;
+//! #[macro_use] extern crate anterofit;
 //! # fn main() {}
+//!
 //! service! {
 //!     pub trait MyService {
 //!         /// Get the version of this API.
@@ -102,7 +103,6 @@
 //! # fn print_api_version<T>(_: &T) {}
 //! # fn register_user<T>(_: &T, _: &str, _: &str) {}
 //! # fn main() {
-//!
 //! use anterofit::{Adapter, Url};
 //!
 //! let adapter = Adapter::builder()
