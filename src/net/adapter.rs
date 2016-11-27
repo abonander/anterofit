@@ -44,7 +44,7 @@ impl<E, I, S, D> AdapterBuilder<E, I, S, D> {
     pub fn base_url(self, url: Url) -> Self {
         AdapterBuilder { base_url: Some(url), .. self }
     }
-    
+
     /// Set a `hyper::Client` instance to use with the adapter.
     ///
     /// If not supplied, a default instance will be constructed.
