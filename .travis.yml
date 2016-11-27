@@ -10,8 +10,8 @@ os:
 script:
   - if [ ${TRAVIS_RUST_VERSION} = "nightly" ]; then
       cargo build --verbose --features "nightly";
-      cargo test --verbose --features "nightly"
-      cargo build --verbose --no-default-features --features "serde-all nightly"
+      cargo test --verbose --features "nightly";
+      cargo build --verbose --no-default-features --features "serde-all nightly";
     fi
   - cargo build --verbose;
   - cargo test --verbose;
