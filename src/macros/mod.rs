@@ -32,7 +32,7 @@ macro_rules! service {
         $(#[$meta:meta])*
         trait $servicenm:ident {
             $(
-                $(#[$meta:meta])*
+                $(#[$fnmeta:meta])*
                 fn $fnname:ident $(<$($generics:tt)*>)* (&self $($args:tt)*) $(-> $ret:ty)*
                 $(where $($whereclause:tt)+)* {
                     $($body:tt)+
@@ -43,7 +43,7 @@ macro_rules! service {
         $(#[$meta])*
         trait $servicenm {
             $(
-                $(#[$meta])*
+                $(#[$fnmeta])*
                 fn $fnname $(<$($generics)*>)* (&self $($args)*) -> $crate::net::Request<$($ret)*>
                 $(where $($whereclause)+)*;
             )*
@@ -51,7 +51,6 @@ macro_rules! service {
 
         impl<T: $crate::net::AbsAdapter> $servicenm for T {
             $(
-                $(#[$meta])*
                 fn $fnname $(<$($generics)*>)* (&self $($args)*) -> $crate::net::Request<$($ret)*>
                 $(where $($whereclause)+)* {
                     request_impl! {
@@ -65,7 +64,7 @@ macro_rules! service {
         $(#[$meta:meta])*
         pub trait $servicenm:ident {
             $(
-                $(#[$meta:meta])*
+                $(#[$fnmeta:meta])*
                 fn $fnname:ident $(<$($generics:tt)*>)* (&self $($args:tt)*) $(-> $ret:ty)*
                 $(where $($whereclause:tt)+)* {
                     $($body:tt)+
@@ -73,10 +72,10 @@ macro_rules! service {
             )*
         }
     ) => (
-        $(#[meta])*
+        $(#[$meta])*
         pub trait $servicenm {
             $(
-                $(#[$meta])*
+                $(#[$fnmeta])*
                 fn $fnname $(<$($generics)*>)* (&self $($args)*) -> $crate::net::Request<$($ret)*>
                 $(where $($whereclause)+)*;
             )*
@@ -84,7 +83,6 @@ macro_rules! service {
 
         impl<T: $crate::net::AbsAdapter> $servicenm for T {
             $(
-                $(#[$meta])*
                 fn $fnname $(<$($generics)*>)* (&self $($args)*) -> $crate::net::Request<$($ret)*>
                 $(where $($whereclause)+)* {
                     request_impl! {
