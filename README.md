@@ -1,4 +1,4 @@
-# anterofit
+# anterofit [![Build Status](https://travis-ci.org/abonander/anterofit.svg?branch=master)](https://travis-ci.org/abonander/anterofit) [![On Crates.io](https://img.shields.io/crates/v/anterofit.svg)](https://crates.io/crates/anterofit)
 
 #### [retrofit](https://square.github.io/retrofit) | *verb*  \ˈre-trō-ˌfit, ˌre-trō-ˈfit\
 
@@ -21,6 +21,8 @@ with few exceptions, reserved for error conditions that can only be discovered a
 
 Usage
 -----
+
+###[Documentation](https://docs.rs/anterofit)
 
 With [`rustc-serialize`](https://crates.io/crates/rustc-serialize):
 
