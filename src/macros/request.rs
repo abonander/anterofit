@@ -97,12 +97,15 @@ macro_rules! body_eager (
 /// For a single identifier, the identifier will be stringified for the field name, and its
 /// value will become the field value:
 ///
-/// ```rust,ignore
+/// ```rust
+/// # #[macro_use] extern crate anterofit;
+/// # fn main() { let _ =
 /// fields! {
 ///     "username" => username,
 ///     // Equivalent to "password" => password
 ///     password
 /// }
+/// # ; }
 /// ```
 ///
 /// By default, this will serialize to a `www-form-urlencoded` body.
@@ -141,6 +144,9 @@ macro_rules! fields {
 ///
 /// ## Overwrites Body
 /// Setting a new body will overwrite any previous body on the request.
+///
+/// ## Panics
+/// If the request is a GET request (cannot have a body).
 #[macro_export]
 macro_rules! body_map {
     ($($key:expr => $val:expr),+) => ({
@@ -164,6 +170,9 @@ macro_rules! body_map {
 ///
 /// ## Overwrites Body
 /// Setting a new body will overwrite any previous body on the request.
+///
+/// ## Panics
+/// If the request is a GET request (cannot have a body).
 #[macro_export]
 macro_rules! body_map_eager {
     ($($key:expr => $val:expr),+) => ({
