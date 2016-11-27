@@ -99,13 +99,19 @@ macro_rules! body_eager (
 ///
 /// ```rust
 /// # #[macro_use] extern crate anterofit;
-/// # fn main() { let _ =
-/// fields! {
-///     "username" => username,
-///     // Equivalent to "password" => password
-///     password
+/// # fn main() {}
+/// service! {
+///     pub trait RegisterService {
+///         fn register(&self, username: &str, password: &str) {
+///             POST("/register");
+///             fields! {
+///                 "username" => username,
+///                 // Equivalent to "password" => password
+///                 password
+///             }
+///         }
+///     }
 /// }
-/// # ; }
 /// ```
 ///
 /// By default, this will serialize to a `www-form-urlencoded` body.
