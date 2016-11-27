@@ -1,6 +1,8 @@
 //! Wrap REST calls with Rust traits.
 //!
-//! ```rust,ignore
+//! ```rust
+//! # #[macro_use] extern crate anterofit;
+//! # fn main() {}
 //! service! {
 //!     pub trait MyService {
 //!         /// Get the version of this API.
@@ -56,7 +58,7 @@
 //! the appropriate credentials with each request:
 //!
 //! ```rust,no_run
-//! # use anterofit::{Adapter, Url};
+//! use anterofit::{Adapter, Url};
 //! use anterofit::net::interceptor::AddHeader;
 //! use anterofit::net::header::{Headers, Authorization, Bearer};
 //!
@@ -95,7 +97,14 @@
 //! That way you can easily swap between, for example, testing and production endpoints implementing
 //! the same REST API:
 //!
-//! ```rust,ignore
+//! ```rust
+//! # extern crate anterofit;
+//! # fn print_api_version<T>(_: &T) {}
+//! # fn register_user<T>(_: &T, _: &str, _: &str) {}
+//! # fn main() {
+//!
+//! use anterofit::{Adapter, Url};
+//!
 //! let adapter = Adapter::builder()
 //!     .base_url(Url::parse("https://test.myservice.com/api").unwrap())
 //!     .build();
@@ -109,6 +118,7 @@
 //!
 //! print_api_version(&adapter);
 //! register_user(&adapter, "username", "password");
+//! # }
 //! ```
 //!
 //! ### `Request`
