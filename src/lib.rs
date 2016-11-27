@@ -5,6 +5,7 @@
 //! # fn main() {}
 //!
 //! service! {
+//!     /// Trait wrapping `myservice.com` API.
 //!     pub trait MyService {
 //!         /// Get the version of this API.
 //!         fn api_version(&self) -> String {
