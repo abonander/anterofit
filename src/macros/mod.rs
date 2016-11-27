@@ -29,6 +29,7 @@ mod request;
 #[macro_export]
 macro_rules! service {
     (
+        $(#[$meta:meta])*
         trait $servicenm:ident {
             $(
                 $(#[$meta:meta])*
@@ -39,6 +40,7 @@ macro_rules! service {
             )*
         }
     ) => (
+        $(#[$meta])*
         trait $servicenm {
             $(
                 $(#[$meta])*
@@ -60,6 +62,7 @@ macro_rules! service {
         }
     );
     (
+        $(#[$meta:meta])*
         pub trait $servicenm:ident {
             $(
                 $(#[$meta:meta])*
@@ -70,6 +73,7 @@ macro_rules! service {
             )*
         }
     ) => (
+        $(#[meta])*
         pub trait $servicenm {
             $(
                 $(#[$meta])*
