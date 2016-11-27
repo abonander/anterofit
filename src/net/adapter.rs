@@ -44,6 +44,27 @@ impl<E, I, S, D> AdapterBuilder<E, I, S, D> {
     pub fn base_url(self, url: Url) -> Self {
         AdapterBuilder { base_url: Some(url), .. self }
     }
+    
+    /// Set a `hyper::Client` instance to use with the adapter.
+    ///
+    /// If not supplied, a default instance will be constructed.
+    pub fn client(mut self, client: Client) -> Self {
+        self.client = Some(client);
+        self
+    }
+
+    /// Set a new executor for the adapter.
+    pub fn executor<E_>(self, executor: E_) -> AdapterBuilder<E_, I, S, D>
+        where E: Executor {
+        AdapterBuilder {
+            base_url: self.base_url,
+            client: self.client,
+            executor: executor,
+            interceptor: self.interceptor,
+            serializer: self.serializer,
+            deserializer: self.deserializer,
+        }
+    }
 
     /// Set a new interceptor for the adapter.
     pub fn interceptor<I_>(self, interceptor: I_) -> AdapterBuilder<E, I_, S, D>
@@ -87,19 +108,6 @@ impl<E, I, S, D> AdapterBuilder<E, I, S, D> {
         }
     }
 
-    /// Set a new executor for the adapter.
-    pub fn executor<E_>(self, executor: E_) -> AdapterBuilder<E_, I, S, D>
-    where E: Executor {
-        AdapterBuilder {
-            base_url: self.base_url,
-            client: self.client,
-            executor: executor,
-            interceptor: self.interceptor,
-            serializer: self.serializer,
-            deserializer: self.deserializer,
-        }
-    }
-
     /// Set a new `Serializer` impl for the adapter.
     pub fn serializer<S_>(self, serialize: S_) -> AdapterBuilder<E, I, S_, D>
     where S_: Serializer {
@@ -124,14 +132,6 @@ impl<E, I, S, D> AdapterBuilder<E, I, S, D> {
             serializer: self.serializer,
             deserializer: deserialize,
         }
-    }
-
-    /// Set a `hyper::Client` instance to use with the adapter.
-    ///
-    /// If not supplied, a default instance will be constructed.
-    pub fn client(mut self, client: Client) -> Self {
-        self.client = Some(client);
-        self
     }
 }
 
