@@ -1,17 +1,5 @@
 # anterofit [![Build Status](https://travis-ci.org/abonander/anterofit.svg?branch=master)](https://travis-ci.org/abonander/anterofit) [![On Crates.io](https://img.shields.io/crates/v/anterofit.svg)](https://crates.io/crates/anterofit)
 
-#### [retrofit](https://square.github.io/retrofit) | *verb*  \ˈre-trō-ˌfit, ˌre-trō-ˈfit\
-
-* *to adapt an existing implement to suit a new purpose or need*
-
-* *a Java library which generates REST API wrappers at runtime using class metadata* 
-
-#### anterofit | *verb (neologism)* \ˈan-tə-(ˌ)rō-ˌfit\
-
-* *to create an original implement to suit a particular purpose or need*
-
-* *a Rust crate which generates type-safe REST API wrappers at compile time using macros*
-
 Anterofit is a collection of Rust macros coupled to a lightweight, self-contained HTTP framework that
 allows you to create strongly-typed Rust wrappers around REST APIs with ease.
 
