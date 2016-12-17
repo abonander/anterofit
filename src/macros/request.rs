@@ -28,7 +28,7 @@ macro_rules! url (
 #[macro_export]
 #[doc(hidden)]
 macro_rules! request_impl {
-    ($adapter:ident; $method:ident($($urlpart:tt)+) $(; $buildexpr:expr)*) => ({
+    ($adapter:expr; $method:ident($($urlpart:tt)+) $(; $buildexpr:expr)*) => ({
         use $crate::net::RequestBuilder;
 
         let builder = RequestBuilder::new(

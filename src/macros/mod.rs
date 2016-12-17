@@ -31,30 +31,51 @@ macro_rules! service {
     (
         $(#[$meta:meta])*
         trait $servicenm:ident {
+            $($guts:tt)*
+        }
+    ) => (
+        service! {
+            $(#[$meta])*
+            trait $servicenm {
+                $($guts)*
+            }
+
+            delegate(T: $crate::net::AbsAdapter) for T {
+                |this| this
+            }
+        }
+    );
+    (
+        $(#[$meta:meta])*
+        trait $servicenm:ident {
             $(
                 $(#[$fnmeta:meta])*
-                fn $fnname:ident $(<$($generics:tt)*>)* (&self $($args:tt)*) $(-> $ret:ty)*
+                fn $fnname:ident $($generics:tt)* (&self $($args:tt)*) $(-> $ret:ty)*
                 $(where $($whereclause:tt)+)* {
                     $($body:tt)+
                 }
             )*
+        }
+
+        delegate($($delegatedecls:tt)*) for $delegate:ty {
+            $getadapter:expr
         }
     ) => (
         $(#[$meta])*
         trait $servicenm {
             $(
                 $(#[$fnmeta])*
-                fn $fnname $(<$($generics)*>)* (&self $($args)*) -> $crate::net::Request<$($ret)*>
+                fn $fnname $($generics)* (&self $($args)*) -> $crate::net::Request<$($ret)*>
                 $(where $($whereclause)+)*;
             )*
         }
 
-        impl<T: $crate::net::AbsAdapter> $servicenm for T {
+        impl<$($delegatedecls)*> $servicenm for $delegate {
             $(
-                fn $fnname $(<$($generics)*>)* (&self $($args)*) -> $crate::net::Request<$($ret)*>
+                fn $fnname $($generics)* (&self $($args)*) -> $crate::net::Request<$($ret)*>
                 $(where $($whereclause)+)* {
                     request_impl! {
-                        self; $($body)+
+                        $crate::get_adapter(self, $getadapter); $($body)+
                     }
                 }
             )*
@@ -63,33 +84,54 @@ macro_rules! service {
     (
         $(#[$meta:meta])*
         pub trait $servicenm:ident {
+            $($guts:tt)*
+        }
+    ) => (
+        service! {
+            $(#[$meta])*
+            pub trait $servicenm {
+                $($guts)*
+            }
+
+            delegate(T: $crate::net::AbsAdapter) for T {
+                |this| this
+            }
+        }
+    );
+    (
+        $(#[$meta:meta])*
+        pub trait $servicenm:ident {
             $(
                 $(#[$fnmeta:meta])*
-                fn $fnname:ident $(<$($generics:tt)*>)* (&self $($args:tt)*) $(-> $ret:ty)*
+                fn $fnname:ident $($generics:tt)* (&self $($args:tt)*) $(-> $ret:ty)*
                 $(where $($whereclause:tt)+)* {
                     $($body:tt)+
                 }
             )*
+        }
+
+        delegate($($delegatedecls:tt)*) for $delegate:ty {
+            $getadapter:expr
         }
     ) => (
         $(#[$meta])*
         pub trait $servicenm {
             $(
                 $(#[$fnmeta])*
-                fn $fnname $(<$($generics)*>)* (&self $($args)*) -> $crate::net::Request<$($ret)*>
+                fn $fnname $($generics)* (&self $($args)*) -> $crate::net::Request<$($ret)*>
                 $(where $($whereclause)+)*;
             )*
         }
 
-        impl<T: $crate::net::AbsAdapter> $servicenm for T {
+        impl<$($delegatedecls)*> $servicenm for $delegate {
             $(
-                fn $fnname $(<$($generics)*>)* (&self $($args)*) -> $crate::net::Request<$($ret)*>
+                fn $fnname $($generics)* (&self $($args)*) -> $crate::net::Request<$($ret)*>
                 $(where $($whereclause)+)* {
                     request_impl! {
-                        self; $($body)+
+                        $crate::get_adapter(self, $getadapter); $($body)+
                     }
                 }
             )*
         }
-    )
+    );
 }

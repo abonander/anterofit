@@ -198,3 +198,9 @@ pub use net::request::Request;
 /// Recommended to be used as `anterofit::Result` to avoid confusing
 /// shadowing of `std::result::Result`.
 pub type Result<T> = ::std::result::Result<T, Error>;
+
+/// Strong typing hint for delegate adapter-getters.
+#[doc(hidden)]
+pub fn get_adapter<D, A: AbsAdapter, F: FnOnce(&D) -> &A>(delegate: &D, map: F) -> &A {
+    map(delegate)
+}
