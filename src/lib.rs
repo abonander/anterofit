@@ -51,7 +51,7 @@
 //!
 //! ## Adapter
 //! Built via `Adapter::builder()`, this is the starting point for all requests. It encompasses
-//! five crucial components, and one very important property:
+//! five core components, and one very important property:
 //!
 //! * The `Executor` is responsible for taking prepared requests and executing them. Since Anterofit
 //! is primarily designed to be asynchronous, the executor should submit jobs to be completed in the

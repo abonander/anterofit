@@ -46,7 +46,7 @@ impl RequestHead {
     /// Set an HTTP header for this request, overwriting any previous value.
     ///
     /// ##Note
-    /// Some headers, such as `Content-Type`, may be overwritten.
+    /// Some headers, such as `Content-Type`, may be overwritten by Anterofit.
     pub fn header<H: Header + HeaderFormat>(&mut self, header: H) -> &mut Self {
         self.headers.set(header);
         self
@@ -57,7 +57,7 @@ impl RequestHead {
     /// Duplicate headers will be overwritten.
     ///
     /// ##Note
-    /// Some headers, such as `Content-Type`, may be overwritten.
+    /// Some headers, such as `Content-Type`, may be overwritten by Anterofit.
     pub fn headers(&mut self, headers: &Headers) -> &mut Self {
         self.headers.extend(headers.iter());
         self
