@@ -50,12 +50,12 @@ macro_rules! request_impl {
 ///
 /// If the value is intended to be read directly as the request body, wrap it with `RawBody`.
 ///
-/// ## Note
-/// `$body` must be `Send + 'static` as depending on the adaptor's configuration, it most likely
-/// will be sent to another thread for serialization.
+/// By default, serialization will be done on the adapter's executor,
+/// so the body type must be `Send + 'static`.
 ///
 /// If you want to serialize borrowed values or other types which cannot be sent to other threads,
-/// use `body_eager!()`, which will serialize the value on the current thread.
+/// use the `EAGER:` contextual keyword, which will cause the body to be immediately serialized
+/// on the current thread.
 ///
 /// ## Overwrites Body
 /// Setting a new body will overwrite any previous body on the request.
@@ -65,17 +65,25 @@ macro_rules! request_impl {
 #[macro_export]
 macro_rules! body (
     ($body:expr) => (
-        move | req | Ok(req.body($body))
+        move | builder | Ok(builder.body($body))
+    );
+    (EAGER: $body:expr) => (
+        move | builder | builder.body_eager($body)
     )
 );
 
-/// Eagerly serialize the given value as the request body on the current thread.
+/// Serialize a series of key-value pairs as the request body.
 ///
-/// Uses the adapter's serializer.
+/// The series will be serialized as if it were a map, like `HashMap` or `BTreeMap`,
+/// but no extra traits besides `Serialize` are required; thus, keys will not be deduplicated
+/// or appear in any different order than provided.
 ///
-/// Use this instead of `body!()` when you have a request body that is not `Send + 'static`.
+/// By default, serialization will be done on the adapter's executor,
+/// so the key and value types must be `Send + 'static`.
 ///
-/// If the value is intended to be read directly as the request body, wrap it with `RawBody`.
+/// If you want to serialize borrowed values or other types which cannot be sent to other threads,
+/// use the `EAGER:` contextual keyword, which will cause the map to be immediately serialized on
+/// the current thread.
 ///
 /// ## Overwrites Body
 /// Setting a new body will overwrite any previous body on the request.
@@ -83,11 +91,26 @@ macro_rules! body (
 /// ## Panics
 /// If the request is a GET request (cannot have a body).
 #[macro_export]
-macro_rules! body_eager (
-    ($body:expr) => (
-        move | req | req.body_eager($body)
-    );
-);
+macro_rules! body_map {
+    ($($key:expr => $val:expr),+) => ({
+        let mut pairs = $crate::serialize::PairMap::new();
+
+        $(
+            pairs.insert($key, $val);
+        )+;
+
+        move |builder| Ok(builder.body(pairs))
+    });
+    (EAGER: $($key:expr => $val:expr),+) => ({
+        let mut pairs = $crate::serialize::PairMap::new();
+
+        $(
+            pairs.insert($key, $val);
+        )+;
+
+        move |builder| builder.body_eager(pairs)
+    });
+}
 
 /// Serialize a series of fields as the request body (form-encode them).
 ///
@@ -135,60 +158,7 @@ macro_rules! fields {
             let fields = (field!($key, $($val)*)) (fields);
         )*;
 
-        move |req| Ok($crate::net::RequestBuilder::body(req, fields))
-    })
-}
-
-/// Serialize a series of key-value pairs as the request body.
-///
-/// The series will be serialized as if it were a map, like `HashMap` or `BTreeMap`,
-/// but no extra traits besides `Serialize` are required; keys will not be deduplicated.
-///
-/// Serialization will be done on the executor, so the key and value types must be `Send + 'static`.
-///
-/// For an eagerly serialized version, use `body_map_eager!()`.
-///
-/// ## Overwrites Body
-/// Setting a new body will overwrite any previous body on the request.
-///
-/// ## Panics
-/// If the request is a GET request (cannot have a body).
-#[macro_export]
-macro_rules! body_map {
-    ($($key:expr => $val:expr),+) => ({
-        let mut pairs = $crate::serialize::PairMap::new();
-
-        $(
-            pairs.insert($key, $val);
-        )+;
-
-        move |req| Ok($crate::net::RequestBuilder::body(req, pairs))
-    })
-}
-
-/// Eagerly serialize a series of key-value pairs as the request body.
-///
-/// The series will be serialized as if it were a map, like `HashMap` or `BTreeMap`,
-/// but no extra traits besides `Serialize` are required; keys will not be deduplicated.
-///
-/// Serialization will be done immediately on the current thread; neither `Send` nor `'static` is
-/// required.
-///
-/// ## Overwrites Body
-/// Setting a new body will overwrite any previous body on the request.
-///
-/// ## Panics
-/// If the request is a GET request (cannot have a body).
-#[macro_export]
-macro_rules! body_map_eager {
-    ($($key:expr => $val:expr),+) => ({
-        let mut pairs = $crate::serialize::PairMap::new();
-
-        $(
-            pairs.insert($key, $val);
-        )+;
-
-        move |req| req.body_eager(req, pairs)
+        move |builder| Ok(builder.body(fields))
     })
 }
 
@@ -247,12 +217,14 @@ macro_rules! path (
 
 /// Append a series of query pairs to the URL of the request.
 ///
+/// `$key` and `$val` can be anything that is `Display`; neither `Send` nor `'static` is required.
+///
 /// Can be invoked multiple times.
 #[macro_export]
 macro_rules! query {
     ($($key:expr => $val:expr),+) => (
-        |req| {
-            req.head_mut().query(req, &[
+        |builder| {
+            builder.head_mut().query(builder, &[
                 $(&$key as &::std::fmt::Display, &$val as &::std::fmt::Display),+
             ])
         }

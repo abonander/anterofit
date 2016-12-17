@@ -51,10 +51,10 @@ service! {
         /// Create a new Post under the given user ID with the given title and body.
         fn new_post(&self, userid: u64, title: &str, body: &str) -> Post {
             POST("/posts/");
-            // We use body_eager! so we can use borrowed values in the body.
+            // We use the `EAGER:` keyword so we can use borrowed values in the body.
             // This serializes the body value immediately instead of waiting to serialize
             // it on the executor.
-            body_eager!(NewPost {
+            body!(EAGER: NewPost {
                 userid: userid,
                 title: title,
                 body: body
