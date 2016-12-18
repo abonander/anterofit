@@ -49,35 +49,26 @@ macro_rules! service {
         $(#[$meta:meta])*
         trait $servicenm:ident {
             $(
-                $(#[$fnmeta:meta])*
-                fn $fnname:ident $($generics:tt)* (&self $($args:tt)*) $(-> $ret:ty)*
-                $(where $($whereclause:tt)+)* {
-                    $($body:tt)+
-                }
+                $fnitem:item
             )*
         }
 
-        delegate($($delegatedecls:tt)*) for $delegate:ty {
+        delegate($($delegatedecls:tt)*) for $delegate:ty
+        $(where $delwherety:ty : $delwherebnd:ty)* $(, $ndelwherety:ty : $ndelwherebnd:ty)* {
             $getadapter:expr
         }
     ) => (
         $(#[$meta])*
         trait $servicenm {
             $(
-                $(#[$fnmeta])*
-                fn $fnname $($generics)* (&self $($args)*) -> $crate::net::Request<$($ret)*>
-                $(where $($whereclause)+)*;
+                method_proto!($fnitem);
             )*
         }
 
-        impl<$($delegatedecls)*> $servicenm for $delegate {
+        impl<$($delegatedecls)*> $servicenm for $delegate
+        $(where $delwherety : $delwherebnd)* $(, $ndelwherety : $ndelwherebnd)* {
             $(
-                fn $fnname $($generics)* (&self $($args)*) -> $crate::net::Request<$($ret)*>
-                $(where $($whereclause)+)* {
-                    request_impl! {
-                        $crate::get_adapter(self, $getadapter); $($body)+
-                    }
-                }
+                method_impl!($getadapter; $fnitem);
             )*
         }
     );
@@ -102,36 +93,137 @@ macro_rules! service {
         $(#[$meta:meta])*
         pub trait $servicenm:ident {
             $(
-                $(#[$fnmeta:meta])*
-                fn $fnname:ident $($generics:tt)* (&self $($args:tt)*) $(-> $ret:ty)*
-                $(where $($whereclause:tt)+)* {
-                    $($body:tt)+
-                }
+                $fnitem:item
             )*
         }
 
-        delegate($($delegatedecls:tt)*) for $delegate:ty {
+        delegate($($delegatedecls:tt)*) for $delegate:ty
+        $(where $delwherety:ty : $delwherebnd:ty)* $(, $ndelwherety:ty : $ndelwherebnd:ty)* {
             $getadapter:expr
         }
     ) => (
         $(#[$meta])*
         pub trait $servicenm {
             $(
-                $(#[$fnmeta])*
-                fn $fnname $($generics)* (&self $($args)*) -> $crate::net::Request<$($ret)*>
-                $(where $($whereclause)+)*;
+                method_proto!($fnitem);
             )*
         }
 
-        impl<$($delegatedecls)*> $servicenm for $delegate {
+        impl<$($delegatedecls)*> $servicenm for $delegate
+        $(where $delwherety : $delwherebnd)* $(, $ndelwherety : $ndelwherebnd)* {
             $(
-                fn $fnname $($generics)* (&self $($args)*) -> $crate::net::Request<$($ret)*>
-                $(where $($whereclause)+)* {
-                    request_impl! {
-                        $crate::get_adapter(self, $getadapter); $($body)+
-                    }
-                }
+                method_impl!($getadapter; $fnitem);
             )*
+        }
+    );
+}
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! method_proto {
+    (
+        $(#[$fnmeta:meta])*
+        fn $fnname ($($args:tt)*) $(-> $ret:ty)* {
+            // Remainder tokens that aren't necessary for prototype
+            $($_rem:tt)*
+        }
+    ) => (
+        $(#[$fnmeta])*
+        fn $fnname (&self $($args)*) -> $crate::net::Request<$($ret)*>;
+    );
+    (
+        $(#[$fnmeta:meta])*
+        fn $fnname <$($genericty:ident $(: $genericbnd:ty)*),*> ($($args:tt)*) $(-> $ret:ty)* {
+            // Remainder tokens that aren't necessary for prototype
+            $($_rem:tt)*
+        }
+    ) => (
+        $(#[$fnmeta])*
+        fn $fnname <$($genericty $(: $genericbnd)*),*> (&self $($args)*) -> $crate::net::Request<$($ret)*>;
+    );
+    (
+        $(#[$fnmeta:meta])*
+        fn $fnname ($($args:tt)*) $(-> $ret:ty)*
+        where $($wherety:path : $wherebnd:path),+ {
+            // Remainder tokens that aren't necessary for prototype
+            $($_rem:tt)*
+        }
+    ) => (
+        $(#[$fnmeta])*
+        fn $fnname (&self $($args)*) -> $crate::net::Request<$($ret)*>
+        where $($wherety : $wherebnd),+;
+    );
+    (
+        $(#[$fnmeta:meta])*
+        fn $fnname <$($genericty:ident $(: $genericbnd:ty)*),*> ($($args:tt)*) $(-> $ret:ty)*
+        where $($wherety:path : $wherebnd:path),+ {
+            // Remainder tokens that aren't necessary for prototype
+            $($_rem:tt)*
+        }
+    ) => (
+        $(#[$fnmeta])*
+        fn $fnname <$($genericty $(: $genericbnd)*),*> (&self $($args)*) -> $crate::net::Request<$($ret)*>
+        where $($wherety : $wherebnd),+;
+    );
+}
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! method_impl {
+    (
+        $getadapter:expr;
+        $(#[$fnmeta:meta])*
+        fn $fnname (&self $($args:tt)*) $(-> $ret:ty)* {
+            $($body:tt)*
+        }
+    ) => (
+        fn $fnname (&self $($args)*) -> $crate::net::Request<$($ret)*> {
+            request_impl! {
+                $crate::get_adapter(self, $getadapter); $($body)+
+            }
+        }
+    );
+    (
+        $getadapter:expr;
+        $(#[$fnmeta:meta])*
+        fn $fnname <$($genericty:ident $(: $genericbnd:ty)*),*> (&self $($args:tt)*) $(-> $ret:ty)* {
+            $($body:tt)*
+        }
+    ) => (
+        fn $fnname <$($genericty $(: $genericbnd)*),*> (&self $($args)*) -> $crate::net::Request<$($ret)*> {
+            request_impl! {
+                $crate::get_adapter(self, $getadapter); $($body)+
+            }
+        }
+    );
+    (
+        $getadapter:expr;
+        $(#[$fnmeta:meta])*
+        fn $fnname (&self $($args:tt)*) $(-> $ret:ty)*
+        where $($wherety:path : $wherebnd:path),+ {
+            $($body:tt)*
+        }
+    ) => (
+        fn $fnname (&self $($args)*) -> $crate::net::Request<$($ret)*>
+        where $($wherety : $wherebnd),+ {
+            request_impl! {
+                $crate::get_adapter(self, $getadapter); $($body)+
+            }
+        }
+    );
+    (
+        $getadapter:expr;
+        $(#[$fnmeta:meta])*
+        fn $fnname <$($genericty:ident $(: $genericbnd:ty)*),*> (&self $($args:tt)*) $(-> $ret:ty)*
+        where $($wherety:path : $wherebnd:path),+ {
+            $($body:tt)*
+        }
+    ) => (
+        fn $fnname <$($genericty $(: $genericbnd)*),*> (&self $($args)*) -> $crate::net::Request<$($ret)*>
+        where $($wherety : $wherebnd),+ {
+            request_impl! {
+                $crate::get_adapter(self, $getadapter); $($body)+
+            }
         }
     );
 }
