@@ -49,6 +49,8 @@
 //! }
 //! ```
 //!
+//! For more details, see the [`service!{}` macro](macro.service.html).
+//!
 //! ## Adapter
 //! Built via `Adapter::builder()`, this is the starting point for all requests. It encompasses
 //! five core components, and one very important property:
