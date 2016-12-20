@@ -8,7 +8,7 @@ pub use hyper::header::Headers;
 
 pub use hyper::header;
 
-pub use self::adapter::{Adapter, AbsAdapter, AdapterBuilder};
+pub use self::adapter::{Adapter, AbsAdapter, AdapterBuilder, ObjSafeAdapter};
 
 pub use self::intercept::{Interceptor, Chain};
 
