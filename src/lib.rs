@@ -128,10 +128,11 @@
 //! ```
 //!
 //! ## `Request`
-//! This type wraps the return value of every service trait method. Unlike in Retrofit,
-//! where the request is determined to be synchronous or asynchronous at the service method
-//! declaration site, `Request` gives the power over this choice to the caller so that
-//! no change to the trait is needed to change the execution context:
+//! This type wraps the return value of every service trait method. Unlike in Retrofit
+//! (v1; v2 uses this pattern now, but is more verbose), where the request is determined to
+//! be synchronous or asynchronous at the service method declaration site, `Request` gives the power
+//! over this choice to the caller so that no change to the trait is needed to change the execution
+//! context:
 //!
 //! ```rust,ignore
 //! fn print_api_version(service: &MyService) {
