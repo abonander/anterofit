@@ -39,7 +39,8 @@ mod request;
 ///
 /// ##Generics and `where` clauses
 /// Both of these are supported; however, the Rust grammar must be changed slightly
-/// so that they can be parsed and transformed properly by the `service!{}` macro.
+/// so that they can be parsed and transformed properly by the `service!{}` macro without
+/// making its implementation details too complex.
 ///
 /// Put simply, use `[]` instead of `<>` to wrap your generic declarations,
 /// and wrap your entire `where` clause, if present, with `[]`:
