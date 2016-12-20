@@ -36,14 +36,14 @@ entirely on your needs.
 <table>
     <tr>
         <td />
-        <td>`rustc-serialize`</td>
+        <td><code>rustc-serialize</code></td>
         <td>Serde</td>
     </tr>
     <tr>
         <td>Pros</td>
         <td>
             <ul>
-                <li> `#[derive]` on Stable channel </li>
+                <li> <code>#[derive]</code> on Stable channel </li>
                 <li> (Potentially) Faster Compilation:
                     <ul>
                         <li> No Transitive Dependencies </li>
@@ -70,7 +70,7 @@ entirely on your needs.
         </td>
         <td>
             <ul>
-                <li> `#[derive]` requires nightly/unstable feature </li>
+                <li> <code>#[derive]</code> requires nightly/unstable feature </li>
                 <li> Slower compilation:
                     <ul>
                         <li> Several transitive dependencies </li>
