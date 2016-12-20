@@ -10,6 +10,19 @@ pub type StaticCowStr = Cow<'static, str>;
 use net::intercept::Interceptor;
 use net::request::RequestHead;
 
+/// A no-op interceptor which does nothing when invoked.
+pub struct NoIntercept;
+
+impl Interceptor for NoIntercept {
+    fn intercept(&self, _req: &mut RequestHead) {}
+}
+
+impl<F> Interceptor for F where F: Fn(&mut RequestHead) + Send + Sync + 'static {
+    fn intercept(&self, req: &mut RequestHead) {
+        (*self)(req)
+    }
+}
+
 /// Adds the wrapped header to every request.
 ///
 /// To add multiple headers to one request, chain this interceptor with another.

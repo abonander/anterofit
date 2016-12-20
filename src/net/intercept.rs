@@ -17,18 +17,7 @@ pub trait Interceptor: Send + Sync + 'static {
     }
 }
 
-/// A no-op interceptor which does nothing when invoked.
-pub struct NoIntercept;
 
-impl Interceptor for NoIntercept {
-    fn intercept(&self, _req: &mut RequestHead) {}
-}
-
-impl<F> Interceptor for F where F: Fn(&mut RequestHead) + Send + Sync + 'static {
-    fn intercept(&self, req: &mut RequestHead) {
-        (*self)(req)
-    }
-}
 
 /// Chains two interceptors together, invoking the first, then the second.
 pub struct Chain<I1, I2>(I1, I2);
