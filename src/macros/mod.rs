@@ -41,8 +41,8 @@ mod request;
 /// Both of these are supported; however, the Rust grammar must be changed slightly
 /// so that they can be parsed and transformed properly by the `service!{}` macro.
 ///
-/// Put simply, use `[ ]` instead of `< >` to wrap your generic declarations,
-/// and wrap your entire `where` clause, if present, with `[ ]`:
+/// Put simply, use `[]` instead of `<>` to wrap your generic declarations,
+/// and wrap your entire `where` clause, if present, with `[]`:
 ///
 /// ```rust
 /// # #[macro_use] extern crate anterofit;
@@ -60,7 +60,8 @@ mod request;
 ///         }
 ///
 ///         /// Login an existing user with the API.
-///         fn login[U, P](&self, username: U, password: P) -> ApiToken [where U: ToString, P: ToString] {
+///         fn login[U, P](&self, username: U, password: P) -> ApiToken
+///         [where U: ToString, P: ToString] {
 ///             POST("/login");
 ///             fields! {
 ///                 username, password
@@ -141,10 +142,18 @@ mod request;
 ///     }
 ///
 ///     // This generates `impl DelegatedService for DelegateAdapter {}`
-///     delegate for DelegateAdapter {
+///     impl for DelegateAdapter {
 ///         // Closure parameter is just `&self` from the service method body.
 ///         |this| &this.inner
 ///     }
+///
+///     // Generics and `where` clauses are allowed in their usual positions, however `[]` is
+///     // required in the same places as mentioned under the previous header.
+///     impl[T] for T [where T: AsRef<DelegateAdapter>] {
+///         |this| &this.as_ref().inner
+///     }
+///
+///     // As shown here, multiple declarations are allowed as well.
 /// }
 /// # }
 /// ```
@@ -162,7 +171,7 @@ macro_rules! service {
                 $($guts)*
             }
 
-            delegate[T: $crate::net::AbsAdapter] for T {
+            impl[T: $crate::net::AbsAdapter] for T {
                 |this| this
             }
         }
@@ -179,7 +188,7 @@ macro_rules! service {
                 $($guts)*
             }
 
-            delegate[T: $crate::net::AbsAdapter] for T {
+            impl[T: $crate::net::AbsAdapter] for T {
                 |this| this
             }
         }
@@ -371,7 +380,7 @@ macro_rules! method_impl(
 macro_rules! delegate_impl {
     (
         $servicenm:ident; [$($guts:tt)*]
-        delegate for $delegate:path {
+        impl for $delegate:ty {
             $getadapt:expr
         }
 
@@ -385,7 +394,7 @@ macro_rules! delegate_impl {
     );
     (
         $servicenm:ident; [$($guts:tt)*]
-        delegate [$($decls:tt)*] for $delegate:path {
+        impl [$($decls:tt)*] for $delegate:ty {
             $getadapt:expr
         }
 
@@ -399,27 +408,27 @@ macro_rules! delegate_impl {
     );
     (
         $servicenm:ident; [$($guts:tt)*]
-        delegate for $delegate:path [where $($wheres:tt)+]{
+        impl for $delegate:ty [where $($wheres:tt)+]{
             $getadapt:expr
         }
 
         $($rem:tt)*
     ) => (
-        impl $servicenm for $delegate where $($wheres:tt)+ {
+        impl $servicenm for $delegate where $($wheres)+ {
             method_impl!($getadapt; $($guts)*);
         }
 
-        delegate_impl!($servicenm; [$($guts)*] $($rem)*);
+        impl_impl!($servicenm; [$($guts)*] $($rem)*);
     );
     (
         $servicenm:ident; [$($guts:tt)*]
-        delegate [$($decls:tt)*] for $delegate:path [where $($wheres:tt)+]{
+        impl [$($decls:tt)*] for $delegate:ty [where $($wheres:tt)+]{
             $getadapt:expr
         }
 
         $($rem:tt)*
     ) => (
-        impl<$($decls)*> $servicenm for $delegate where $($wheres:tt)+ {
+        impl<$($decls)*> $servicenm for $delegate where $($wheres)+ {
             method_impl!($getadapt; $($guts)*);
         }
 
