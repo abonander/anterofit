@@ -150,7 +150,7 @@ macro_rules! body_map {
 #[macro_export]
 macro_rules! fields {
     ($($key:expr $(=> $val:expr)*),*) => ({
-        use $crate::net::body::{AddField, EmptyFields};
+        use $crate::net::body::EmptyFields;
 
         let fields = EmptyFields;
 
