@@ -43,7 +43,7 @@ mod request;
 /// or later, as this didn't work before
 /// [rust-lang/rust PR #38279](https://github.com/rust-lang/rust/pull/38279).
 ///
-/// However, for simplicity's sake, lifetimes are *not* allowed. This shouldn't be much issue
+/// However, for simplicity's sake, lifetimes are *not* allowed. This shouldn't be much of an issue
 /// as return types are required to be `'static`, so elided lifetimes should suffice. If you discover
 /// a use-case where explicit lifetime parameters are required, please open an issue on
 /// the crate's Github repository.
@@ -62,7 +62,6 @@ mod request;
 ///                 username, password
 ///             }
 ///         }
-///
 ///
 ///         /// Login an existing user with the API.
 ///         fn login<U, P>(&self, username: U, password: P) -> ApiToken
