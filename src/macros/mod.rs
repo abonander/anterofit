@@ -106,6 +106,9 @@ mod request;
 /// use anterofit::serialize::json::{Serializer as JsonSerializer, Deserializer as JsonDeserializer};
 ///
 /// pub struct DelegateAdapter {
+///     // Notice that this field remains private but due to visibility rules,
+///     // the impls of `DelegatedService` still get to access it.
+///     // This allows you to hide the adapter as an implementation detail.
 ///     inner: Adapter<DefaultExecutor, NoIntercept, JsonSerializer, JsonDeserializer>,
 /// }
 ///
