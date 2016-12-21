@@ -43,6 +43,11 @@ mod request;
 /// or later, as this didn't work before
 /// [rust-lang/rust PR #38279](https://github.com/rust-lang/rust/pull/38279).
 ///
+/// However, for simplicity's sake, lifetimes are *not* allowed. This shouldn't be much issue
+/// as return types are required to be `'static`, so elided lifetimes should suffice. If you discover
+/// a use-case where explicit lifetime parameters are required, please open an issue on
+/// the crate's Github repository.
+///
 /// ```rust
 /// # #[macro_use] extern crate anterofit;
 /// # fn main() {}
