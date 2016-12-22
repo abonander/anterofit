@@ -38,10 +38,12 @@ mod request;
 /// ```
 ///
 /// ##Generics and `where` clauses
-/// Both of these are supported in their usual positions. However, if you get an error with valid
-/// syntax, be sure the compiler you're using is 1.15 stable, beta or nightly `71c06a56a 2016-12-18`
-/// or later, as this didn't work before
-/// [rust-lang/rust PR #38279](https://github.com/rust-lang/rust/pull/38279).
+/// Both of these are supported; however, the Rust grammar must be changed slightly
+/// so that they can be parsed and transformed properly by the `service!{}` macro without
+/// making its implementation details too complex.
+///
+/// Put simply, use `[]` instead of `<>` to wrap your generic declarations,
+/// and wrap your entire `where` clause, if present, with `[]`:
 ///
 /// ```rust
 /// # #[macro_use] extern crate anterofit;
@@ -51,7 +53,7 @@ mod request;
 /// service! {
 ///     pub trait MyService {
 ///         /// Register a new user with the API.
-///         fn register<U: ToString, P: ToString>(&self, username: U, password: P) {
+///         fn register[U: ToString, P: ToString](&self, username: U, password: P) {
 ///             POST("/register");
 ///             fields! {
 ///                 username, password
@@ -59,8 +61,8 @@ mod request;
 ///         }
 ///
 ///         /// Login an existing user with the API.
-///         fn login<U, P>(&self, username: U, password: P) -> ApiToken
-///         where U: ToString, P: ToString {
+///         fn login[U, P](&self, username: U, password: P) -> ApiToken
+///         [where U: ToString, P: ToString] {
 ///             POST("/login");
 ///             fields! {
 ///                 username, password
@@ -149,10 +151,9 @@ mod request;
 ///         |this| &this.inner
 ///     }
 ///
-///     // Generics and `where` clauses are allowed in their usual positions,
-///     // however this didn't work correctly before a certain compiler version.
-///     // For details, see the previous header in this documentation.
-///     impl<T> for T where T: AsRef<DelegateAdapter> {
+///     // Generics and `where` clauses are allowed in their usual positions, however `[]` is
+///     // required in the same places as mentioned under the previous header.
+///     impl[T] for T [where T: AsRef<DelegateAdapter>] {
 ///         |this| &this.as_ref().inner
 ///     }
 ///
@@ -174,7 +175,7 @@ macro_rules! service {
                 $($guts)*
             }
 
-            impl<T: $crate::net::AbsAdapter> for T {
+            impl[T: $crate::net::AbsAdapter] for T {
                 |this| this
             }
         }
@@ -191,7 +192,7 @@ macro_rules! service {
                 $($guts)*
             }
 
-            impl<T: $crate::net::AbsAdapter> for T {
+            impl[T: $crate::net::AbsAdapter] for T {
                 |this| this
             }
         }
@@ -248,42 +249,42 @@ macro_rules! method_proto(
     // Generics
     (
         $(#[$fnmeta:meta])*
-        fn $fnname:ident <$($decl:ident $(: $bnd:path)*),*> (&self $($args:tt)*) $(-> $ret:ty)* {
+        fn $fnname:ident [$($generics:tt)+] (&self $($args:tt)*) $(-> $ret:ty)* {
             $($body:tt)+
         }
         
         $($rem:tt)*
     ) => (
         $(#[$fnmeta])*
-        fn $fnname <$($decl $(: $bnd)*),*> (&self $($args)*) -> $crate::net::Request<$($ret)*>;
+        fn $fnname <$($generics)+> (&self $($args)*) -> $crate::net::Request<$($ret)*>;
         
         method_proto!($($rem)*);
     );
     // Where clause
     (
         $(#[$fnmeta:meta])*
-        fn $fnname:ident  (&self $($args:tt)*) $(-> $ret:ty)* where $($wheredcl:path : $wherebnd:path),+ {
+        fn $fnname:ident  (&self $($args:tt)*) $(-> $ret:ty)* [where $($wheres:tt)+] {
             $($body:tt)+
         }
         
         $($rem:tt)*
     ) => (
         $(#[$fnmeta])*
-        fn $fnname (&self $($args)*) -> $crate::net::Request<$($ret)*> where $($wheredcl : $wherebnd),+ ;
+        fn $fnname (&self $($args)*) -> $crate::net::Request<$($ret)*> where $($wheres)+ ;
         
         method_proto!($($rem)*);
     );
     // Generics + where clause
     (
         $(#[$fnmeta:meta])*
-        fn $fnname:ident <$($decl:ident $(: $bnd:path)*),*> (&self $($args:tt)*) $(-> $ret:ty)* where $($wheredcl:path : $wherebnd:path),+ {
+        fn $fnname:ident [$($generics:tt)+] (&self $($args:tt)*) $(-> $ret:ty)* [where $($wheres:tt)+] {
             $($body:tt)+
         }
         
         $($rem:tt)*
     ) => (
         $(#[$fnmeta])*
-        fn $fnname <$($decl $(: $bnd)*),*> (&self $($args)*) -> $crate::net::Request<$($ret)*> where $($wheredcl : $wherebnd),+;
+        fn $fnname <$($generics)+> (&self $($args)*) -> $crate::net::Request<$($ret)*> where $($wheres)+;
         
         method_proto!($($rem)*);
     );
@@ -306,7 +307,7 @@ macro_rules! method_impl(
         $($rem:tt)*
     ) => (
         $(#[$fnmeta])*
-        fn $fnname (&self $($args)*) -> $crate::net::Request<$($ret)*> {
+        fn $fnname (&self $($args)*)  -> $crate::net::Request<$($ret)*> {
             request_impl! {
                 $crate::get_adapter(self, $getadapt); $($body)+
             }
@@ -319,14 +320,14 @@ macro_rules! method_impl(
         $getadapt:expr;
 
         $(#[$fnmeta:meta])*
-        fn $fnname:ident <$($decl:ident $(: $bnd:path)*),*> (&self $($args:tt)*) $(-> $ret:ty)* {
+        fn $fnname:ident [$($generics:tt)+] (&self $($args:tt)*) $(-> $ret:ty)* {
             $($body:tt)+
         }
         
         $($rem:tt)*
     ) => (
         $(#[$fnmeta])*
-        fn $fnname <$($decl $(: $bnd)*),*> (&self $($args)*) -> $crate::net::Request<$($ret)*> {
+        fn $fnname <$($generics)+> (&self $($args)*) -> $crate::net::Request<$($ret)*> {
             request_impl! {
                 $crate::get_adapter(self, $getadapt); $($body)+
             }
@@ -339,14 +340,14 @@ macro_rules! method_impl(
         $getadapt:expr;
 
         $(#[$fnmeta:meta])*
-        fn $fnname:ident  (&self $($args:tt)*) $(-> $ret:ty)* where $($wheredcl:path : $wherebnd:path),+ {
+        fn $fnname:ident  (&self $($args:tt)*) $(-> $ret:ty)* [where $($wheres:tt)+] {
             $($body:tt)+
         }
         
         $($rem:tt)*
     ) => (
         $(#[$fnmeta])*
-        fn $fnname (&self $($args)*) -> $crate::net::Request<$($ret)*> where $($wheredcl : $wherebnd),+ {
+        fn $fnname (&self $($args)*) -> $crate::net::Request<$($ret)*> where $($wheres)+ {
             request_impl! {
                 $crate::get_adapter(self, $getadapt); $($body)+
             }
@@ -359,14 +360,14 @@ macro_rules! method_impl(
         $getadapt:expr;
 
         $(#[$fnmeta:meta])*
-        fn $fnname:ident <$($decl:ident $(: $bnd:path)*),*>(&self $($args:tt)*) $(-> $ret:ty)* where $($wheredcl:path : $wherebnd:path),+ {
+        fn $fnname:ident [$($generics:tt)+] (&self $($args:tt)*) $(-> $ret:ty)* [where $($wheres:tt)+] {
             $($body:tt)+
         }
         
         $($rem:tt)*
     ) => (
         $(#[$fnmeta])*
-        fn $fnname <$($decl $(: $bnd)*),*> (&self $($args)*) -> $crate::net::Request<$($ret)*> where $($wheredcl : $wherebnd),+ {
+        fn $fnname <$($generics)+> (&self $($args)*) -> $crate::net::Request<$($ret)*> where $($wheres)+ {
             request_impl! {
                 $crate::get_adapter(self, $getadapt); $($body)+
             }
@@ -397,13 +398,13 @@ macro_rules! delegate_impl {
     );
     (
         $servicenm:ident; [$($guts:tt)*]
-        impl <$($decl:ident $(: $bnd:path)*),*> for $delegate:ty {
+        impl [$($decls:tt)*] for $delegate:ty {
             $getadapt:expr
         }
 
         $($rem:tt)*
     ) => (
-        impl <$($decl $(: $bnd)*),*> $servicenm for $delegate {
+        impl<$($decls)*> $servicenm for $delegate {
             method_impl!($getadapt; $($guts)*);
         }
 
@@ -411,13 +412,13 @@ macro_rules! delegate_impl {
     );
     (
         $servicenm:ident; [$($guts:tt)*]
-        impl for $delegate:ty where $($wheredcl:path : $wherebnd:path),+ {
+        impl for $delegate:ty [where $($wheres:tt)+]{
             $getadapt:expr
         }
 
         $($rem:tt)*
     ) => (
-        impl $servicenm for $delegate where $($wheredcl : $wherebnd),+ {
+        impl $servicenm for $delegate where $($wheres)+ {
             method_impl!($getadapt; $($guts)*);
         }
 
@@ -425,13 +426,13 @@ macro_rules! delegate_impl {
     );
     (
         $servicenm:ident; [$($guts:tt)*]
-        impl <$($decl:ident $(: $bnd:path)*),*> for $delegate:ty where $($wheredcl:path : $wherebnd:path),+ {
+        impl [$($decls:tt)*] for $delegate:ty [where $($wheres:tt)+]{
             $getadapt:expr
         }
 
         $($rem:tt)*
     ) => (
-        impl <$($decl $(: $bnd)*),*> $servicenm for $delegate where $($wheredcl : $wherebnd),+ {
+        impl<$($decls)*> $servicenm for $delegate where $($wheres)+ {
             method_impl!($getadapt; $($guts)*);
         }
 
