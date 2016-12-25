@@ -113,4 +113,4 @@ the request builder, use `with_builder!()` and `map_builder!()`
 of the closures passed to these macros are kept intact and in
 the same scope.
 
-[doc-macros]: http://docs.rs/anterofit#Macros
+[doc-macros]: http://docs.rs/anterofit#macros
