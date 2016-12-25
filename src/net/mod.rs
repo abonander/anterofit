@@ -24,11 +24,8 @@ pub mod body;
 
 mod call;
 
-mod intercept;
-
-pub mod interceptor;
+pub mod intercept;
 
 pub mod request;
 
 pub mod response;
-

@@ -68,7 +68,7 @@
 //!
 //! ```rust,no_run
 //! use anterofit::{Adapter, Url};
-//! use anterofit::net::interceptor::AddHeader;
+//! use anterofit::net::intercept::AddHeader;
 //! use anterofit::net::header::{Headers, Authorization, Bearer};
 //!
 //! let adapter = Adapter::builder()

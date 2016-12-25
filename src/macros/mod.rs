@@ -99,7 +99,7 @@ mod request;
 ///
 /// use anterofit::{Adapter, Url};
 /// use anterofit::executor::DefaultExecutor;
-/// use anterofit::net::interceptor::NoIntercept;
+/// use anterofit::net::intercept::NoIntercept;
 /// use anterofit::serialize::json::{Serializer as JsonSerializer, Deserializer as JsonDeserializer};
 ///
 /// pub struct DelegateAdapter {

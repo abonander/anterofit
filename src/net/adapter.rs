@@ -5,8 +5,7 @@ use std::sync::Arc;
 
 use executor::{DefaultExecutor, Executor, ExecBox};
 
-use net::intercept::{Interceptor, Chain};
-use net::interceptor::NoIntercept;
+use net::intercept::{Interceptor, Chain, NoIntercept};
 
 use net::request::RequestHead;
 
