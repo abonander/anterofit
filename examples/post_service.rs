@@ -86,7 +86,7 @@ fn create_post<T: PostService>(post_service: &T) {
         // to poll for the result. However, it does shadow a couple methods of Future
         // so that you don't have to import the trait to use them.
         // See the docs of Call for more info.
-        .exec().wait()
+        .exec().block()
         .unwrap();
 
     println!("{:?}", post);
