@@ -2,7 +2,12 @@
 
 use hyper::header::{Header, HeaderFormat};
 
+use std::borrow::Cow;
+
 use super::RequestHead;
+
+/// Easier, quicker to type since it's used a lot in these APIs.
+pub type StaticCowStr = Cow<'static, str>;
 
 /// A trait describing a type which may intercept and modify outgoing request from an adapter
 /// instance.
@@ -21,6 +26,12 @@ pub trait Interceptor: Send + Sync + 'static {
     }
 }
 
+impl<F> Interceptor for F where F: Fn(&mut RequestHead) + Send + Sync + 'static {
+    fn intercept(&self, req: &mut RequestHead) {
+        (*self)(req)
+    }
+}
+
 /// Chains two interceptors together, invoking the first, then the second.
 pub struct Chain<I1, I2>(I1, I2);
 
@@ -31,21 +42,11 @@ impl<I1: Interceptor, I2: Interceptor> Interceptor for Chain<I1, I2> {
     }
 }
 
-use std::borrow::Cow;
-
-/// Easier, quicker to type since it's used a lot in these APIs.
-pub type StaticCowStr = Cow<'static, str>;
 /// A no-op interceptor which does nothing when invoked.
 pub struct NoIntercept;
 
 impl Interceptor for NoIntercept {
     fn intercept(&self, _req: &mut RequestHead) {}
-}
-
-impl<F> Interceptor for F where F: Fn(&mut RequestHead) + Send + Sync + 'static {
-    fn intercept(&self, req: &mut RequestHead) {
-        (*self)(req)
-    }
 }
 
 /// Adds the wrapped header to every request.
