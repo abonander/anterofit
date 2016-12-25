@@ -74,8 +74,9 @@ macro_rules! body (
 
 /// Serialize a series of key-value pairs as the request body.
 ///
-/// The series will be serialized as if it were a map, like `HashMap` or `BTreeMap`,
-/// but no extra traits besides `Serialize` are required; thus, keys will not be deduplicated
+/// The series will be serialized as if it were a map, like `HashMap` or `BTreeMap`
+/// but with much less restrictive trait bounds: keys must be `Display` and values
+/// must be `Serialize`; thus, keys will not be deduplicated
 /// or appear in any different order than provided.
 ///
 /// By default, serialization will be done on the adapter's executor,
