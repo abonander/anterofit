@@ -219,7 +219,7 @@ macro_rules! path (
 ///
 /// `$key` and `$val` can be anything that is `Display`; neither `Send` nor `'static` is required.
 ///
-/// Can be invoked multiple times.
+/// Can be invoked multiple times. Duplicate keys are left to be handled by the server.
 #[macro_export]
 macro_rules! query {
     ($($key:expr => $val:expr),+) => (
