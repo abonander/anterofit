@@ -55,13 +55,13 @@ The return type can also be omitted. Just like in regular Rust,
 it is implied to be `()`.
 
 The body of a trait method is syntactically the same
-as any Rust function; a series of semicolon-terminated expressions 
-followed by an unterminated expression. However, there are two main differences:
+as any (non-empty) Rust function: zero or more semicolon-terminated expressions 
+followed by an unterminated expression. However, there are a couple of major differences:
 
-The first expression is structured like a function call, where the identifier outside is an HTTP verb and the inside
-is the URL string and any optional formatting arguments, in the vein
-of `format!()` or `println!()`. This allows parameters
-to be interpolated into the URL. All standard HTTP verbs are supported: `GET, POST, PUT, PATCH, DELETE`
+The first expression, which is always required, is structured like a function call, where the identifier 
+outside is an HTTP verb and the inside is the URL string and any optional formatting arguments, in the vein
+of `format!()` or `println!()`. This allows parameters to be interpolated into the URL. 
+The most common HTTP verbs are supported: `GET POST PUT PATCH DELETE`
 
 ```
 // If `id` is some parameter that implements `Display`
@@ -71,15 +71,14 @@ POST("/posts/update/{}", id)
 DELETE("/posts/{id}", id=id)
 ```
 
-Note that the URLs in these methods are not commonly
-complete URLs; instead, they will be appended to the 
-base URL provided in the adapter.
+Notice that the paths in these declarations are not assumed to be complete URLs; instead, they will be appended to the 
+base URL provided in the adapter. However, if necessary, they *can* be complete URLs, with the base URL being omitted 
+during the construction of the adapter.
 
-All following expressions, if any, are treated as modifiers
-to the request. Syntactically, any expression is allowed, but 
-arbitrary expressions will not typecheck. Instead, you are
-expected to use the other macros provided by Anterofit
-to modify the request.
+All expressions following the first, if any, are treated as modifiers to the request. 
+Syntactically, any expression is allowed, but arbitrary expressions will likely not typecheck due to some
+implementation details of the `service!{}` macro. Instead, you are expected to use the other macros provided 
+by Anterofit to modify the request.
 
 See the [`Macros` header in the crate docs][doc-macros]
 for more information.
@@ -88,29 +87,26 @@ for more information.
 use `query!{}`
  
 * To add form fields, sometimes called `POST` parameters, use `fields!{}`.
- You can see this being used in a previous example.
+ You can see this being used in the first example.
  
-    * To add a file to be uploaded, use `file!()`
-    in a key-value pair.
+    * To add a file to be uploaded, use `file!()` in a key-value pair.
     
-    * To add a stream to be uploaded (can be any generic `Read` impl), use
-    `stream!()` in a key-value pair.
+    * To add a stream to be uploaded (can be any generic `Read` impl), use `stream!()` in a key-value pair.
     
-* To set the request body, use the `body!()` macro. You
-would use this if
-your REST API is expecting parameters passed as, e.g. JSON,
-instead of in an HTTP form; see the Serialization header for more information.
+* To set the request body, use the `body!()` macro. You would use this if your REST API is expecting parameters 
+passed as, e.g. JSON, instead of in an HTTP form; see the Serialization header for more information.
 
-* To set the request body as a series of key-value pairs,
-use `body_map!()`. This behaves as if you passed
-a `HashMap` or `BTreeMap` of the key-value pairs to `body!()`, but
-does not require the keys to implement any trait except the
-serialize trait for the serialization framework you're using.
+* To set the request body as a series of key-value pairs, use `body_map!()`. This behaves as if you passed
+a `HashMap` or `BTreeMap` of the key-value pairs to `body!()`, but does not require the keys to implement 
+any trait except `std::fmt::Display` (thus, keys are not deduplicated or reordered--the server is expected to handle
+it); values are, of course, expected to implement the serialization trait from the serialization framework you're using.
 
-* To apply arbitrary mutations or transformations to
-the request builder, use `with_builder!()` and `map_builder!()`
-, respectively. Unlike method body expressions, the bodies
-of the closures passed to these macros are kept intact and in
-the same scope.
+* To apply arbitrary mutations or transformations to the request builder, use `with_builder!()` or `map_builder!()`, 
+respectively.
+
+For more advanced usage, you can use bare closure expressions that take `RequestBuilder` and return 
+`Result<RequestBuilder, anterofit::Error>`. See `RequestBuilder::apply()`, which is used as a type hint
+so that no type annotations are required on the closures (very convenient, by the way). All the aforementioned
+macros wrap this mechanism.
 
 [doc-macros]: http://docs.rs/anterofit#macros

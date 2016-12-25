@@ -274,6 +274,9 @@ macro_rules! query {
 ///     }
 /// }
 /// ```
+///
+/// If you just want to return a `Result<RequestBuilder>`, use a bare closure in your service
+/// method body.
 #[macro_export]
 macro_rules! map_builder {
     (|$builder:ident| $expr:expr) => (
