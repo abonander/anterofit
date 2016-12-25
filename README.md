@@ -10,7 +10,9 @@ with few exceptions, reserved for error conditions that can only be discovered a
 Usage
 -----
 
-###[Documentation](https://docs.rs/anterofit)
+Get started with our [User Guide](GUIDE.md)
+
+Or an in-depth look with our [Documentation](https://docs.rs/anterofit)
 
 With [`rustc-serialize`](https://crates.io/crates/rustc-serialize):
 
