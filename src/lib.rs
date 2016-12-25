@@ -149,8 +149,8 @@
 //! ## `Call`
 //! Returned by `Request::exec()`, this type is a pollable `Future` which will yield the result
 //! of the request when it is ready. If there was an error in constructing the request,
-//! the result will be available immediately. `Call` shadows `Future::poll()` and `Future::wait()`
-//! with inherent methods that do not require the use of types from the `futures` crate, so you
+//! the result will be available immediately. `Call` provides alternative methods wrapping
+//! `Future::poll()` and `Future::wait()` without external types so you
 //! have a choice over whether you want to use futures in your app or not.
 #![warn(missing_docs)]
 #![cfg_attr(feature = "nightly", feature(insert_str))]

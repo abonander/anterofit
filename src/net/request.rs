@@ -328,7 +328,7 @@ impl<'a, T> Request<'a, T> {
     /// Execute this request on the current thread, **blocking** until the result is available.
     pub fn exec_here(self) -> Result<T> {
         self.exec.exec();
-        self.call.wait()
+        self.call.block()
     }
 
     /// Returns `true` if a result is immediately available (`exec_here()` will not block).
@@ -391,7 +391,7 @@ impl<'a, T> Request<'a, T> where T: Send + 'static {
         let Request { adapter, exec, call } = self;
 
         if call.is_immediate() {
-            let res = on_result(call.wait());
+            let res = on_result(call.block());
             return Request::immediate(res);
         }
 
@@ -401,7 +401,7 @@ impl<'a, T> Request<'a, T> where T: Send + 'static {
             exec.exec();
 
             guard.complete(
-                on_result(call.wait())
+                on_result(call.block())
             );
         });
 

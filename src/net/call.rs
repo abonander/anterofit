@@ -33,8 +33,11 @@ impl<T> Call<T> {
     pub fn ignore_ok(self) -> Result<()> { Ok(()) }
 
     /// Block on this call until a result is available.
-    pub fn wait(self) -> Result<T> {
-        <Self as Future>::wait(self)
+    ///
+    /// Depending on the stage of the request, this may return immediately.
+    /// Call `is_immediate()` check for this if you want.
+    pub fn block(self) -> Result<T> {
+        self.wait()
     }
 
     /// Poll this call for a result.
