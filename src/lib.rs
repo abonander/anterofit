@@ -82,7 +82,7 @@
 //! ```
 //!
 //! `Interceptor` is also implemented for closures of the kind `Fn(&mut anterofit::net::request::RequestHead)`,
-//! but common operations are implemented as types in the `anterofit::net::interceptor` module.
+//! but common operations are implemented as types in the `anterofit::net::intercept` module.
 //! You can also chain interceptors together, or call `box_interceptor()` to transform
 //! it to `Box<Interceptor>` if you need to name the full type of `Adapter`.
 //!
@@ -130,9 +130,9 @@
 //! ```
 //!
 //! ## `Request`
-//! This type wraps the return value of every service trait method. Unlike in Retrofit
-//! (v1; v2 uses this pattern now, but is more verbose), where the request is determined to
-//! be synchronous or asynchronous at the service method declaration site, `Request` gives the power
+//! This type wraps the return value of every service trait method. Unlike in Retrofit,
+//! where the request is determined to
+//! be synchronous or asynchronous at the service method declaration site^1, `Request` gives the power
 //! over this choice to the caller so that no change to the trait is needed to change the execution
 //! context:
 //!
@@ -145,6 +145,8 @@
 //!         .exec().ignore();
 //! }
 //! ```
+//! ^1 : Retrofit v1 established synchronicity at the declaration site; v2 follows the same
+//! pattern as Anterofit, but the two were developed independently.
 //!
 //! ## `Call`
 //! Returned by `Request::exec()`, this type is a pollable `Future` which will yield the result
