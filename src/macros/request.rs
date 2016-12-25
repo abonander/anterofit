@@ -147,6 +147,8 @@ macro_rules! body_map {
 ///
 /// ## Panics
 /// If the request is a GET request (cannot have a body).
+///
+/// In some server stacks (e.g. PHP), these would be called `POST` parameters.
 #[macro_export]
 macro_rules! fields {
     ($($key:expr $(=> $val:expr)*),*) => ({
@@ -220,6 +222,8 @@ macro_rules! path (
 /// `$key` and `$val` can be anything that is `Display`; neither `Send` nor `'static` is required.
 ///
 /// Can be invoked multiple times. Duplicate keys are left to be handled by the server.
+///
+/// In some server stacks (e.g. PHP), these would be called `GET` parameters.
 #[macro_export]
 macro_rules! query {
     ($($key:expr => $val:expr),+) => (
