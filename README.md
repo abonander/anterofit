@@ -14,21 +14,38 @@ Get started with our [User Guide](GUIDE.md)
 
 Or an in-depth look with our [Documentation](https://docs.rs/anterofit)
 
-With [`rustc-serialize`](https://crates.io/crates/rustc-serialize):
+###Setup
 
+####[`rustc-serialize`](https://crates.io/crates/rustc-serialize):
+
+`Cargo.toml`:
 ```toml
 [dependencies]
 anterofit = "0.1"
+rustc-serialize = "0.3"
 ```
 
-With [`serde`](https://crates.io/crates/serde) and JSON serialization:
+Crate Root:
+```rust
+#[macro_use] extern crate anterofit;
+extern crate rustc_serialize;
+```
+-------------------
 
+#### [Serde](https://crates.io/crates/serde) and JSON serialization:
+
+`Cargo.toml`:
 ```toml
+[dependencies]
+serde = "0.8"
+
 [dependencies.anterofit]
 version = "0.1"
 default-features = false
 features = ["serde", "serde_json"]
 ```
+
+Then see [Serde's *Setting Up Codegen* guide](https://serde.rs/codegen.html).
 
 ###Choosing a serialization framework
 
