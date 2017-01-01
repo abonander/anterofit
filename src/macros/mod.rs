@@ -3,6 +3,8 @@
 #[macro_use]
 mod request;
 
+mod proc_macro;
+
 /// Define a service trait whose methods make HTTP requests.
 ///
 /// ##Example
@@ -161,7 +163,7 @@ mod request;
 /// }
 /// # }
 /// ```
-#[macro_export]
+//#[macro_export]
 macro_rules! service {
     (
         $(#[$meta:meta])*
