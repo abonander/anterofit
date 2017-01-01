@@ -7,6 +7,9 @@ rust:
 os:
   - linux
   # - osx
+branches:
+  except:
+    - proc-macro
 script:
   - if [ ${TRAVIS_RUST_VERSION} = "nightly" ]; then
       cargo build --verbose --features "nightly";

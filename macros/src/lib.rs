@@ -1,8 +1,11 @@
-use proc_macro::TokenStream;
-use quote::Tokens;
-use syn::*;
+#![feature(proc_macro, proc_macro_lib)]
+extern crate syn;
+#[macro_use] extern crate quote;
+extern crate proc_macro;
 
-const DEFAULT_DELEGATE_BOUND: &'static str = "::anterofit::AbsAdapter";
+use proc_macro::TokenStream;
+use quote::{Tokens, ToTokens};
+use syn::*;
 
 #[proc_macro_attribute]
 pub fn service(args: Option<TokenStream>, input: TokenStream) -> TokenStream {
@@ -15,13 +18,15 @@ pub fn service(args: Option<TokenStream>, input: TokenStream) -> TokenStream {
         let args = parse_token_trees(args.to_string()).expect("This should be infallible, right?");
         service_trait.add_delegates(args);
     }
+
+    service_trait.output()
 }
 
 struct ServiceTrait {
     name: Ident,
     vis: Visibility,
     attrs: Vec<Attribute>,
-    methods: Vec<TraitMethod>,
+    methods: Vec<ServiceMethod>,
     delegates: Vec<Delegate>,
 }
 
@@ -40,7 +45,7 @@ impl ServiceTrait {
             name: item.ident,
             vis: item.vis,
             attrs: item.attrs,
-            methods: items.into_iter().map(TraitMethod::from_trait_item).collect(),
+            methods: items.into_iter().map(ServiceMethod::from_trait_item).collect(),
             delegates: vec![],
         }
     }
@@ -57,21 +62,60 @@ impl ServiceTrait {
         }
     }
 
-    fn output(&self) -> TokenTree {
-        quote! {
-            #self.vis() trait
+    fn output(&self) -> Tokens {
+        let vis = &self.vis;
+        let name = &self.name;
+        let attrs = &self.attrs;
+
+        let mut tokens = quote! {
+            #(#attrs)*
+            #vis trait #name
+        };
+
+        tokens.append("{");
+
+        for method in &self.methods {
+            method.decl(out);
         }
+
+        tokens.append("}");
+
+        if !self.delegates.is_empty() {
+            for delegate in &self.delegates {
+                match *delegate {
+                    Delegate::Concrete(ref delegate) => {
+                        out.append("impl ");
+                        self.name.to_tokens(out);
+                        out.append(" for ");
+                        delegate.to_tokens(out);
+
+                        out.append(" { ");
+
+                        for method in &self.methods {
+                            method.method_impl("self.get_adapter()", out);
+                        }
+
+                        out.append(" } ");
+                    }
+                }
+            }
+        } else {
+            out.append("impl<T: ::anterofit::AbsAdapter> ");
+            self.name.to_tokens(out);
+            out.append(" for ")
+        }
+
     }
 }
 
-struct TraitMethod {
+struct ServiceMethod {
     name: Ident,
     attrs: Vec<Attribute>,
     sig: MethodSig,
     body: Vec<Stmt>,
 }
 
-impl TraitMethod {
+impl ServiceMethod {
     fn from_trait_item(trait_item: TraitItem) -> Self {
         let (sig, block) = if let TraitItemKind::Method(sig, block) = trait_item.node {
             let block = block.expect("Every trait method must have a block.");
@@ -81,12 +125,46 @@ impl TraitMethod {
             panic!("Unsupported item in service trait (only methods are allowed): {}", trait_item)
         };
 
-        TraitMethod {
+        ServiceMethod {
             name: trait_item.ident,
             attrs: trait_item.attrs,
             sig: sig,
             body: block.stmts
         }
+    }
+
+    fn header(&self, out: &mut Tokens) {
+        out.append_all(&self.attrs);
+        out.append("fn");
+        self.name.to_tokens(out);
+        self.sig.generics.to_tokens(out);
+        out.append("(");
+        out.append_separated(&self.sig.decl.inputs, ",");
+        out.append(")");
+
+        out.append("-> anterofit::Request");
+
+        if let FunctionRetTy::Ty(ref ret_ty) = self.sig.decl.output {
+            out.append("<");
+            ret_ty.to_tokens(out);
+            out.append(">");
+        }
+    }
+
+    fn decl(&self, out: &mut Tokens) {
+        self.header(out);
+        out.append(";");
+    }
+
+    fn method_impl(&self, get_adpt: Option<&str>, out: &mut Tokens) {
+        self.header(out);
+        out.append_all(&[
+            "{ request_impl! { ",
+            get_adpt.unwrap_or("self"),
+            ";"
+        ]);
+        out.append_all(&self.body);
+        out.append(" } } ");
     }
 }
 

@@ -156,7 +156,6 @@
 //! have a choice over whether you want to use futures in your app or not.
 #![warn(missing_docs)]
 #![cfg_attr(feature = "nightly", feature(insert_str))]
-#![feature(proc_macro, proc_macro_lib)]
 #![recursion_limit="100"]
 
 #[macro_use]
@@ -173,10 +172,6 @@ extern crate multipart;
 extern crate rustc_serialize;
 
 extern crate url;
-
-extern crate syn;
-#[macro_use] extern crate quote;
-extern crate proc_macro;
 
 pub extern crate hyper;
 
