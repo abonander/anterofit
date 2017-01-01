@@ -9,7 +9,7 @@ os:
   # - osx
 branches:
   except:
-    - proc-macro
+    - proc_macro
 script:
   - if [ ${TRAVIS_RUST_VERSION} = "nightly" ]; then
       cargo build --verbose --features "nightly";
