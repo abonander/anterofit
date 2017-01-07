@@ -1,11 +1,11 @@
 [package]
-name = "anterofit-macros"
+name = "anterofit-service-attr"
 version = "0.1.0"
 authors = ["Austin Bonander <austin.bonander@gmail.com>"]
 
 [dependencies]
-quote = "*"
-syn = "*"
+quote = "0.3"
+syn = { version = "0.10", features = ["full"] }
 
 [lib]
 proc-macro = true

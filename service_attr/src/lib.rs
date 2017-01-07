@@ -1,4 +1,5 @@
-#![feature(proc_macro, proc_macro_lib)]
+// FIXME: remove last feature flag
+#![feature(proc_macro_lib, proc_macro_attribute, proc_macro_internals)]
 extern crate syn;
 #[macro_use] extern crate quote;
 extern crate proc_macro;
@@ -8,18 +9,15 @@ use quote::{Tokens, ToTokens};
 use syn::*;
 
 #[proc_macro_attribute]
-pub fn service(args: Option<TokenStream>, input: TokenStream) -> TokenStream {
-    let item = parse_item(input.to_string())
+pub fn service(args: TokenStream, input: TokenStream) -> TokenStream {
+    let item = parse_item(&input.to_string())
         .expect("Input required to contain a trait and zero or more `delegate!()` invocations");
 
-    let mut service_trait = ServiceTrait::from_item(&item);
+    let mut service_trait = ServiceTrait::from_item(item);
 
-    if let Some(args) = args {
-        let args = parse_token_trees(args.to_string()).expect("This should be infallible, right?");
-        service_trait.add_delegates(args);
-    }
+    assert!(args.to_string().is_empty(), "#[service] attribute does not take arguments");
 
-    service_trait.output()
+    service_trait.output().parse().expect("Failed to parse output")
 }
 
 struct ServiceTrait {
@@ -30,11 +28,20 @@ struct ServiceTrait {
     delegates: Vec<Delegate>,
 }
 
+fn assert_generics_empty(generics: &Generics) {
+    assert!(
+        generics.lifetimes.is_empty() &&
+        generics.ty_params.is_empty() &&
+        generics.where_clause.predicates.is_empty(),
+        "Generics are (currently) not supported on service traits"
+    )
+}
+
 impl ServiceTrait {
     fn from_item(item: Item) -> Self {
         let items = if let ItemKind::Trait(unsafety, generics, bounds, items) = item.node {
             assert_eq!(unsafety, Unsafety::Normal, "Unsafe traits are not supported");
-            assert!(generics.is_empty(), "Generics are not supported on service traits");
+            assert_generics_empty(&generics);
             assert!(bounds.is_empty(), "Bounds are not supported on service traits");
             items
         } else {
@@ -67,44 +74,32 @@ impl ServiceTrait {
         let name = &self.name;
         let attrs = &self.attrs;
 
-        let mut tokens = quote! {
+        let mut out = quote! {
             #(#attrs)*
             #vis trait #name
         };
 
-        tokens.append("{");
+        out.append("{");
 
         for method in &self.methods {
-            method.decl(out);
+            method.decl(&mut out);
         }
 
-        tokens.append("}");
+        out.append("}");
 
         if !self.delegates.is_empty() {
-            for delegate in &self.delegates {
-                match *delegate {
-                    Delegate::Concrete(ref delegate) => {
-                        out.append("impl ");
-                        self.name.to_tokens(out);
-                        out.append(" for ");
-                        delegate.to_tokens(out);
-
-                        out.append(" { ");
-
-                        for method in &self.methods {
-                            method.method_impl("self.get_adapter()", out);
-                        }
-
-                        out.append(" } ");
-                    }
-                }
-            }
+            unimplemented!();
         } else {
             out.append("impl<T: ::anterofit::AbsAdapter> ");
-            self.name.to_tokens(out);
-            out.append(" for ")
+            self.name.to_tokens(&mut out);
+            out.append(" for T { ");
+
+            for method in &self.methods {
+                method.method_impl("self", &mut out);
+            }
         }
 
+        out
     }
 }
 
@@ -122,7 +117,7 @@ impl ServiceMethod {
 
             (sig, block)
         } else {
-            panic!("Unsupported item in service trait (only methods are allowed): {}", trait_item)
+            panic!("Unsupported item in service trait (only methods are allowed): {:?}", trait_item)
         };
 
         ServiceMethod {
@@ -156,13 +151,9 @@ impl ServiceMethod {
         out.append(";");
     }
 
-    fn method_impl(&self, get_adpt: Option<&str>, out: &mut Tokens) {
+    fn method_impl(&self, get_adpt: &str, out: &mut Tokens) {
         self.header(out);
-        out.append_all(&[
-            "{ request_impl! { ",
-            get_adpt.unwrap_or("self"),
-            ";"
-        ]);
+        out.append_all(&["{ request_impl! { ", get_adpt, ";"]);
         out.append_all(&self.body);
         out.append(" } } ");
     }
@@ -175,33 +166,21 @@ enum Delegate {
 
 impl Delegate {
     fn parse<I: Iterator<Item = TokenTree>>(tokens: I) -> Self {
-        let mut tokens = tokens.map(non_delimited);
-
-        let kind = unwrap_ident(tokens.next()
-            .expect("Expected `delegate` or `delegate_bnd`", tokens));
-
-        assert_eq!(Some(Token::Eq), tokens.next());
-
-        let del_type = delegate_type(tokens.next().expect("Expected type name after `=`"));
-
-        match kind {
-            "delegate" => Delegate::Concrete(del_type),
-            "delegate_bnd" => Delegate::Bounded(del_type),
-        }
+        unimplemented!()
     }
 }
 
 fn non_delimited(tt: TokenTree) -> Token {
     match tt {
         TokenTree::Token(token) => token,
-        _ => panic!("Unexpected delimited token tree: {}", tt),
+        _ => panic!("Unexpected delimited token tree: {:?}", tt),
     }
 }
 
 fn unwrap_ident(token: Token) -> Ident {
     match token {
         Token::Ident(ident) => ident,
-        _ => panic!("Expected identifier, got {}", token),
+        _ => panic!("Expected identifier, got {:?}", token),
     }
 }
 
@@ -209,9 +188,10 @@ fn delegate_type(token: Token) -> Ty {
     match token {
         Token::Ident(ident) => ident_to_type(ident),
         Token::Literal(Lit::Str(ref path, _)) => {
-            parse_path(path).expect()
+            let path = parse_path(path).expect("Expected path");
+            unimplemented!()
         },
-        _ => panic!("Expected type (bare or in string literal), got {}", token),
+        _ => panic!("Expected type (bare or in string literal), got {:?}", token),
     }
 }
 
