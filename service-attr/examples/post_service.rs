@@ -2,6 +2,7 @@
 //
 // If you are using the `serde` feature, use `#[derive(Deserialize)]`
 // and `serialize::serde::json::Deserializer` instead at the appropriate places.
+#![feature(proc_macro_attribute)]
 
 #[macro_use] extern crate anterofit;
 #[macro_use] extern crate anterofit_service_attr;

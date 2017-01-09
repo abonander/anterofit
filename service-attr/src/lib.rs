@@ -97,6 +97,8 @@ impl ServiceTrait {
             for method in &self.methods {
                 method.method_impl("self", &mut out);
             }
+
+            out.append(" } ");
         }
 
         out
@@ -153,7 +155,9 @@ impl ServiceMethod {
 
     fn method_impl(&self, get_adpt: &str, out: &mut Tokens) {
         self.header(out);
-        out.append_all(&["{ request_impl! { ", get_adpt, ";"]);
+        out.append("{ request_impl! { ");
+        out.append(get_adpt);
+        out.append(";");
         out.append_all(&self.body);
         out.append(" } } ");
     }

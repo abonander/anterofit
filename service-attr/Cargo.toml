@@ -7,5 +7,9 @@ authors = ["Austin Bonander <austin.bonander@gmail.com>"]
 quote = "0.3"
 syn = { version = "0.10", features = ["full"] }
 
+[dev-dependencies]
+anterofit = { path = "../" }
+rustc-serialize = "*"
+
 [lib]
 proc-macro = true
