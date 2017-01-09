@@ -1,5 +1,4 @@
-// FIXME: remove last feature flag
-#![feature(proc_macro_lib, proc_macro_attribute, proc_macro_internals)]
+#![feature(proc_macro_attribute)]
 extern crate syn;
 #[macro_use] extern crate quote;
 extern crate proc_macro;
@@ -8,12 +7,14 @@ use proc_macro::TokenStream;
 use quote::{Tokens, ToTokens};
 use syn::*;
 
+use std::iter::Peekable;
+
 #[proc_macro_attribute]
 pub fn service(args: TokenStream, input: TokenStream) -> TokenStream {
     let item = parse_item(&input.to_string())
         .expect("Input required to contain a trait and zero or more `delegate!()` invocations");
 
-    let mut service_trait = ServiceTrait::from_item(item);
+    let service_trait = ServiceTrait::from_item(item);
 
     assert!(args.to_string().is_empty(), "#[service] attribute does not take arguments");
 
@@ -48,24 +49,14 @@ impl ServiceTrait {
             panic!("Target of `#[service]` attribute must be a trait");
         };
 
+        let (methods, delegates) = collect_items(items);
+
         ServiceTrait {
             name: item.ident,
             vis: item.vis,
             attrs: item.attrs,
-            methods: items.into_iter().map(ServiceMethod::from_trait_item).collect(),
-            delegates: vec![],
-        }
-    }
-
-    fn add_delegates(&mut self, args: Vec<TokenTree>) {
-        let mut args = args.into_iter().peekable();
-
-        while args.peek().is_some() {
-            self.delegates.push(Delegate::parse(&mut args));
-
-            if let Some(token) = args.next().map(non_delimited) {
-                assert_eq!(token, Token::Comma);
-            }
+            methods: methods,
+            delegates: delegates,
         }
     }
 
@@ -88,14 +79,18 @@ impl ServiceTrait {
         out.append("}");
 
         if !self.delegates.is_empty() {
-            unimplemented!();
+            for delegate in &self.delegates {
+                delegate.output(&self.name, &self.methods, &mut out);
+            }
         } else {
+            let self_ = parse_token_trees("self").unwrap();
+
             out.append("impl<T: ::anterofit::AbsAdapter> ");
             self.name.to_tokens(&mut out);
             out.append(" for T { ");
 
             for method in &self.methods {
-                method.method_impl("self", &mut out);
+                method.method_impl(&self_, &mut out);
             }
 
             out.append(" } ");
@@ -103,6 +98,21 @@ impl ServiceTrait {
 
         out
     }
+}
+
+fn collect_items(items: Vec<TraitItem>) -> (Vec<ServiceMethod>, Vec<Delegate>) {
+    let mut methods = vec![];
+    let mut delegates = vec![];
+
+    for item in items {
+        match item.node {
+            TraitItemKind::Method(..) => methods.push(ServiceMethod::from_trait_item(item)),
+            TraitItemKind::Macro(mac) => delegates.push(Delegate::from_mac(mac)),
+            _ => panic!("Unsupported item in service trait: {:?}", item),
+        }
+    }
+
+    (methods, delegates)
 }
 
 struct ServiceMethod {
@@ -153,58 +163,160 @@ impl ServiceMethod {
         out.append(";");
     }
 
-    fn method_impl(&self, get_adpt: &str, out: &mut Tokens) {
+    fn method_impl(&self, get_adpt: &[TokenTree], out: &mut Tokens) {
         self.header(out);
         out.append("{ request_impl! { ");
-        out.append(get_adpt);
+        out.append_all(get_adpt);
         out.append(";");
         out.append_all(&self.body);
         out.append(" } } ");
     }
 }
 
-enum Delegate {
-    Concrete(Ty),
-    Bounded(Ty),
+struct Delegate {
+    generics: Vec<TokenTree>,
+    for_type: Vec<TokenTree>,
+    where_clause: Vec<TokenTree>,
+    get_adpt: Vec<TokenTree>,
 }
 
 impl Delegate {
-    fn parse<I: Iterator<Item = TokenTree>>(tokens: I) -> Self {
-        unimplemented!()
+    fn from_mac(mac: Mac) -> Self {
+        assert_eq!(mac.path, "delegate".into(), "Only `delegate!()` macro invocations are allowed \
+                                                 inside service traits.");
+        Self::parse(mac.tts)
+    }
+
+    fn parse(mut tokens: Vec<TokenTree>) -> Self {
+        let tokens = match tokens.pop() {
+            Some(TokenTree::Delimited(delimited)) => delimited.tts,
+            None => panic!("Empty `delegate!()` invocation!"),
+            Some(token) =>  {
+                tokens.push(token);
+                panic!("Unsupported `delegate!()` invocation: {:?}", tokens)
+            },
+        };
+
+        let mut parser = DelegateParser(tokens.into_iter().peekable());
+
+        parser.expect_keyword("impl");
+
+        let generics = parser.get_generics();
+
+        parser.expect_keyword("for");
+
+        let for_type = parser.get_type();
+
+        assert!(!for_type.is_empty(), "Expected type, got nothing");
+
+        let where_clause = parser.get_where();
+
+        let get_adpt = parser.get_body_inner();
+
+        Delegate {
+            generics: generics,
+            for_type: for_type,
+            where_clause: where_clause,
+            get_adpt: get_adpt,
+        }
+    }
+
+    fn output(&self, trait_name: &Ident, methods: &[ServiceMethod], out: &mut Tokens) {
+        out.append("impl");
+        out.append_all(&self.generics);
+        trait_name.to_tokens(out);
+        out.append("for");
+        out.append_all(&self.for_type);
+        out.append_all(&self.where_clause);
+        out.append("{");
+
+        for method in methods {
+            method.method_impl(&self.get_adpt, out);
+        }
+
+        out.append("}");
     }
 }
 
-fn non_delimited(tt: TokenTree) -> Token {
-    match tt {
-        TokenTree::Token(token) => token,
-        _ => panic!("Unexpected delimited token tree: {:?}", tt),
-    }
-}
+struct DelegateParser<I: Iterator>(Peekable<I>);
 
-fn unwrap_ident(token: Token) -> Ident {
-    match token {
-        Token::Ident(ident) => ident,
-        _ => panic!("Expected identifier, got {:?}", token),
-    }
-}
+impl<I: Iterator<Item = TokenTree>> DelegateParser<I> {
 
-fn delegate_type(token: Token) -> Ty {
-    match token {
-        Token::Ident(ident) => ident_to_type(ident),
-        Token::Literal(Lit::Str(ref path, _)) => {
-            let path = parse_path(path).expect("Expected path");
-            unimplemented!()
-        },
-        _ => panic!("Expected type (bare or in string literal), got {:?}", token),
+    fn expect_keyword(&mut self, expect: &str) {
+        match self.0.next() {
+            Some(TokenTree::Token(Token::Ident(ref ident))) => assert_eq!(ident.as_ref(), expect),
+            Some(other) => panic!("Expected keyword {:?}, got {:?}", expect, other),
+            None => panic!("Expected keyword/ {:?}, found nothing"),
+        }
     }
-}
 
-fn ident_to_type(ident: Ident) -> Ty {
-    Ty::Path(None, Path {
-        global: false,
-        segments: vec![PathSegment {
-            ident: ident,
-            parameters: PathParameters::none(),
-        }]
-    })
+    fn get_generics(&mut self) -> Vec<TokenTree> {
+        let mut depth = 0;
+
+        let ret = self.take_while(|token| {
+            match *token {
+                TokenTree::Token(Token::Lt) => depth += 1,
+                TokenTree::Token(Token::Gt) => {
+                    depth -= 1;
+
+                    if depth == 0 { return true; }
+                },
+                _ => (),
+            }
+
+            depth > 0
+        });
+
+        if depth != 0 {
+            panic!("Missing closing > on generics in delegate!() invocation: {:?}", ret);
+        }
+
+        ret
+    }
+
+    fn get_type(&mut self) -> Vec<TokenTree> {
+        self.take_while(|token| match *token {
+            TokenTree::Delimited(ref delimited) => delimited.delim != DelimToken::Brace,
+            TokenTree::Token(Token::Ident(ref ident)) => ident != "where",
+            _ => true,
+        })
+    }
+
+    fn get_where(&mut self) -> Vec<TokenTree> {
+        match self.0.peek() {
+            Some(&TokenTree::Token(Token::Ident(ref ident))) if ident == "where" => (),
+            _ => return vec![],
+        }
+
+        self.take_while(|token| match *token {
+            TokenTree::Delimited(ref delimited) => delimited.delim != DelimToken::Brace,
+            _ => true,
+        })
+    }
+
+    fn get_body_inner(&mut self) -> Vec<TokenTree> {
+        let delimited = match self.0.next() {
+            Some(TokenTree::Delimited(delimited)) => delimited,
+            Some(TokenTree::Token(token)) => panic!("Expected opening brace, got {:?}", token),
+            None => panic!("Expected opening brace, got nothing"),
+        };
+
+        assert_eq!(delimited.delim, DelimToken::Brace);
+
+        delimited.tts
+    }
+
+    fn take_while<F>(&mut self, mut predicate: F) -> Vec<TokenTree> where F: FnMut(&TokenTree) -> bool {
+        let mut out = vec![];
+
+        loop {
+            if !self.0.peek().map_or(false, &mut predicate) {
+                break
+            }
+
+            out.push(self.0.next().unwrap())
+        }
+
+        out
+    }
 }

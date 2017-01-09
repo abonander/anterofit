@@ -62,6 +62,9 @@ trait PostService {
             body: body
         })
     }
+
+    // This is the default delegate impl, this doesn't need to be here
+    delegate!(impl<T: ::anterofit::AbsAdapter> for T { self });
 }
 
 fn main() {
