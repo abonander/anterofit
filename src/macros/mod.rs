@@ -161,7 +161,7 @@ mod request;
 /// }
 /// # }
 /// ```
-//#[macro_export]
+#[macro_export]
 macro_rules! service {
     (
         $(#[$meta:meta])*
