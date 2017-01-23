@@ -2,10 +2,11 @@
 //
 // If you are using the `serde` feature, use `#[derive(Deserialize)]`
 // and `serialize::serde::json::Deserializer` instead at the appropriate places.
-#![feature(proc_macro_attribute)]
+#![feature(proc_macro)]
 
 #[macro_use] extern crate anterofit;
-#[macro_use] extern crate anterofit_service_attr;
+
+extern crate anterofit_service_attr;
 
 extern crate rustc_serialize;
 
@@ -14,6 +15,8 @@ extern crate rustc_serialize;
 // You can glob-import if you like, but know that it will shadow `Result`
 // which may cause some confusing type-mismatch errors.
 use anterofit::{Adapter, Url};
+
+use anterofit_service_attr::service;
 
 #[derive(Debug, RustcDecodable)]
 struct Post {

@@ -38,3 +38,5 @@ default = ["rustc-serialize", "pool"]
 serde-all = ["serde", "serde_json", "serde_xml"]
 pool = ["threadpool"]
 nightly = ["multipart/nightly"]
+# Enable this when using the `#[service]` attribute from `anterofit_service_attr`
+service-attr = []

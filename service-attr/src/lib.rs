@@ -1,4 +1,5 @@
-#![feature(proc_macro_attribute)]
+#![feature(proc_macro)]
+
 extern crate syn;
 #[macro_use] extern crate quote;
 extern crate proc_macro;

@@ -8,7 +8,9 @@ quote = "0.3"
 syn = { version = "0.10", features = ["full"] }
 
 [dev-dependencies]
-anterofit = { path = "../" }
+# The `service-attr` feature disables the `service!{}` macro
+# so that the `#[service]` attribute doesn't get shadowed
+anterofit = { path = "../", features = ["service-attr"]}
 rustc-serialize = "*"
 
 [lib]
