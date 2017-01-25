@@ -1,0 +1,17 @@
+[package]
+name = "anterofit-service-attr"
+version = "0.1.0"
+authors = ["Austin Bonander <austin.bonander@gmail.com>"]
+
+[dependencies]
+quote = "0.3"
+syn = { version = "0.10", features = ["full"] }
+
+[dev-dependencies]
+# The `service-attr` feature disables the `service!{}` macro
+# so that the `#[service]` attribute doesn't get shadowed
+anterofit = { path = "../", features = ["service-attr"]}
+rustc-serialize = "*"
+
+[lib]
+proc-macro = true

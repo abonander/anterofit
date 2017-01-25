@@ -161,6 +161,7 @@ mod request;
 /// }
 /// # }
 /// ```
+#[cfg(not(feature = "service-attr"))]
 #[macro_export]
 macro_rules! service {
     (
