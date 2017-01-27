@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use executor::{DefaultExecutor, Executor, ExecBox};
 
-use net::intercept::{Intercept, Chain, NoIntercept};
+use net::intercept::{Interceptor, Chain, NoIntercept};
 
 use net::request::RequestHead;
 
@@ -68,7 +68,7 @@ impl<E, I, S, D> AdapterBuilder<E, I, S, D> {
 
     /// Set a new interceptor for the adapter.
     pub fn interceptor<I_>(self, interceptor: I_) -> AdapterBuilder<E, I_, S, D>
-    where I_: Intercept {
+    where I_: Interceptor {
         AdapterBuilder {
             base_url: self.base_url,
             client: self.client,
@@ -80,10 +80,10 @@ impl<E, I, S, D> AdapterBuilder<E, I, S, D> {
     }
 
     /// Box the adapter's `Interceptor`.
-    pub fn box_interceptor(self) -> AdapterBuilder<E, Box<Intercept>, S, D>
-    where I: Intercept {
+    pub fn box_interceptor(self) -> AdapterBuilder<E, Box<Interceptor>, S, D>
+    where I: Interceptor {
         // Necessary to force coercion to trait object
-        let boxed: Box<Intercept> = Box::new(self.interceptor);
+        let boxed: Box<Interceptor> = Box::new(self.interceptor);
 
         AdapterBuilder {
             base_url: self.base_url,
@@ -97,7 +97,7 @@ impl<E, I, S, D> AdapterBuilder<E, I, S, D> {
 
     /// Chain a new interceptor with the current one. They will be called in-order.
     pub fn chain_interceptor<I_>(self, next: I_) -> AdapterBuilder<E, Chain<I, I_>, S, D>
-    where I: Intercept, I_: Intercept {
+    where I: Interceptor, I_: Interceptor {
         AdapterBuilder {
             base_url: self.base_url,
             client: self.client,
@@ -147,7 +147,7 @@ impl<E, I, S, D> AdapterBuilder<E, I, S, D> {
 }
 
 impl<E, I, S, D> AdapterBuilder<E, I, S, D>
-where E: Executor, I: Intercept, S: Serializer, D: Deserializer {
+where E: Executor, I: Interceptor, S: Serializer, D: Deserializer {
 
     /// Using the supplied types, complete the adapter.
     pub fn build(self) -> Adapter<E, I, S, D> {
@@ -229,7 +229,7 @@ pub trait ObjSafeAdapter: Send + 'static {
 }
 
 impl<E, I, S, D> AbsAdapter for Adapter<E, I, S, D>
-where E: Executor, I: Intercept, S: Serializer, D: Deserializer {
+where E: Executor, I: Interceptor, S: Serializer, D: Deserializer {
     type Serializer = S;
     type Deserializer = D;
 
@@ -243,7 +243,7 @@ where E: Executor, I: Intercept, S: Serializer, D: Deserializer {
 }
 
 impl<E, I, S, D> ObjSafeAdapter for Adapter<E, I, S, D>
-where E: Executor, I: Intercept, S: Serializer, D: Deserializer {
+where E: Executor, I: Interceptor, S: Serializer, D: Deserializer {
 
     fn execute(&self, exec: Box<ExecBox>) {
         self.executor.execute(exec)

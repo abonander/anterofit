@@ -10,7 +10,7 @@ pub use hyper::header;
 
 pub use self::adapter::{Adapter, AbsAdapter, AdapterBuilder, ObjSafeAdapter};
 
-pub use self::intercept::{Intercept, Chain};
+pub use self::intercept::{Interceptor, Chain};
 
 pub use self::call::Call;
 
