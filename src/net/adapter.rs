@@ -199,9 +199,11 @@ impl<E: Clone, I: Interceptor, S, D> Adapter<E, I, S, D> {
     /// With the `nightly` feature, unsizing coercion is implemented, so you don't need
     /// to call this method explicitly to get this effect.
     pub fn erase(self) -> Adapter<E, Interceptor, S, D> {
+        let inner: Arc<Adapter_<Interceptor, S, D>> = self.inner;
+
         Adapter {
             executor: self.executor,
-            inner: self.inner,
+            inner: inner,
         }
     }
 }
