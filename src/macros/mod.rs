@@ -442,3 +442,65 @@ macro_rules! delegate_impl {
     // Empty end-case for recursion
     ($servicenm:ident; [$($guts:tt)*]) => ();
 }
+
+/// Create a meta-service trait which combines the listed service traits.
+///
+/// This can be used as a shorthand to combine several service traits in generics
+/// or trait objects, and then upcast at-will:
+///
+/// ```no_run
+/// #[macro_use] extern crate anterofit;
+///
+/// use anterofit::Adapter;
+///
+/// service! {
+///     trait FooService {
+///         fn foo(&self) -> String {
+///             GET("/foo")
+///         }
+///     }
+/// }
+///
+/// service! {
+///     trait BarService {
+///         fn bar(&self, param: &str) {
+///             POST("/bar");
+///             query! { "param" => param }
+///         }
+///     }
+/// }
+///
+/// meta_service! { trait BazService: FooService + BarService }
+///
+/// fn use_baz<T: BazService>(service: &T) {
+///     service.foo().exec_here().unwrap();
+///     service.bar("Hello, world!").exec_here().unwrap();
+/// }
+///
+/// fn obj_baz(service: &BazService) {
+///     service.foo().exec_here().unwrap();
+///     service.bar("Hello, world!").exec_here().unwrap();
+/// }
+///
+/// # fn main() {
+/// // Useless adapter, just for demonstration
+/// let adapter = Adapter::builder().build();
+///
+/// use_baz(&adapter);
+/// obj_baz(&adapter);
+/// # }
+/// ```
+#[macro_export]
+macro_rules! meta_service (
+    (trait $metanm:ident : $($superr:tt)+ ) => (
+        trait $metanm : $($superr)+ {}
+
+        impl<T: $($superr)+> $metanm for T {}
+    );
+
+    (pub trait $metanm:ident : $($superr:tt)+ ) => (
+        pub trait $metanm : $($superr)+ {}
+
+        impl<T: $($superr)+> $metanm for T {}
+    );
+);

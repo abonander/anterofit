@@ -228,10 +228,11 @@ macro_rules! path (
 #[macro_export]
 macro_rules! query {
     ($($key:expr => $val:expr),+) => (
-        |builder| {
-            builder.head_mut().query(builder, &[
-                $(&$key as &::std::fmt::Display, &$val as &::std::fmt::Display),+
-            ])
+        |mut builder| {
+            builder.head_mut().query(&[
+                $((&$key as &::std::fmt::Display, &$val as &::std::fmt::Display)),+
+            ]);
+            Ok(builder)
         }
     )
 }
