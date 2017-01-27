@@ -13,7 +13,7 @@ pub type StaticCowStr = Cow<'static, str>;
 /// instance.
 ///
 /// Implemented for `Fn(&mut RequestHead) + Send + Sync + 'static`.
-pub trait Interceptor: Send + Sync + 'static {
+pub trait Intercept: Send + Sync + 'static {
     /// Modify the request headers in any way desired.
     ///
     /// Great care must be taken to not introduce logic errors in service methods
@@ -21,12 +21,12 @@ pub trait Interceptor: Send + Sync + 'static {
     fn intercept(&self, req: &mut RequestHead);
 
     /// Chain `self` with `other`, invoking `self` then `other` for each request.
-    fn chain<I>(self, other: I) -> Chain<Self, I> where Self: Sized, I: Interceptor {
+    fn chain<I>(self, other: I) -> Chain<Self, I> where Self: Sized, I: Intercept {
         Chain(self, other)
     }
 }
 
-impl<F> Interceptor for F where F: Fn(&mut RequestHead) + Send + Sync + 'static {
+impl<F> Intercept for F where F: Fn(&mut RequestHead) + Send + Sync + 'static {
     fn intercept(&self, req: &mut RequestHead) {
         (*self)(req)
     }
@@ -35,7 +35,7 @@ impl<F> Interceptor for F where F: Fn(&mut RequestHead) + Send + Sync + 'static 
 /// Chains two interceptors together, invoking the first, then the second.
 pub struct Chain<I1, I2>(I1, I2);
 
-impl<I1: Interceptor, I2: Interceptor> Interceptor for Chain<I1, I2> {
+impl<I1: Intercept, I2: Intercept> Intercept for Chain<I1, I2> {
     fn intercept(&self, req: &mut RequestHead) {
         self.0.intercept(req);
         self.1.intercept(req);
@@ -45,7 +45,7 @@ impl<I1: Interceptor, I2: Interceptor> Interceptor for Chain<I1, I2> {
 /// A no-op interceptor which does nothing when invoked.
 pub struct NoIntercept;
 
-impl Interceptor for NoIntercept {
+impl Intercept for NoIntercept {
     fn intercept(&self, _req: &mut RequestHead) {}
 }
 
@@ -54,7 +54,7 @@ impl Interceptor for NoIntercept {
 /// To add multiple headers to one request, chain this interceptor with another.
 pub struct AddHeader<H: Header + HeaderFormat>(pub H);
 
-impl<H: Header + HeaderFormat> Interceptor for AddHeader<H> {
+impl<H: Header + HeaderFormat> Intercept for AddHeader<H> {
     fn intercept(&self, req: &mut RequestHead) {
         req.header(self.0.clone());
     }
@@ -73,7 +73,7 @@ impl PrependUrl {
     }
 }
 
-impl Interceptor for PrependUrl {
+impl Intercept for PrependUrl {
     fn intercept(&self, req: &mut RequestHead) {
         req.prepend_url(&self.0);
     }
@@ -127,7 +127,7 @@ impl AppendQuery {
     }
 }
 
-impl Interceptor for AppendQuery {
+impl Intercept for AppendQuery {
     fn intercept(&self, req: &mut RequestHead) {
         req.query(self.0.iter());
     }
