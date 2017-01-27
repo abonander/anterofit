@@ -10,6 +10,13 @@ focal point of this power lies in the `service!{}` macro.
 
 See the [README](README.md) for setting up dependencies and choosing a serialization framework.
 
+####Note
+This document is a work-in-progress. If there is any information which you think would be helpful
+to add, please feel free to open a pull request.
+
+The [API Documentation](https://docs.rs/anterofit) also contains a wealth of information about
+Anterofit and its functionality.
+
 Creating Service Traits with `service!{}`
 -----------------------------------------
 
@@ -117,3 +124,14 @@ Serialization
 -------------
 
 Anterofit supports both serialization of request bodies, and deserialization of response bodies.
+
+If you want to use the `body!()` or `body_map!()` macros in a request method, you'll need to set
+a `Serializer` during construction of the adapter. Similarly, if you want to deserialize responses as Rust types, you'll need to set a `Deserializer`
+at the same time.
+
+For serializing and deserializing JSON, the adapter builder has a convenience method: `serialize_json()`.
+
+As of January 2017, Anterofit supports JSON serialization and deserialization, and XML deserialization.
+
+Relevant types are in the `serialize` module.
+
