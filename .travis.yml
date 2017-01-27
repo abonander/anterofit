@@ -15,6 +15,7 @@ script:
       cargo build --verbose --features "nightly";
       cargo test --verbose --features "nightly";
       cargo build --verbose --no-default-features --features "serde-all nightly";
+      (cd service-attr && cargo test --verbose);
     fi
   - cargo build --verbose;
   - cargo test --verbose;
