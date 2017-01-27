@@ -97,16 +97,13 @@ mod request;
 /// # #[cfg(feature = "rustc-serialize")]
 /// # mod only_rustc_serialize {
 ///
-/// use anterofit::{Adapter, Url};
-/// use anterofit::executor::DefaultExecutor;
-/// use anterofit::net::intercept::NoIntercept;
-/// use anterofit::serialize::json::{Serializer as JsonSerializer, Deserializer as JsonDeserializer};
+/// use anterofit::{Adapter, JsonAdapter, Url};
 ///
 /// pub struct DelegateAdapter {
 ///     // Notice that this field remains private but due to visibility rules,
 ///     // the impls of `DelegatedService` still get to access it.
 ///     // This allows you to hide the adapter as an implementation detail.
-///     inner: Adapter<DefaultExecutor, NoIntercept, JsonSerializer, JsonDeserializer>,
+///     inner: JsonAdapter
 /// }
 ///
 /// impl DelegateAdapter {

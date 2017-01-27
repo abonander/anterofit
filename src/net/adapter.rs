@@ -166,20 +166,42 @@ where E: Executor, I: Interceptor, S: Serializer, D: Deserializer {
     }
 }
 
+/// A shorthand for an adapter with JSON serialization enabled.
+#[cfg(any(feature = "rustc-serialize", feature = "serde-json"))]
+pub type JsonAdapter<E = DefaultExecutor,
+                     I = NoIntercept> = Adapter<E, I, ::serialize::json::Serializer,
+                                                ::serialize::json::Deserializer>;
+
 /// The starting point of all Anterofit requests.
 ///
 /// Use `builder()` to start constructing an instance.
 #[derive(Debug)]
-pub struct Adapter<E, I, S, D> {
+pub struct Adapter<E, I: ?Sized, S, D> {
     executor: E,
     inner: Arc<Adapter_<I, S, D>>,
 }
 
-impl<E: Clone, I, S, D> Clone for Adapter<E, I, S, D> {
+impl<E: Clone, I: ?Sized, S, D> Clone for Adapter<E, I, S, D> {
     fn clone(&self) -> Self {
         Adapter {
             executor: self.executor.clone(),
             inner: self.inner.clone(),
+        }
+    }
+}
+
+impl<E: Clone, I: Interceptor, S, D> Adapter<E, I, S, D> {
+    /// Type-erase the adaptor's `Interceptor`.
+    ///
+    /// Useful for when you want to be able to name the `Adapter` type
+    /// but you're using a closure or a long interceptor chain.
+    ///
+    /// With the `nightly` feature, unsizing coercion is implemented, so you don't need
+    /// to call this method explicitly to get this effect.
+    pub fn erase(self) -> Adapter<E, Interceptor, S, D> {
+        Adapter {
+            executor: self.executor,
+            inner: self.inner,
         }
     }
 }
@@ -192,12 +214,13 @@ impl Adapter<DefaultExecutor, NoIntercept, NoSerializer, NoDeserializer> {
 }
 
 #[derive(Debug)]
-struct Adapter_<I, S, D> {
+struct Adapter_<I: ?Sized, S, D> {
     base_url: Option<Url>,
     client: Client,
-    interceptor: I,
     serializer: S,
     deserializer: D,
+    // Last field so it may be unsized
+    interceptor: I,
 }
 
 /// Implemented by `Adapter`. Mainly used to simplify generics.
@@ -228,7 +251,7 @@ pub trait ObjSafeAdapter: Send + 'static {
     fn request_builder(&self, head: &RequestHead) -> Result<NetRequestBuilder>;
 }
 
-impl<E, I, S, D> AbsAdapter for Adapter<E, I, S, D>
+impl<E, I: ?Sized, S, D> AbsAdapter for Adapter<E, I, S, D>
 where E: Executor, I: Interceptor, S: Serializer, D: Deserializer {
     type Serializer = S;
     type Deserializer = D;
@@ -242,7 +265,7 @@ where E: Executor, I: Interceptor, S: Serializer, D: Deserializer {
     }
 }
 
-impl<E, I, S, D> ObjSafeAdapter for Adapter<E, I, S, D>
+impl<E, I: ?Sized, S, D> ObjSafeAdapter for Adapter<E, I, S, D>
 where E: Executor, I: Interceptor, S: Serializer, D: Deserializer {
 
     fn execute(&self, exec: Box<ExecBox>) {
@@ -271,4 +294,24 @@ impl ObjSafeAdapter for NoopAdapter {
     fn request_builder(&self, _: &RequestHead) -> Result<NetRequestBuilder> {
         unimplemented!()
     }
+}
+
+#[cfg(feature = "nightly")]
+mod nightly {
+    use super::Adapter;
+
+    use std::marker::Unsize;
+    use std::ops::CoerceUnsized;
+
+    /// Allows `I` to be erased as `Interceptor`.
+    impl<E, I, I_, S, D> CoerceUnsized<Adapter<E, I_, S, D>>
+    for Adapter<E, I, S, D> where I: Unsize<I_> + ?Sized, I_: ?Sized {}
+
+    #[test]
+    fn unsize_adapter() {
+        use super::Interceptor;
+
+        let _ : Adapter<_, Interceptor, _, _> = Adapter::builder().build();
+    }
+
 }

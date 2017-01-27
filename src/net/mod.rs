@@ -10,6 +10,9 @@ pub use hyper::header;
 
 pub use self::adapter::{Adapter, AbsAdapter, AdapterBuilder, ObjSafeAdapter};
 
+#[cfg(any(feature = "rustc-serialize", feature = "serde-json"))]
+pub use self::adapter::JsonAdapter;
+
 pub use self::intercept::{Interceptor, Chain};
 
 pub use self::call::Call;
