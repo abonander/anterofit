@@ -120,6 +120,44 @@ macros wrap this mechanism.
 
 [doc-macros]: http://docs.rs/anterofit#macros
 
+#### Delegation
+
+When using Anterofit in a library context, such as when writing a wrapper for a public REST API, like Reddit's or Github's,
+you may want to control construction of and access to the `Adapter` to limit potential footguns, but you may still
+ want to use service traits in your public API to limit duplication. 
+ 
+ By default, service traits are implemented for 
+ `Adapter`, so this may seem at odds with the desire for abstraction. However, you can override this and have Anterofit automatically generate implementations of your service
+ traits for a custom type: all that is required is a closure expression that will serve as an accessor for the 
+ inner `Adapter` instance: 
+
+```rust
+service! {
+    pub struct MyDelegate {
+        // `Adapter`'s type parameters omitted for brevity
+        adapter: ::anterofit::Adapter<...>,
+    }
+    
+    pub trait MyService {
+        /// Get the version of this API.
+        fn api_version(&self) -> String {
+            GET("/version")
+        }
+
+        /// Register a user with the API.
+        fn register(&self, username: &str, password: &str) {
+            POST("/register");
+            fields! {
+                username, password
+            }
+        }    
+    }
+    
+    // The expression inside the braces is expected to be `FnOnce(&Self) -> &Adapter<...>`
+    impl for MyDelegate { |this| &this.adapter }
+}
+```
+
 Serialization
 -------------
 
