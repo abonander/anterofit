@@ -9,6 +9,7 @@ use mime::Mime;
 use ::Result;
 
 /// A no-op serializer which returns an error when attempting to use it.
+#[derive(Debug)]
 pub struct NoSerializer;
 
 impl Serializer for NoSerializer {
@@ -22,6 +23,7 @@ impl Serializer for NoSerializer {
 }
 
 /// A no-op deserializer which returns an error when attempting to use it.
+#[derive(Debug)]
 pub struct NoDeserializer;
 
 impl Deserializer for NoDeserializer {
