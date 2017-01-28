@@ -6,8 +6,10 @@
 
 use mime::Mime;
 
+use std::error::Error;
 use std::fmt;
 use std::io::{Read, Write};
+use std::str::FromStr;
 
 use ::Result;
 
@@ -53,6 +55,45 @@ pub trait Serializer: Send + Sync + 'static {
 pub trait Deserializer: Send + Sync + 'static {
     /// Deserialize `T` from `read`, returning the result.
     fn deserialize<T: Deserialize, R: Read>(&self, read: &mut R) -> Result<T>;
+}
+
+/// A deserializer which just uses `FromStr`.
+///
+/// ##Panics
+/// In all methods that are not deserializing a string, float, or integer.
+pub struct FromStrDeserializer;
+
+impl Deserializer for FromStrDeserializer {
+    #[cfg(feature = "rustc-serialize")]
+    fn deserialize<T: Deserialize, R: Read>(&self, read: &mut R) -> Result<T> {
+        let ref mut impl_ = FromStrDeserializerImpl(read);
+        T::decode(impl_)
+    }
+
+    #[cfg(feature = "serde")]
+    fn deserialize<T: Deserialize, R: Read>(&self, read: &mut R) -> Result<T> {
+        let ref mut impl_ = FromStrDeserializerImpl(read);
+        T::deserialize(impl_)
+    }
+}
+
+struct FromStrDeserializerImpl<R>(R);
+
+impl<R: Read> FromStrDeserializerImpl<R> {
+    fn read_string(&mut self) -> Result<String> {
+        let mut string = String::new();
+        let _ = try!(self.0.read_to_string(&mut string));
+        Ok(string)
+    }
+
+    fn read_val<T: FromStr>(&mut self) -> Result<T> where <T as FromStr>::Err: Error + Send + 'static {
+        self.read_string().and_then(|s| ::Error::map_deserialize(s.parse()))
+    }
+
+    fn read_char(&mut self) -> Result<char> {
+        let string = try!(self.read_string());
+        string.chars().next().ok_or_else(|| self.error("Unexpected end of input"))
+    }
 }
 
 /// A simple series of key-value pairs that can be serialized as a map.
