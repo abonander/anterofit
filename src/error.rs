@@ -115,6 +115,11 @@ impl Error {
     pub fn map_deserialize<T, E: StdError + Send + 'static>(res: Result<T, E>) -> Result<T, Self> {
         res.map_err(|e| Error::Deserialize(Box::new(e)))
     }
+
+    /// Create a value of `Error::Deserialize`
+    pub fn deserialize<E: Into<Box<StdError + Send + Sync + 'static>>>(err: E) -> Self {
+        Error::Deserialize(err.into())
+    }
 }
 
 /// Flatten a `Result` of a `Result` where the outer's error type is convertible to `anterofit::Result`.

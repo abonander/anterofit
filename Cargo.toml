@@ -26,7 +26,8 @@ rustc-serialize = { version = "0.3", optional = true }
 
 serde = { version = "0.9 ", optional = true }
 serde_json = { version = "0.9", optional = true }
-serde_xml = { version = "0.9.1", optional = true }
+# Disabled until updated to serde 0.9
+# serde_xml = { version = "0.9.1", optional = true }
 
 [dependencies.multipart]
 version = "0.9.0"
@@ -35,7 +36,7 @@ features = ["client", "hyper"]
 
 [features]
 default = ["rustc-serialize", "pool"]
-serde-all = ["serde", "serde_json", "serde_xml"]
+serde-all = ["serde", "serde_json" ]
 pool = ["threadpool"]
 nightly = ["multipart/nightly"]
 # Enable this when using the `#[service]` attribute from `anterofit_service_attr`

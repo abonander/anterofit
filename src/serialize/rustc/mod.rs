@@ -7,11 +7,10 @@ pub use rustc_serialize::{
     Encoder
 };
 
-use super::FromStrDeserializerImpl;
-
 use std::error::Error;
 use std::fmt::{Display, Write};
 use std::io::Read;
+use std::str::FromStr;
 
 pub mod json;
 
@@ -33,6 +32,33 @@ impl<K: Display, V: Encodable> Encodable for super::PairMap<K, V> {
 
             Ok(())
         })
+    }
+}
+
+/// ##Panics
+/// In all methods that are not deserializing a string, float, or integer.
+impl super::Deserializer for super::FromStrDeserializer {
+    fn deserialize<T: super::Deserialize, R: Read>(&self, read: &mut R) -> ::Result<T> {
+        T::decode(&mut FromStrDeserializerImpl(read))
+    }
+}
+
+struct FromStrDeserializerImpl<R>(R);
+
+impl<R: Read> FromStrDeserializerImpl<R> {
+    fn read_string(&mut self) -> ::Result<String> {
+        let mut string = String::new();
+        let _ = try!(self.0.read_to_string(&mut string));
+        Ok(string)
+    }
+
+    fn read_val<T: FromStr>(&mut self) -> ::Result<T> where <T as FromStr>::Err: Error + Send + 'static {
+        self.read_string().and_then(|s| ::Error::map_deserialize(s.parse()))
+    }
+
+    fn read_char(&mut self) -> ::Result<char> {
+        let string = try!(self.read_string());
+        string.chars().next().ok_or_else(|| ::Error::deserialize("Unexpected end of input"))
     }
 }
 
