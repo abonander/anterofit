@@ -38,8 +38,8 @@ impl<K: Display, V: Encodable> Encodable for super::PairMap<K, V> {
 ///
 /// Uses `std::str::FromStr` to parse values from response string.
 ///
-/// ##Panics
-/// In all methods that are not deserializing a string, float, or integer.
+/// ## Errors
+/// For complex types which expect a full `Decoder` impl.
 impl super::Deserializer for super::FromStrDeserializer {
     fn deserialize<T: super::Deserialize, R: Read>(&self, read: &mut R) -> ::Result<T> {
         T::decode(&mut FromStrImpl(read))
@@ -64,6 +64,13 @@ impl<R: Read> FromStrImpl<R> {
         string.chars().next().ok_or_else(|| ::Error::deserialize("Unexpected end of input"))
     }
 }
+
+macro_rules! unsupported (
+    ($method:ident) => (
+        Err(::Error::deserialize(concat!("`rustc_serialize::Decoder::", stringify!($method),
+                                     "()` is not supported by `FromStrDeserializer`")))
+    )
+);
 
 #[allow(unused_variables)]
 impl<R: Read> Decoder for FromStrImpl<R> {
@@ -135,71 +142,71 @@ impl<R: Read> Decoder for FromStrImpl<R> {
     }
 
     fn read_enum<T, F>(&mut self, name: &str, f: F) -> Result<T, Self::Error> where F: FnOnce(&mut Self) -> Result<T, Self::Error> {
-        unimplemented!()
+        unsupported!(read_enum)
     }
 
     fn read_enum_variant<T, F>(&mut self, names: &[&str], f: F) -> Result<T, Self::Error> where F: FnMut(&mut Self, usize) -> Result<T, Self::Error> {
-        unimplemented!()
+        unsupported!(read_enum_variant)
     }
 
     fn read_enum_variant_arg<T, F>(&mut self, a_idx: usize, f: F) -> Result<T, Self::Error> where F: FnOnce(&mut Self) -> Result<T, Self::Error> {
-        unimplemented!()
+        unsupported!(read_enum_variant_arg)
     }
 
     fn read_enum_struct_variant<T, F>(&mut self, names: &[&str], f: F) -> Result<T, Self::Error> where F: FnMut(&mut Self, usize) -> Result<T, Self::Error> {
-        unimplemented!()
+        unsupported!(read_enum_struct_variant)
     }
 
     fn read_enum_struct_variant_field<T, F>(&mut self, f_name: &str, f_idx: usize, f: F) -> Result<T, Self::Error> where F: FnOnce(&mut Self) -> Result<T, Self::Error> {
-        unimplemented!()
+        unsupported!(read_enum_struct_variant_field)
     }
 
     fn read_struct<T, F>(&mut self, s_name: &str, len: usize, f: F) -> Result<T, Self::Error> where F: FnOnce(&mut Self) -> Result<T, Self::Error> {
-        unimplemented!()
+        unsupported!(read_struct)
     }
 
     fn read_struct_field<T, F>(&mut self, f_name: &str, f_idx: usize, f: F) -> Result<T, Self::Error> where F: FnOnce(&mut Self) -> Result<T, Self::Error> {
-        unimplemented!()
+        unsupported!(read_struct_field)
     }
 
     fn read_tuple<T, F>(&mut self, len: usize, f: F) -> Result<T, Self::Error> where F: FnOnce(&mut Self) -> Result<T, Self::Error> {
-        unimplemented!()
+        unsupported!(read_tuple)
     }
 
     fn read_tuple_arg<T, F>(&mut self, a_idx: usize, f: F) -> Result<T, Self::Error> where F: FnOnce(&mut Self) -> Result<T, Self::Error> {
-        unimplemented!()
+        unsupported!(read_tuple_arg)
     }
 
     fn read_tuple_struct<T, F>(&mut self, s_name: &str, len: usize, f: F) -> Result<T, Self::Error> where F: FnOnce(&mut Self) -> Result<T, Self::Error> {
-        unimplemented!()
+        unsupported!(read_tuple_struct)
     }
 
     fn read_tuple_struct_arg<T, F>(&mut self, a_idx: usize, f: F) -> Result<T, Self::Error> where F: FnOnce(&mut Self) -> Result<T, Self::Error> {
-        unimplemented!()
+        unsupported!(read_tuple_struct_arg)
     }
 
     fn read_option<T, F>(&mut self, f: F) -> Result<T, Self::Error> where F: FnMut(&mut Self, bool) -> Result<T, Self::Error> {
-        unimplemented!()
+        unsupported!(read_option)
     }
 
     fn read_seq<T, F>(&mut self, f: F) -> Result<T, Self::Error> where F: FnOnce(&mut Self, usize) -> Result<T, Self::Error> {
-        unimplemented!()
+        unsupported!(read_seq)
     }
 
     fn read_seq_elt<T, F>(&mut self, idx: usize, f: F) -> Result<T, Self::Error> where F: FnOnce(&mut Self) -> Result<T, Self::Error> {
-        unimplemented!()
+        unsupported!(read_seq_elt)
     }
 
     fn read_map<T, F>(&mut self, f: F) -> Result<T, Self::Error> where F: FnOnce(&mut Self, usize) -> Result<T, Self::Error> {
-        unimplemented!()
+        unsupported!(read_map)
     }
 
     fn read_map_elt_key<T, F>(&mut self, idx: usize, f: F) -> Result<T, Self::Error> where F: FnOnce(&mut Self) -> Result<T, Self::Error> {
-        unimplemented!()
+        unsupported!(read_map_elt_key)
     }
 
     fn read_map_elt_val<T, F>(&mut self, idx: usize, f: F) -> Result<T, Self::Error> where F: FnOnce(&mut Self) -> Result<T, Self::Error> {
-        unimplemented!()
+        unsupported!(read_map_elt_val)
     }
 
     fn error(&mut self, err: &str) -> Self::Error {
