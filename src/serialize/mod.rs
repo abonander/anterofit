@@ -55,13 +55,8 @@ pub trait Deserializer: Send + Sync + 'static {
     fn deserialize<T: Deserialize, R: Read>(&self, read: &mut R) -> Result<T>;
 }
 
-/// A deserializer which just uses `FromStr`.
-///
-/// ##Panics
-/// In all methods that are not deserializing a string, float, or integer.
+/// A deserializer which attempts to parse values from the response as a string.
 pub struct FromStrDeserializer;
-
-
 
 /// A simple series of key-value pairs that can be serialized as a map.
 ///

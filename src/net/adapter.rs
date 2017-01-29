@@ -11,7 +11,7 @@ use net::request::RequestHead;
 
 use serialize::{Serializer, Deserializer};
 use serialize::none::NoSerializer;
-use serialize::FromStrDeserializer as FromStr;
+use serialize::FromStrDeserializer;
 
 use ::Result;
 
@@ -25,7 +25,7 @@ pub struct AdapterBuilder<E, I, S, D> {
     deserializer: D,
 }
 
-impl AdapterBuilder<DefaultExecutor, NoIntercept, NoSerializer, FromStr> {
+impl AdapterBuilder<DefaultExecutor, NoIntercept, NoSerializer, FromStrDeserializer> {
     fn new() -> Self {
         AdapterBuilder {
             base_url: None,
@@ -33,7 +33,7 @@ impl AdapterBuilder<DefaultExecutor, NoIntercept, NoSerializer, FromStr> {
             executor: DefaultExecutor::new(),
             interceptor: NoIntercept,
             serializer: NoSerializer,
-            deserializer: FromStr,
+            deserializer: FromStrDeserializer,
         }
     }
 }
@@ -209,9 +209,9 @@ impl<E: Clone, I: Interceptor, S, D> Adapter<E, I, S, D> {
     }
 }
 
-impl Adapter<DefaultExecutor, NoIntercept, NoSerializer, FromStr> {
+impl Adapter<DefaultExecutor, NoIntercept, NoSerializer, FromStrDeserializer> {
     /// Start building an impl of `Adapter` using the default inner types.
-    pub fn builder() -> AdapterBuilder<DefaultExecutor, NoIntercept, NoSerializer, FromStr> {
+    pub fn builder() -> AdapterBuilder<DefaultExecutor, NoIntercept, NoSerializer, FromStrDeserializer> {
         AdapterBuilder::new()
     }
 }

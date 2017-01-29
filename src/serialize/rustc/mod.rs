@@ -34,18 +34,21 @@ impl<K: Display, V: Encodable> Encodable for super::PairMap<K, V> {
         })
     }
 }
-
+/// ### Feature: `rustc-serialize`
+///
+/// Uses `std::str::FromStr` to parse values from response string.
+///
 /// ##Panics
 /// In all methods that are not deserializing a string, float, or integer.
 impl super::Deserializer for super::FromStrDeserializer {
     fn deserialize<T: super::Deserialize, R: Read>(&self, read: &mut R) -> ::Result<T> {
-        T::decode(&mut FromStrDeserializerImpl(read))
+        T::decode(&mut FromStrImpl(read))
     }
 }
 
-struct FromStrDeserializerImpl<R>(R);
+struct FromStrImpl<R>(R);
 
-impl<R: Read> FromStrDeserializerImpl<R> {
+impl<R: Read> FromStrImpl<R> {
     fn read_string(&mut self) -> ::Result<String> {
         let mut string = String::new();
         let _ = try!(self.0.read_to_string(&mut string));
@@ -63,7 +66,7 @@ impl<R: Read> FromStrDeserializerImpl<R> {
 }
 
 #[allow(unused_variables)]
-impl<R: Read> Decoder for FromStrDeserializerImpl<R> {
+impl<R: Read> Decoder for FromStrImpl<R> {
     type Error = ::Error;
 
     fn read_nil(&mut self) -> Result<(), Self::Error> {
