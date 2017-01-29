@@ -15,11 +15,25 @@ use serialize::FromStrDeserializer;
 
 use ::Result;
 
+enum Lazy<T> {
+    Later(fn () -> T),
+    Now(T)
+}
+
+impl<T> Lazy<T> {
+    fn into_val(self) -> T {
+        match self {
+            Lazy::Later(init) => init(),
+            Lazy::Now(val) => val,
+        }
+    }
+}
+
 /// A builder for `Adapter`. Call `Adapter::builder()` to get an instance.
 pub struct AdapterBuilder<E, I, S, D> {
     base_url: Option<Url>,
     client: Option<Client>,
-    executor: E,
+    executor: Lazy<E>,
     interceptor: I,
     serializer: S,
     deserializer: D,
@@ -30,7 +44,7 @@ impl AdapterBuilder<DefaultExecutor, NoIntercept, NoSerializer, FromStrDeseriali
         AdapterBuilder {
             base_url: None,
             client: None,
-            executor: DefaultExecutor::new(),
+            executor: Lazy::Later(DefaultExecutor::new),
             interceptor: NoIntercept,
             serializer: NoSerializer,
             deserializer: FromStrDeserializer,
@@ -60,7 +74,7 @@ impl<E, I, S, D> AdapterBuilder<E, I, S, D> {
         AdapterBuilder {
             base_url: self.base_url,
             client: self.client,
-            executor: executor,
+            executor: Lazy::Now(executor),
             interceptor: self.interceptor,
             serializer: self.serializer,
             deserializer: self.deserializer,
@@ -153,7 +167,7 @@ where E: Executor, I: Interceptor, S: Serializer, D: Deserializer {
     /// Using the supplied types, complete the adapter.
     pub fn build(self) -> Adapter<E, I, S, D> {
         Adapter {
-            executor: self.executor,
+            executor: self.executor.into_val(),
             inner: Arc::new(
                 Adapter_ {
                     base_url: self.base_url,
