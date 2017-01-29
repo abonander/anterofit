@@ -132,12 +132,12 @@ you may want to control construction of and access to the `Adapter` to limit pot
  inner `Adapter` instance: 
 
 ```rust
-service! {
-    pub struct MyDelegate {
-        // `Adapter`'s type parameters omitted for brevity
-        adapter: ::anterofit::Adapter<...>,
-    }
-    
+pub struct MyDelegate {
+    // `Adapter`'s type parameters omitted for brevity
+    adapter: ::anterofit::Adapter<...>,
+}
+
+service! {    
     pub trait MyService {
         /// Get the version of this API.
         fn api_version(&self) -> String {
@@ -157,6 +157,9 @@ service! {
     impl for MyDelegate { |this| &this.adapter }
 }
 ```
+
+Notice that the adapter is completely concealed inside `MyDelegate`, but because of Rust's visibility
+ rules, the service trait's impl can still access it. 
 
 Serialization
 -------------
