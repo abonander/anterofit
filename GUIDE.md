@@ -164,15 +164,18 @@ Notice that the adapter is completely concealed inside `MyDelegate`, but because
 Serialization
 -------------
 
-Anterofit supports both serialization of request bodies, and deserialization of response bodies.
+Anterofit supports both serialization of request bodies, and deserialization of response bodies. However,
+Anterofit does not use any specified data format by default. The default serializer returns an error for all types,
+and the default deserializer only supports primitives and strings.
 
 If you want to use the `body!()` or `body_map!()` macros in a request method, you'll need to set
-a `Serializer` during construction of the adapter. Similarly, if you want to deserialize responses as Rust types, you'll need to set a `Deserializer`
-at the same time.
+a `Serializer` during construction of the adapter. Similarly, if you want to deserialize responses as complex types, 
+you'll need to set a `Deserializer` at the same time.
 
-For serializing and deserializing JSON, the adapter builder has a convenience method: `serialize_json()`.
+For serializing and deserializing JSON, the adapter builder has a convenience method: `serialize_json()`,
+and the `JsonAdapter` typedef for ease of naming.
 
-As of January 2017, Anterofit supports JSON serialization and deserialization, and XML deserialization.
+As of January 2017, Anterofit supports JSON serialization and deserialization *only*.
 
 Relevant types are in the `serialize` module.
 
