@@ -321,8 +321,8 @@ mod nightly {
     use std::ops::CoerceUnsized;
 
     /// Allows `I` to be erased as `Interceptor`.
-    impl<E, I, I_, S, D> CoerceUnsized<Adapter<E, I_, S, D>>
-    for Adapter<E, I, S, D> where I: Unsize<I_> + ?Sized, I_: ?Sized {}
+    impl<E, I: ?Sized, I_: ?Sized, S, D> CoerceUnsized<Adapter<E, I_, S, D>>
+    for Adapter<E, I, S, D> where I: Unsize<I_>, {}
 
     #[test]
     fn unsize_adapter() {
