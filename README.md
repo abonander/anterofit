@@ -62,7 +62,7 @@ entirely on your needs.
         <td>Pros</td>
         <td>
             <ul>
-                <li> <code>#[derive]</code> on Stable channel </li>
+                <li> <code>#[derive]</code> has been stable for a long time </li>
                 <li> (Potentially) Faster Compilation:
                     <ul>
                         <li> No Transitive Dependencies </li>
@@ -89,7 +89,7 @@ entirely on your needs.
         </td>
         <td>
             <ul>
-                <li> <code>#[derive]</code> requires nightly/unstable feature </li>
+                <li> <code>#[derive]</code> only recently stabilized </li>
                 <li> Slower compilation:
                     <ul>
                         <li> Several transitive dependencies </li>
