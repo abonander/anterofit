@@ -43,7 +43,7 @@ service! {
 }
 ```
 
-#### Service Trait Method Overview
+## Service Trait Method Overview
 
 Service trait methods always take `&self` as the first parameter; this is purely
 an implementation detail. Method parameters are passed to the implementation, unchanged.
@@ -65,7 +65,7 @@ The body of a trait method is syntactically the same
 as any (non-empty) Rust function: zero or more semicolon-terminated statements/expressions 
 followed by an unterminated expression. However, there are a couple of major differences:
 
-#### HTTP Verb and URL
+### HTTP Verb and URL
 
 The first expression, which is always required, is structured like a function call, where the identifier 
 outside is an HTTP verb and the inside is the URL string and any optional formatting arguments, in the vein
@@ -84,7 +84,7 @@ Notice that the paths in these declarations are not assumed to be complete URLs;
 base URL provided in the adapter. However, if necessary, they *can* be complete URLs, with the base URL being omitted 
 during the construction of the adapter.
 
-#### Request Modifiers (query pairs, form fields, etc)
+### Request Modifiers (query pairs, form fields, etc)
 
 All expressions following the first, if any, are treated as modifiers to the request. 
 Syntactically, any expression is allowed, but arbitrary expressions will likely not typecheck due to some
@@ -93,19 +93,118 @@ by Anterofit to modify the request.
 
 See the [`Macros` header in the crate docs][doc-macros] for more information.
 
-* To add query parameters, sometimes called `GET` parameters, use `query!{}`
+#### Query Parameters
+
+To add query parameters, sometimes called `GET` parameters, use `query!{}`, which takes a series of key-value
+pairs; `Display` implementation is required, but the types don't have to be homogeneous and don't have to be `Send`
+or `'static`:
+
+```rust
+service! {
+    /// Hypothetical service getting user profiles.
+    pub trait UserService {
+        /// List usernames partially matching `search`, returning at most `max_count`.
+        fn search_username(&self, search: &str, max_count: u32) -> Vec<User> {
+            GET("/user");
+            query! { 
+                "search" => search,
+                "max_count" => max_count,
+            }
+        }
+    }
+}
+```
  
-* To add form fields, sometimes called `POST` parameters, use `fields!{}`.
- You can see this being used in the first example.
+#### HTTP Form Fields
+
+To add form fields, sometimes called `POST` parameters, use `fields!{}`, which takes a series of key-value pairs
+similar to `query!{}`, and the requirements are mostly the same, but also has an optional short-hand syntax
+for when the identifier is the same as the field name. As an expansion of the first example:
+
+```rust
+service! {
+    pub trait RegisterService {
+        /// Register a user with the API.
+        fn register(&self, username: &str, password: &str) {
+            POST("/register");
+            fields! {
+                "username" => username,
+                // Shorthand for `"password" => password,
+                password
+            }
+        }
+    }
+}
+```
  
-    * To add a file to be uploaded, use `path!()` (takes anything convertible to `PathBuf`) as a field value.
+##### File Upload
+
+To add a file to be uploaded, use `path!()` (takes anything convertible to `PathBuf`) as a field value:
+(Also showcases the generic syntax limitation of `service!{}`)
+
+```rust
+service! {
+    pub trait AvatarService {
+        /// Set a new avatar for the logged-in user.
+        /// `UploadResponse` would say whether or not the file was accepted.
+        /// If there was an error opening the file for upload, it will be in the `Request`
+        fn upload_avatar[P: Into<PathBuf>](&self, file_path: P) -> UploadResponse {
+            POST("/avatar");
+            fields! {
+                "avatar" => path!(file_path)
+            }
+        }
+    }
+}
+```
     
-    * To add a stream to be uploaded (can be any generic `Read` impl), use `stream!()` as a field value.
-    
-* To set the request body, use the `body!()` macro. You would use this if your REST API is expecting parameters 
+To add a stream to be uploaded (can be any generic `Read` impl), use `stream!()` as a field value. The server
+will see this as a file field. `stream!()` has a few different variants depending on how much information you want to 
+provide:
+(Also showing `where` clause syntax)
+
+```rust
+// This gives us the `mime!()` macro shorthand
+#[macro_use] extern crate mime;
+
+service! {
+    /// Some hypothetical file upload service
+    pub trait UploadService {
+        /// Uploads an `application/octet-stream` file
+        fn upload_stream[R: Send + 'static](&self, stream: R) -> UploadResponse [where R: Read] {
+            POST("/stream");
+            fields! {
+                // The generic `Read` impl is the first value. `Send + 'static` is required.
+                "stream" => stream!(stream),
+            }
+        }
+        
+        fn upload_png[R: Send + 'static](&self, image: R) -> UploadResponse [where R: Read] {
+            POST("/image");
+            fields! {
+                "image" => stream!(image, content_type = mime!(Image/Png)),
+            }
+        }
+        
+        fn upload_text[R: Send + 'static](&self, filename: &str, text: R) -> UploadResponse [where R: Read] {
+            POST("/text");
+            fields! {
+                // Both `filename` and `content_type` keys are optional
+                // The `filename` key can be borrowed
+                "text" => stream!(text, filename = filename, content_type = mime!(Text/Plain)),
+            }
+        }
+    }
+}
+```
+
+### Custom Body
+
+To set the request body, use the `body!()` macro. You would use this if your REST API is expecting parameters 
 passed as, e.g. JSON, instead of in an HTTP form; see the [Serialization](#serialization) header for more information.
 
-* To set the request body as a series of key-value pairs, use `body_map!()`. This behaves as if you passed
+#### Custom Body with Key-Value Pairs
+To set the request body as a series of key-value pairs, use `body_map!()`. This behaves as if you passed
 a `HashMap` or `BTreeMap` of the key-value pairs to `body!()`, but does not require the keys to implement 
 any trait except `std::fmt::Display` (thus, keys are not deduplicated or reordered--the server is expected to handle
 it); values are, of course, expected to implement the serialization trait from the serialization framework you're using.
@@ -161,9 +260,10 @@ service! {
 Notice that the adapter is completely concealed inside `MyDelegate`, but because of Rust's visibility
  rules, the service trait's impl can still access it. 
 
-Serialization
--------------
+Getting an Adapter
+------------------
 
+#### Serialization
 Anterofit supports both serialization of request bodies, and deserialization of response bodies. However,
 Anterofit does not use any specified data format by default. The default serializer returns an error for all types,
 and the default deserializer only supports primitives and strings.
@@ -178,4 +278,3 @@ and the `JsonAdapter` typedef for ease of naming.
 As of January 2017, Anterofit supports JSON serialization and deserialization *only*.
 
 Relevant types are in the `serialize` module.
-
