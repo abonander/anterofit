@@ -118,7 +118,7 @@ service! {
 #### HTTP Form Fields
 
 To add form fields, sometimes called `POST` parameters, use `fields!{}`, which takes a series of key-value pairs
-similar to `query!{}`, and the requirements are mostly the same, but also has an optional short-hand syntax
+similar to `query!{}`; the requirements are mostly the same, but `fields!{}` also has an optional short-hand syntax
 for when the identifier is the same as the field name. As an expansion of the first example:
 
 ```rust
@@ -137,7 +137,7 @@ service! {
 }
 ```
  
-##### File Upload
+#### File Upload
 
 To add a file to be uploaded, use `path!()` (takes anything convertible to `PathBuf`) as a field value:
 (Also showcases the generic syntax limitation of `service!{}`)
@@ -179,6 +179,7 @@ service! {
             }
         }
         
+        /// Upload a file to be interpreted as a PNG
         fn upload_png[R: Send + 'static](&self, image: R) -> UploadResponse [where R: Read] {
             POST("/image");
             fields! {
@@ -186,6 +187,7 @@ service! {
             }
         }
         
+        /// Upload a file to be interpreted as text, with the given filename
         fn upload_text[R: Send + 'static](&self, filename: &str, text: R) -> UploadResponse [where R: Read] {
             POST("/text");
             fields! {
@@ -198,10 +200,37 @@ service! {
 }
 ```
 
-### Custom Body
+#### Custom Body
 
 To set the request body, use the `body!()` macro. You would use this if your REST API is expecting parameters 
-passed as, e.g. JSON, instead of in an HTTP form; see the [Serialization](#serialization) header for more information.
+passed as, e.g. JSON, instead of in an HTTP form. `body!()`, of course, requires the given type to implement the 
+serialization trait for your chosen framework (`rustc-serialize` or Serde). Also, by default, it requires
+the type to be `Send + 'static`, as it will be serialized on the executor. Adding the `EAGER:` keyword forces
+immediate serialization so that you have more freedom in the types you use, but is not recommended for large values
+where serialization could take a long time or use a large memory buffer to store the serialized value.
+
+```rust
+#[derive(RustcEncodable)]
+pub struct NewPost<'a> {
+    userId: u64,
+    title: &'a str,
+    message: &'a str
+}
+
+service! {
+    pub trait PostService {
+        fn create_post(&self, new_post: NewPost) {
+            POST("/post");
+            // The `EAGER` keyword forces immediate serialization
+            // This allows values that are not `Send` or `'static`
+            body!(EAGER: new_post)
+        }
+    }
+}
+```
+
+You will need to set a serializer which can encode types in the right format; see the 
+[Getting an Adapter / Serialization](#serialization) header for more information.
 
 #### Custom Body with Key-Value Pairs
 To set the request body as a series of key-value pairs, use `body_map!()`. This behaves as if you passed
@@ -209,26 +238,26 @@ a `HashMap` or `BTreeMap` of the key-value pairs to `body!()`, but does not requ
 any trait except `std::fmt::Display` (thus, keys are not deduplicated or reordered--the server is expected to handle
 it); values are, of course, expected to implement the serialization trait from the serialization framework you're using.
 
-* To apply arbitrary mutations or transformations to the request builder, use `with_builder!()` or `map_builder!()`, 
+#### Advanced
+To apply arbitrary mutations or transformations to the request builder, use `with_builder!()` or `map_builder!()`, 
 respectively.
 
 For more advanced usage, you can use bare closure expressions that take `RequestBuilder` and return 
 `Result<RequestBuilder, anterofit::Error>`. See `RequestBuilder::apply()`, which is used as a type hint
-so that no type annotations are required on the closures (very convenient, by the way). All the aforementioned
-macros wrap this mechanism.
+so that no type annotations are required on the closures. All the aforementioned macros wrap this mechanism.
 
 [doc-macros]: http://docs.rs/anterofit#macros
 
-#### Delegation
+### Delegation
 
 When using Anterofit in a library context, such as when writing a wrapper for a public REST API, like Reddit's or Github's,
 you may want to control construction of and access to the `Adapter` to limit potential footguns, but you may still
  want to use service traits in your public API to limit duplication. 
  
- By default, service traits are implemented for 
- `Adapter`, so this may seem at odds with the desire for abstraction. However, you can override this and have Anterofit automatically generate implementations of your service
- traits for a custom type: all that is required is a closure expression that will serve as an accessor for the 
- inner `Adapter` instance: 
+By default, service traits are implemented for 
+`Adapter`, so this may seem at odds with the desire for abstraction. However, you can override this and have Anterofit automatically generate implementations of your service
+traits for a custom type: all that is required is a closure expression that will serve as an accessor for the 
+inner `Adapter` instance: 
 
 ```rust
 pub struct MyDelegate {
@@ -260,8 +289,8 @@ service! {
 Notice that the adapter is completely concealed inside `MyDelegate`, but because of Rust's visibility
  rules, the service trait's impl can still access it. 
 
-Getting an Adapter
-------------------
+Making a `Call`
+---------------
 
 #### Serialization
 Anterofit supports both serialization of request bodies, and deserialization of response bodies. However,
