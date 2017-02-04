@@ -83,8 +83,7 @@
 //!
 //! `Interceptor` is also implemented for closures of the kind `Fn(&mut anterofit::net::request::RequestHead)`,
 //! but common operations are implemented as types in the `anterofit::net::intercept` module.
-//! You can also chain interceptors together, or call `box_interceptor()` to transform
-//! it to `Box<Interceptor>` if you need to name the full type of `Adapter`.
+//! You can also chain interceptors together; they will be called in declaration order.
 //!
 //! * The `Serializer` is responsible for taking a strongly typed request body and converting
 //! it to something that can be read into the HTTP stream, such as JSON or a raw byte sequence.
