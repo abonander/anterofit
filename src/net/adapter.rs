@@ -174,7 +174,7 @@ pub type JsonAdapter<E = DefaultExecutor> = Adapter<::serialize::json::Serialize
 /// The starting point of all Anterofit requests.
 ///
 /// Use `builder()` to start constructing an instance.
-pub struct Adapter<S, D, E: ?Sized = DefaultExecutor> {
+pub struct Adapter<S, D, E = DefaultExecutor> {
     inner: Arc<Adapter_<S, D, Interceptor>>,
     executor: E,
 }
@@ -195,7 +195,7 @@ impl Adapter<NoSerializer, FromStrDeserializer, DefaultExecutor> {
     }
 }
 
-impl<S, D, E: ?Sized> fmt::Debug for Adapter<S, D, E>
+impl<S, D, E> fmt::Debug for Adapter<S, D, E>
 where S: fmt::Debug, D: fmt::Debug, E: fmt::Debug {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_struct("anterofit::Adapter")
@@ -288,24 +288,5 @@ impl ObjSafeAdapter for NoopAdapter {
 
     fn request_builder(&self, _: &RequestHead) -> Result<NetRequestBuilder> {
         unimplemented!()
-    }
-}
-
-#[cfg(feature = "nightly")]
-mod nightly {
-    use super::Adapter;
-
-    use std::marker::Unsize;
-    use std::ops::CoerceUnsized;
-
-    /// Allows `E` to be erased as `Executor`.
-    impl<S, D, E: ?Sized, I: ?Sized, E_: ?Sized> CoerceUnsized<Adapter<S, D, E_, I>>
-    for Adapter<S, D, E, I> where E: Unsize<E_>, {}
-
-    #[test]
-    fn unsize_adapter() {
-        use super::Interceptor;
-
-        let _ : Box<Adapter<_, _, Executor>> = Box::new(Adapter::builder().build());
     }
 }

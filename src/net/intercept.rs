@@ -188,6 +188,10 @@ impl<T> InterceptDebug for T {
 
 #[cfg(feature = "nightly")]
 mod nightly {
+    use std::fmt;
+
+    use super::InterceptDebug;
+
     impl<T> InterceptDebug for T {
         default fn fmt_debug(&self, f: &mut fmt::Formatter) -> fmt::Result {
             f.write_str("Interceptor")

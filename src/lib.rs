@@ -155,7 +155,7 @@
 //! `Future::poll()` and `Future::wait()` without external types so you
 //! have a choice over whether you want to use futures in your app or not.
 #![warn(missing_docs)]
-#![cfg_attr(feature = "nightly", feature(insert_str, coerce_unsized, unsize))]
+#![cfg_attr(feature = "nightly", feature(insert_str, specialization))]
 #![recursion_limit="100"]
 
 #[macro_use]
