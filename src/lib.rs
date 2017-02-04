@@ -195,7 +195,7 @@ pub use hyper::Url;
 pub use net::{Adapter, AbsAdapter};
 
 #[cfg(any(feature = "rustc-serialize", feature = "serde-json"))]
-pub use self::net::JsonAdapter;
+pub use net::JsonAdapter;
 
 pub use net::body::RawBody;
 
