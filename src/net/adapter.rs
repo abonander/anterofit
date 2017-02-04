@@ -2,6 +2,7 @@ use hyper::Url;
 use hyper::client::{Client, RequestBuilder as NetRequestBuilder};
 
 use std::sync::Arc;
+use std::fmt;
 
 use executor::{DefaultExecutor, Executor, ExecBox};
 
@@ -30,7 +31,7 @@ impl<T> Lazy<T> {
 }
 
 /// A builder for `Adapter`. Call `Adapter::builder()` to get an instance.
-pub struct AdapterBuilder<E, I, S, D> {
+pub struct AdapterBuilder<S, D, E, I> {
     base_url: Option<Url>,
     client: Option<Client>,
     executor: Lazy<E>,
@@ -39,7 +40,7 @@ pub struct AdapterBuilder<E, I, S, D> {
     deserializer: D,
 }
 
-impl AdapterBuilder<DefaultExecutor, NoIntercept, NoSerializer, FromStrDeserializer> {
+impl AdapterBuilder<NoSerializer, FromStrDeserializer, DefaultExecutor, NoIntercept> {
     fn new() -> Self {
         AdapterBuilder {
             base_url: None,
@@ -52,7 +53,7 @@ impl AdapterBuilder<DefaultExecutor, NoIntercept, NoSerializer, FromStrDeseriali
     }
 }
 
-impl<E, I, S, D> AdapterBuilder<E, I, S, D> {
+impl<S, D, E, I> AdapterBuilder<S, D, E, I> {
     /// Set the base URL that the adapter will use for all requests.
     ///
     /// If a base URL is not provided, then all service method URLs are assumed to be absolute.
@@ -69,7 +70,7 @@ impl<E, I, S, D> AdapterBuilder<E, I, S, D> {
     }
 
     /// Set a new executor for the adapter.
-    pub fn executor<E_>(self, executor: E_) -> AdapterBuilder<E_, I, S, D>
+    pub fn executor<E_>(self, executor: E_) -> AdapterBuilder<S, D, E_, I>
         where E: Executor {
         AdapterBuilder {
             base_url: self.base_url,
@@ -82,7 +83,7 @@ impl<E, I, S, D> AdapterBuilder<E, I, S, D> {
     }
 
     /// Set a new interceptor for the adapter.
-    pub fn interceptor<I_>(self, interceptor: I_) -> AdapterBuilder<E, I_, S, D>
+    pub fn interceptor<I_>(self, interceptor: I_) -> AdapterBuilder<S, D, E, I_>
     where I_: Interceptor {
         AdapterBuilder {
             base_url: self.base_url,
@@ -94,24 +95,8 @@ impl<E, I, S, D> AdapterBuilder<E, I, S, D> {
         }
     }
 
-    /// Box the adapter's `Interceptor`.
-    pub fn box_interceptor(self) -> AdapterBuilder<E, Box<Interceptor>, S, D>
-    where I: Interceptor {
-        // Necessary to force coercion to trait object
-        let boxed: Box<Interceptor> = Box::new(self.interceptor);
-
-        AdapterBuilder {
-            base_url: self.base_url,
-            client: self.client,
-            executor: self.executor,
-            interceptor: boxed,
-            serializer: self.serializer,
-            deserializer: self.deserializer,
-        }
-    }
-
     /// Chain a new interceptor with the current one. They will be called in-order.
-    pub fn chain_interceptor<I_>(self, next: I_) -> AdapterBuilder<E, Chain<I, I_>, S, D>
+    pub fn chain_interceptor<I_>(self, next: I_) -> AdapterBuilder<S, D, E, Chain<I, I_>>
     where I: Interceptor, I_: Interceptor {
         AdapterBuilder {
             base_url: self.base_url,
@@ -124,7 +109,7 @@ impl<E, I, S, D> AdapterBuilder<E, I, S, D> {
     }
 
     /// Set a new `Serializer` impl for the adapter.
-    pub fn serializer<S_>(self, serialize: S_) -> AdapterBuilder<E, I, S_, D>
+    pub fn serializer<S_>(self, serialize: S_) -> AdapterBuilder<S_, D, E, I>
     where S_: Serializer {
         AdapterBuilder {
             base_url: self.base_url,
@@ -137,7 +122,7 @@ impl<E, I, S, D> AdapterBuilder<E, I, S, D> {
     }
 
     /// Set a new `Deserializer` impl for the adapter.
-    pub fn deserializer<D_>(self, deserialize: D_) -> AdapterBuilder<E, I, S, D_>
+    pub fn deserializer<D_>(self, deserialize: D_) -> AdapterBuilder<S, D_, E, I>
     where D_: Deserializer {
         AdapterBuilder {
             base_url: self.base_url,
@@ -151,21 +136,21 @@ impl<E, I, S, D> AdapterBuilder<E, I, S, D> {
 }
 
 #[cfg(any(feature = "rustc-serialize", feature = "serde-json"))]
-impl<E, I, S, D> AdapterBuilder<E, I, S, D> {
+impl<S, D, E, I> AdapterBuilder<S, D, E, I> {
     /// Convenience method for using JSON serialization.
     ///
     /// Enabled with either the `rust-serialize` feature or the `serde-json` feature.
-    pub fn serialize_json(self) -> AdapterBuilder<E, I, ::serialize::json::Serializer, ::serialize::json::Deserializer> {
+    pub fn serialize_json(self) -> AdapterBuilder<::serialize::json::Serializer, ::serialize::json::Deserializer, E, I> {
         self.serializer(::serialize::json::Serializer)
             .deserializer(::serialize::json::Deserializer)
     }
 }
 
-impl<E, I, S, D> AdapterBuilder<E, I, S, D>
-where E: Executor, I: Interceptor, S: Serializer, D: Deserializer {
+impl<S, D, E, I> AdapterBuilder<S, D, E, I>
+where S: Serializer, D: Deserializer, E: Executor, I: Interceptor {
 
     /// Using the supplied types, complete the adapter.
-    pub fn build(self) -> Adapter<E, I, S, D> {
+    pub fn build(self) -> Adapter<S, D, E> {
         Adapter {
             executor: self.executor.into_val(),
             inner: Arc::new(
@@ -183,55 +168,48 @@ where E: Executor, I: Interceptor, S: Serializer, D: Deserializer {
 
 /// A shorthand for an adapter with JSON serialization enabled.
 #[cfg(any(feature = "rustc-serialize", feature = "serde-json"))]
-pub type JsonAdapter<E = DefaultExecutor,
-                     I = NoIntercept> = Adapter<E, I, ::serialize::json::Serializer,
-                                                ::serialize::json::Deserializer>;
+pub type JsonAdapter<E = DefaultExecutor> = Adapter<::serialize::json::Serializer,
+                                                ::serialize::json::Deserializer, E>;
 
 /// The starting point of all Anterofit requests.
 ///
 /// Use `builder()` to start constructing an instance.
-#[derive(Debug)]
-pub struct Adapter<E, I: ?Sized, S, D> {
+pub struct Adapter<S, D, E: ?Sized = DefaultExecutor> {
+    inner: Arc<Adapter_<S, D, Interceptor>>,
     executor: E,
-    inner: Arc<Adapter_<I, S, D>>,
 }
 
-impl<E: Clone, I: ?Sized, S, D> Clone for Adapter<E, I, S, D> {
+impl<S, D, E: Clone> Clone for Adapter<S, D, E> {
     fn clone(&self) -> Self {
         Adapter {
-            executor: self.executor.clone(),
             inner: self.inner.clone(),
+            executor: self.executor.clone(),
         }
     }
 }
 
-impl<E: Clone, I: Interceptor, S, D> Adapter<E, I, S, D> {
-    /// Type-erase the adaptor's `Interceptor`.
-    ///
-    /// Useful for when you want to be able to name the `Adapter` type
-    /// but you're using a closure or a long interceptor chain.
-    ///
-    /// With the `nightly` feature, unsizing coercion is implemented, so you don't need
-    /// to call this method explicitly to get this effect.
-    pub fn erase(self) -> Adapter<E, Interceptor, S, D> {
-        let inner: Arc<Adapter_<Interceptor, S, D>> = self.inner;
-
-        Adapter {
-            executor: self.executor,
-            inner: inner,
-        }
-    }
-}
-
-impl Adapter<DefaultExecutor, NoIntercept, NoSerializer, FromStrDeserializer> {
+impl Adapter<NoSerializer, FromStrDeserializer, DefaultExecutor> {
     /// Start building an impl of `Adapter` using the default inner types.
-    pub fn builder() -> AdapterBuilder<DefaultExecutor, NoIntercept, NoSerializer, FromStrDeserializer> {
+    pub fn builder() -> AdapterBuilder<NoSerializer, FromStrDeserializer, DefaultExecutor, NoIntercept> {
         AdapterBuilder::new()
     }
 }
 
-#[derive(Debug)]
-struct Adapter_<I: ?Sized, S, D> {
+impl<S, D, E: ?Sized> fmt::Debug for Adapter<S, D, E>
+where S: fmt::Debug, D: fmt::Debug, E: fmt::Debug {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("anterofit::Adapter")
+            .field("base_url", &self.inner.base_url)
+            .field("client", &self.inner.client)
+            .field("serializer", &self.inner.serializer)
+            .field("deserializer", &self.inner.deserializer)
+            .field("interceptor", &&self.inner.interceptor)
+            .field("executor", &&self.executor)
+            .finish()
+    }
+}
+
+struct Adapter_<S, D, I: ?Sized> {
     base_url: Option<Url>,
     client: Client,
     serializer: S,
@@ -268,8 +246,8 @@ pub trait ObjSafeAdapter: Send + 'static {
     fn request_builder(&self, head: &RequestHead) -> Result<NetRequestBuilder>;
 }
 
-impl<E, I: ?Sized, S, D> AbsAdapter for Adapter<E, I, S, D>
-where E: Executor, I: Interceptor, S: Serializer, D: Deserializer {
+impl<S, D, E> AbsAdapter for Adapter<S, D, E>
+where S: Serializer, D: Deserializer, E: Executor {
     type Serializer = S;
     type Deserializer = D;
 
@@ -282,8 +260,8 @@ where E: Executor, I: Interceptor, S: Serializer, D: Deserializer {
     }
 }
 
-impl<E, I: ?Sized, S, D> ObjSafeAdapter for Adapter<E, I, S, D>
-where E: Executor, I: Interceptor, S: Serializer, D: Deserializer {
+impl<S, D, E> ObjSafeAdapter for Adapter<S, D, E>
+where S: Serializer, D: Deserializer, E: Executor {
 
     fn execute(&self, exec: Box<ExecBox>) {
         self.executor.execute(exec)
@@ -320,15 +298,14 @@ mod nightly {
     use std::marker::Unsize;
     use std::ops::CoerceUnsized;
 
-    /// Allows `I` to be erased as `Interceptor`.
-    impl<E, I: ?Sized, I_: ?Sized, S, D> CoerceUnsized<Adapter<E, I_, S, D>>
-    for Adapter<E, I, S, D> where I: Unsize<I_>, {}
+    /// Allows `E` to be erased as `Executor`.
+    impl<S, D, E: ?Sized, I: ?Sized, E_: ?Sized> CoerceUnsized<Adapter<S, D, E_, I>>
+    for Adapter<S, D, E, I> where E: Unsize<E_>, {}
 
     #[test]
     fn unsize_adapter() {
         use super::Interceptor;
 
-        let _ : Adapter<_, Interceptor, _, _> = Adapter::builder().build();
+        let _ : Box<Adapter<_, _, Executor>> = Box::new(Adapter::builder().build());
     }
-
 }
