@@ -20,7 +20,8 @@ pub mod xml;
 
 /// JSON only allows string keys, so all keys are converted to strings.
 impl<K: Display, V: Serialize> Serialize for super::PairMap<K, V> {
-    fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error> where S: Serializer {
+    fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error> where S: Serializer,
+                                                                  S::SerializeMap: SerializeMap {
         let pairs = self.pairs();
 
         let mut map_s = try!(s.serialize_map(Some(pairs.len())));
