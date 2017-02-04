@@ -292,6 +292,25 @@ Notice that the adapter is completely concealed inside `MyDelegate`, but because
 Making a `Call`
 ---------------
 
+Now that you have a service trait defined, you're going to want to start issuing requests and getting responses, 
+i.e. making calls.
+
+### Getting an `Adapter`
+
+The `Adapter` type is the starting point of all requests in Anterofit. As implied in the service traits section,
+ all service traits are implemented for `Adapter` so that you can call their methods on it.
+ 
+You can start building an adapter by calling `Adapter::builder()`, and you finish the builder by calling `build()`.
+You'll also want to supply a base URL, which will be prepended to all service method URLs:
+
+```rust
+use anterofit::Adapter;
+
+let adapter = Adapter::builder()
+    .base_url("https://myservice.com")
+    .build();
+```
+
 #### Serialization
 Anterofit supports both serialization of request bodies, and deserialization of response bodies. However,
 Anterofit does not use any specified data format by default. The default serializer returns an error for all types,
@@ -299,10 +318,29 @@ and the default deserializer only supports primitives and strings.
 
 If you want to use the `body!()` or `body_map!()` macros in a request method, you'll need to set
 a `Serializer` during construction of the adapter. Similarly, if you want to deserialize responses as complex types, 
-you'll need to set a `Deserializer` at the same time.
+you'll need to set a `Deserializer` at the same time:
+
+```rust
+use anterofit::Adapter;
+
+let adapter = Adapter::builder()
+    .base_url("https://myservice.com")
+    .serializer(FooSerializer)
+    .deserializer(FooDeserializer)
+    .build();
+```
 
 For serializing and deserializing JSON, the adapter builder has a convenience method: `serialize_json()`,
-and the `JsonAdapter` typedef for ease of naming.
+and the `JsonAdapter` typedef for ease of naming:
+
+```rust
+use anterofit::{Adapter, JsonAdapter};
+
+let adapter: JsonAdapter = Adapter::builder()
+    .base_url("https://myservice.com")
+    .serialize_json()
+    .build();
+```
 
 As of January 2017, Anterofit supports JSON serialization and deserialization *only*.
 
