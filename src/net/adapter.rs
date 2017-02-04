@@ -174,7 +174,7 @@ pub type JsonAdapter<E = DefaultExecutor> = Adapter<::serialize::json::Serialize
 /// The starting point of all Anterofit requests.
 ///
 /// Use `builder()` to start constructing an instance.
-pub struct Adapter<S, D, E = DefaultExecutor> {
+pub struct Adapter<S = NoSerializer, D = FromStrDeserializer, E = DefaultExecutor> {
     inner: Arc<Adapter_<S, D, Interceptor>>,
     executor: E,
 }

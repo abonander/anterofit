@@ -261,8 +261,7 @@ inner `Adapter` instance:
 
 ```rust
 pub struct MyDelegate {
-    // `Adapter`'s type parameters omitted for brevity
-    adapter: ::anterofit::Adapter<...>,
+    adapter: ::anterofit::Adapter,
 }
 
 service! {    
