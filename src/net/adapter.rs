@@ -157,11 +157,11 @@ where S: Serializer, D: Deserializer, E: Executor, I: Interceptor {
                 Adapter_ {
                     base_url: self.base_url,
                     client: self.client.unwrap_or_else(Client::new),
-                    interceptor: self.interceptor,
                     serializer: self.serializer,
                     deserializer: self.deserializer
                 }
-            )
+            ),
+            interceptor: self.interceptor.into_opt_obj()
         }
     }
 }
@@ -175,8 +175,9 @@ pub type JsonAdapter<E = DefaultExecutor> = Adapter<::serialize::json::Serialize
 ///
 /// Use `builder()` to start constructing an instance.
 pub struct Adapter<S = NoSerializer, D = FromStrDeserializer, E = DefaultExecutor> {
-    inner: Arc<Adapter_<S, D, Interceptor>>,
+    inner: Arc<Adapter_<S, D>>,
     executor: E,
+    interceptor: Option<Arc<Interceptor>>,
 }
 
 impl<S, D, E: Clone> Clone for Adapter<S, D, E> {
@@ -184,6 +185,7 @@ impl<S, D, E: Clone> Clone for Adapter<S, D, E> {
         Adapter {
             inner: self.inner.clone(),
             executor: self.executor.clone(),
+            interceptor: self.interceptor.clone()
         }
     }
 }
@@ -195,6 +197,13 @@ impl Adapter<NoSerializer, FromStrDeserializer, DefaultExecutor> {
     }
 }
 
+impl<S, D, E> Adapter<S, D, E> {
+    /// Modify this adaptor's interceptor.
+    pub fn interceptor_mut(&mut self) -> InterceptorMut {
+        InterceptorMut(&mut self.interceptor)
+    }
+}
+
 impl<S, D, E> fmt::Debug for Adapter<S, D, E>
 where S: fmt::Debug, D: fmt::Debug, E: fmt::Debug {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -203,19 +212,69 @@ where S: fmt::Debug, D: fmt::Debug, E: fmt::Debug {
             .field("client", &self.inner.client)
             .field("serializer", &self.inner.serializer)
             .field("deserializer", &self.inner.deserializer)
-            .field("interceptor", &&self.inner.interceptor)
+            .field("interceptor", &self.interceptor)
             .field("executor", &&self.executor)
             .finish()
     }
 }
 
-struct Adapter_<S, D, I: ?Sized> {
+/// A mutator for modifying the `Interceptor` of an `Adapter`.
+pub struct InterceptorMut<'a>(&'a mut Option<Arc<Interceptor>>);
+
+impl<'a> InterceptorMut<'a> {
+    /// Remove the interceptor from the adapter.
+    pub fn clear(&mut self) {
+        *self.0 = None;
+    }
+
+    /// Set a new interceptor, discarding the old one.
+    pub fn set<I>(&mut self, new: I) where I: Interceptor {
+        *self.0 = new.into_opt_obj();
+    }
+
+    /// Chain the given `Interceptor` before the one currently in the adapter.
+    ///
+    /// Equivalent to `set(before)` if the adapter does not have an interceptor or was constructed
+    /// with `NoIntercept` as the interceptor.
+    pub fn chain_before<I>(&mut self, before: I) where I: Interceptor {
+        *self.0 = match self.0.take() {
+            Some(current) => before.chain(current).into_opt_obj(),
+            None => before.into_opt_obj(),
+        };
+    }
+
+    /// Chain the given `Interceptor` after the one currently in the adapter.
+    ///
+    /// Equivalent to `set(after)` if the adapter does not have an interceptor or was constructed
+    /// with `NoIntercept` as the interceptor.
+    pub fn chain_after<I>(&mut self, after: I) where I: Interceptor {
+        *self.0 = match self.0.take() {
+            Some(current) => current.chain(after).into_opt_obj(),
+            None => after.into_opt_obj(),
+        };
+    }
+
+    /// Chain the given `Interceptor`s before and after the one currently in the adapter.
+    ///
+    /// This saves a level of boxing over calling `chain_before()` and `chain_after()`
+    /// separately.
+    ///
+    /// Equivalent to `set(before.chain(after))` if the adapter does not have an interceptor or
+    /// was constructed with `NoIntercept` as the interceptor.
+    pub fn chain_around<I1, I2>(&mut self, before: I1, after: I2)
+        where I1: Interceptor, I2: Interceptor {
+        *self.0 = match self.0.take() {
+            Some(current) => before.chain2(current, after).into_opt_obj(),
+            None => before.chain(after).into_opt_obj(),
+        };
+    }
+}
+
+struct Adapter_<S, D> {
     base_url: Option<Url>,
     client: Client,
     serializer: S,
     deserializer: D,
-    // Last field so it may be unsized
-    interceptor: I,
 }
 
 /// Implemented by `Adapter`. Mainly used to simplify generics.
@@ -268,7 +327,9 @@ where S: Serializer, D: Deserializer, E: Executor {
     }
 
     fn intercept(&self, head: &mut RequestHead) {
-        self.inner.interceptor.intercept(head);
+        if let Some(ref interceptor) = self.interceptor {
+            interceptor.intercept(head);
+        }
     }
 
     fn request_builder(&self, head: &RequestHead) -> Result<NetRequestBuilder> {
