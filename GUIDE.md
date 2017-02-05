@@ -341,6 +341,25 @@ let adapter: JsonAdapter = Adapter::builder()
     .build();
 ```
 
-As of January 2017, Anterofit supports JSON serialization and deserialization *only*.
+As of January 2017, Anterofit only supports JSON serialization and deserialization.
 
 Relevant types are in the `serialize` module.
+
+### Submitting a Request
+
+Now that you have an `Adapter` instance, you can simply call your service trait methods on it. However,
+to maintain good namespacing, you should coerce it to a trait object or pass it to a generic function which
+restricts the API surface:
+
+```rust
+let my_service: &MyService = &adapter;
+
+// Execute the request in the background, blocking until a result is available
+let api_version = my_service.api_version().exec().block().unwrap());
+println!("API version: {}", api_version);
+
+fn register_user<S: MyService>(service: &S) {
+    // Shorthand for `.exec().block()` but executes on the current thread instead
+    my_service.register("my_user", "my_password").exec_here().unwrap();
+}
+```
