@@ -8,9 +8,17 @@ use std::borrow::Cow;
 
 use std::fmt;
 
+use std::sync::Arc;
+
 impl fmt::Debug for Interceptor {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         self.debug(f)
+    }
+}
+
+impl<I: Interceptor + ?Sized> Interceptor for Arc<I> {
+    fn intercept(&self, req: &mut RequestHead) {
+        (**self).intercept(req)
     }
 }
 
@@ -25,14 +33,29 @@ pub trait Interceptor: Send + Sync + 'static {
     /// (i.e. by changing their endpoints such that they receive unexpected responses).
     fn intercept(&self, req: &mut RequestHead);
 
-    /// Chain `self` with `other`, invoking `self` then `other` for each request.
-    fn chain<I>(self, other: I) -> Chain<Self, I> where Self: Sized, I: Interceptor {
-        Chain(self, other)
+    /// Chain `self` with `then`, invoking `self` then `then` for each request.
+    fn chain<I>(self, then: I) -> Chain<Self, I> where Self: Sized, I: Interceptor {
+        Chain(self, then)
+    }
+
+    /// Chain `self` with two more interceptors.
+    ///
+    /// Saves a level in debug printing, mainly.
+    fn chain2<I1, I2>(self, then: I1, after: I2) -> Chain2<Self, I1, I2> where Self: Sized,
+                                                       I1: Interceptor, I2: Interceptor {
+
+        Chain2(self, then, after)
     }
 
     /// Write debug output equivalent to `std::fmt::Debug`.
     fn debug(&self, f: &mut fmt::Formatter) -> fmt::Result {
         self.fmt_debug(f)
+    }
+
+    /// Overridden by `NoIntercept`
+    #[doc(hidden)]
+    fn into_opt_obj(self) -> Option<Arc<Interceptor>> where Self: Sized {
+        Some(Arc::new(self))
     }
 }
 
@@ -46,7 +69,7 @@ impl<F> Interceptor for F where F: Fn(&mut RequestHead) + Send + Sync + 'static 
     }
 }
 
-/// Chains two interceptors together, invoking the first, then the second.
+/// Chains one interceptor with another, invoking them in declaration order.
 #[derive(Debug)]
 pub struct Chain<I1, I2>(I1, I2);
 
@@ -59,7 +82,27 @@ impl<I1: Interceptor, I2: Interceptor> Interceptor for Chain<I1, I2> {
     fn debug(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_tuple("Chain")
             .field(&(&self.0 as &Interceptor))
+            .field(&(&self.1 as &Interceptor))
+            .finish()
+    }
+}
+
+/// Chains one interceptor with two more, invoking them in declaration order.
+#[derive(Debug)]
+pub struct Chain2<I1, I2, I3>(I1, I2, I3);
+
+impl<I1: Interceptor, I2: Interceptor, I3: Interceptor> Interceptor for Chain2<I1, I2, I3> {
+    fn intercept(&self, req: &mut RequestHead) {
+        self.0.intercept(req);
+        self.1.intercept(req);
+        self.2.intercept(req);
+    }
+
+    fn debug(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_tuple("Chain2")
             .field(&(&self.0 as &Interceptor))
+            .field(&(&self.1 as &Interceptor))
+            .field(&(&self.2 as &Interceptor))
             .finish()
     }
 }
@@ -73,6 +116,10 @@ impl Interceptor for NoIntercept {
 
     fn debug(&self, f: &mut fmt::Formatter) -> fmt::Result {
         <Self as fmt::Debug>::fmt(self, f)
+    }
+
+    fn into_opt_obj(self) -> Option<Arc<Interceptor>> {
+        None
     }
 }
 
