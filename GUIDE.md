@@ -362,4 +362,28 @@ fn register_user<S: MyService>(service: &S) {
     // Shorthand for `.exec().block()` but executes on the current thread instead
     my_service.register("my_user", "my_password").exec_here().unwrap();
 }
+
+register_user(&adapter);
+```
+
+The return type of `exec()` also implements `Future`, so you can integrate it into your event loop if you have one
+or do other `Future`-y things with it.
+
+If you want to supply callbacks that map the result when completed, you can add `on_complete()` or `on_result()`
+before `exec()`:
+
+```rust
+// Execute the request in the background; the callback will be executed if it completes successfully;
+// `ignore()` silences the "unused value" lint as we don't care about the result if it wasn't successful.
+my_service.api_version().on_complete(| println!("API version: {}", api_version)
+    .exec().ignore();
+
+my_service.register("my_user", "my_password")
+    .on_result(|res| {
+        if let Err(e) = res {
+            println!("Error registering user: {}", e);
+        }
+        
+        Ok(())
+    }).exec().ignore();
 ```
