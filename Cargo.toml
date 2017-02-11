@@ -14,9 +14,11 @@ documentation = "https://docs.rs/anterofit"
 license = "MIT OR Apache-2.0"
 
 [dependencies]
+crossbeam = "0.2"
 futures = "0.1.3"
 hyper = "0.9.12"
 mime = ">= 0.2.2, < 0.3"
+parking_lot = "0.3.7"
 quick-error = "1.1.0"
 url = "1.0"
 

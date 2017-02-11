@@ -1,5 +1,7 @@
 //! Types which can take a boxed closure and execute it, preferably in the background.
 
+use std::sync::Arc;
+
 #[cfg(feature = "pool")]
 mod pool;
 
@@ -9,6 +11,8 @@ mod single;
 pub use self::pool::Pooled;
 
 pub use self::single::SingleThread;
+
+pub use mpmc::Queue;
 
 /// The default executor which should be suitable for most use-cases.
 pub type DefaultExecutor = SingleThread;

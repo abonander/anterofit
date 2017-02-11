@@ -14,7 +14,7 @@ use serialize::{Serializer, Deserializer};
 use serialize::none::NoSerializer;
 use serialize::FromStrDeserializer;
 
-use ::Result;
+use Result;
 
 enum Lazy<T> {
     Later(fn () -> T),
@@ -140,9 +140,9 @@ impl<S, D, E, I> AdapterBuilder<S, D, E, I> {
     /// Convenience method for using JSON serialization.
     ///
     /// Enabled with either the `rust-serialize` feature or the `serde-json` feature.
-    pub fn serialize_json(self) -> AdapterBuilder<::serialize::json::Serializer, ::serialize::json::Deserializer, E, I> {
-        self.serializer(::serialize::json::Serializer)
-            .deserializer(::serialize::json::Deserializer)
+    pub fn serialize_json(self) -> AdapterBuilder<serialize::json::Serializer, serialize::json::Deserializer, E, I> {
+        self.serializer(serialize::json::Serializer)
+            .deserializer(serialize::json::Deserializer)
     }
 }
 
@@ -168,8 +168,8 @@ where S: Serializer, D: Deserializer, E: Executor, I: Interceptor {
 
 /// A shorthand for an adapter with JSON serialization enabled.
 #[cfg(any(feature = "rustc-serialize", feature = "serde-json"))]
-pub type JsonAdapter<E = DefaultExecutor> = Adapter<::serialize::json::Serializer,
-                                                ::serialize::json::Deserializer, E>;
+pub type JsonAdapter<E = DefaultExecutor> = Adapter<serialize::json::Serializer,
+                                                serialize::json::Deserializer, E>;
 
 /// The starting point of all Anterofit requests.
 ///

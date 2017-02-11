@@ -158,12 +158,15 @@
 #![recursion_limit="100"]
 
 #[macro_use]
+extern crate mime as mime_;
+
+#[macro_use]
 extern crate quick_error;
 
 extern crate futures;
 
-#[macro_use]
-extern crate mime as mime_;
+extern crate crossbeam;
+extern crate parking_lot;
 
 extern crate multipart;
 
@@ -176,6 +179,8 @@ pub extern crate hyper;
 
 #[macro_use]
 mod macros;
+
+mod mpmc;
 
 pub mod mime;
 
