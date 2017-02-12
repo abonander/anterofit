@@ -12,7 +12,7 @@ use std::borrow::{Borrow, Cow};
 use std::fmt::{self, Write};
 use std::mem;
 
-use net::adapter::{ObjSafeAdapter, AbsAdapter};
+use adapter::{ObjSafeAdapter, AbsAdapter};
 
 use net::body::{Body, EmptyFields, EagerBody, RawBody};
 
@@ -319,7 +319,7 @@ impl<'a, T> Request<'a, T> {
     /// No network or disk activity will occur when this request is executed.
     pub fn immediate(res: Result<T>) -> Request<'static, T> {
         Request {
-            adapter: super::adapter::NOOP,
+            adapter: ::adapter::NOOP,
             exec: ExecBox::noop(),
             call: super::call::immediate(res),
         }
