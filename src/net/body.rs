@@ -2,7 +2,7 @@
 
 use serialize::{Serialize, Serializer};
 
-use net::adapter::AbsAdapter;
+use adapter::AbsAdapter;
 
 use mime::{self, Mime};
 

@@ -177,6 +177,8 @@ extern crate url;
 
 pub extern crate hyper;
 
+mod adapter;
+
 #[macro_use]
 mod macros;
 
@@ -196,10 +198,10 @@ pub use error::Error;
 
 pub use hyper::Url;
 
-pub use net::{Adapter, AbsAdapter};
+pub use adapter::{Adapter, AbsAdapter, AdapterBuilder, ObjSafeAdapter, InterceptorMut};
 
 #[cfg(any(feature = "rustc-serialize", feature = "serde-json"))]
-pub use net::JsonAdapter;
+pub use adapter::JsonAdapter;
 
 pub use net::body::RawBody;
 

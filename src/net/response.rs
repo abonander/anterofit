@@ -6,7 +6,7 @@ use std::io::{self, Read};
 
 use serialize::{Deserialize, Deserializer};
 
-use super::adapter::AbsAdapter;
+use adapter::AbsAdapter;
 
 use ::Result;
 
