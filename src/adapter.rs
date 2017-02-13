@@ -14,9 +14,11 @@ use net::intercept::{Interceptor, Chain, NoIntercept};
 
 use net::request::RequestHead;
 
-use serialize::{Serializer, Deserializer};
+use serialize::{self, Serializer, Deserializer};
 use serialize::none::NoSerializer;
 use serialize::FromStrDeserializer;
+
+use service::ServiceDelegate;
 
 use Result;
 
@@ -143,21 +145,22 @@ where S: Serializer, D: Deserializer, E: Executor, I: Interceptor {
     ///
     /// `<E as Executor>::start()` will be called here.
     pub fn build(self) -> Adapter<S, D> {
-        let client_url = ClientUrl {
+        let (tx, rx) = mpmc::channel();
+
+        self.executor.start(rx);
+
+        let consts = AdapterConsts {
             base_url: self.base_url,
             client: self.client.unwrap_or_else(Client::new),
-        };
-
-        let serialize = Serialize {
             serializer: self.serializer,
             deserializer: self.deserializer,
+            sender: tx,
         };
 
         Adapter {
             inner: Arc::new(
                 Adapter_ {
-                    client_url: client_url,
-                    serialize: serialize,
+                    consts: Arc::new(consts),
                     interceptor: self.interceptor.into_opt_obj(),
                 }
             ),
@@ -267,108 +270,67 @@ impl<'a> InterceptorMut<'a> {
     }
 }
 
-struct ClientUrl {
-    base_url: Option<Url>,
-    client: Client,
-}
-
-struct Serialize<S, D> {
-    serializer: S,
-    deserializer: D,
+/// Constant types in an adapter
+pub struct AdapterConsts<S, D> {
+    pub base_url: Option<Url>,
+    pub client: Client,
+    pub sender: Sender,
+    pub serializer: S,
+    pub deserializer: D,
 }
 
 /// Public but not accessible
 pub struct Adapter_<S, D> {
-    client_url: Arc<ClientUrl>,
-    serialize: Arc<Serialize<S, D>>,
+    consts: Arc<AdapterConsts<S, D>>,
     interceptor: Option<Arc<Interceptor>>,
 }
 
 impl<S, D> Clone for Adapter_<S, D> {
     fn clone(&self) -> Self {
         Adapter_ {
-            client_url: self.client_url.clone(),
-            serialize: self.serialize.clone(),
+            consts: self.consts.clone(),
             interceptor: self.interceptor.clone()
         }
     }
 }
 
-impl<S, D> Adapter<S, D> {
-    pub fn service<S, D, Service: ?Sized>(&self) -> Arc<Service> where Adapter_<S, D>: Service {
-        unimplemented!();
+impl<S: Serializer, D: Deserializer> Adapter<S, D> {
+    pub fn service<Serv: ?Sized>(&self) -> Arc<Serv::Wrapped> where Serv: ServiceDelegate {
+        Serv::from_adapter(self.inner.clone())
     }
 }
 
-/// Implemented by `Adapter`. Mainly used to simplify generics.
-///
-/// Not object-safe.
-pub trait AbsAdapter: ObjSafeAdapter + Clone {
+/// Implemented by private types.
+pub trait AbsAdapter: PrivAdapter {}
+
+pub trait PrivAdapter: Send + 'static {
     /// The adapter's serializer type.
-    type Serializer: Serializer;
+    type Ser: Serializer;
     /// The adapter's deserializer type.
-    type Deserializer: Deserializer;
+    type De: Deserializer;
 
-    /// Get a reference to the adapter's `Serializer`.
-    fn serializer(&self) -> &Self::Serializer;
+    fn ref_consts(&self) -> &AdapterConsts<Self::Ser, Self::De>;
 
-    /// Get a reference to the adapter's `Deserializer`.
-    fn deserializer(&self) -> &Self::Deserializer;
+    fn consts(&self) -> Arc<AdapterConsts<Self::Ser, Self::De>>;
+
+    fn interceptor(&self) -> Option<Arc<Interceptor>>;
 }
 
-/// Object-safe subset of the adapter API.
-pub trait ObjSafeAdapter: Send + 'static {
-    /// Pass `head` to this adapter's interceptor for modification.
-    fn intercept(&self, head: &mut RequestHead);
+impl<S, D> AbsAdapter for Adapter_<S, D> where S: Serializer, D: Deserializer {}
 
-    /// Enqueue `exec` on this adapter's executor.
-    fn enqueue(&self, exec: Box<ExecBox>);
+impl<S, D> PrivAdapter for Adapter_<S, D> where S: Serializer, D: Deserializer {
+    type Ser = S;
+    type De = D;
 
-    /// Initialize a `hyper::client::RequestBuilder` from `head`.
-    fn request_builder(&self, head: &RequestHead) -> Result<NetRequestBuilder>;
-}
-
-impl<S, D> AbsAdapter for Adapter<S, D> where S: Serializer, D: Deserializer {
-    type Serializer = S;
-    type Deserializer = D;
-
-    fn serializer(&self) -> &S {
-        &self.inner.serializer
+    fn ref_consts(&self) -> &AdapterConsts<S, D> {
+        &self.consts
     }
 
-    fn deserializer(&self) -> &D {
-        &self.inner.deserializer
-    }
-}
-
-impl<S, D> ObjSafeAdapter for Adapter<S, D> where S: Serializer, D: Deserializer {
-
-    fn enqueue(&self, exec: Box<ExecBox>) {
-        self.executor.execute(exec)
+    fn consts(&self) -> Arc<AdapterConsts<S, D>> {
+        self.consts.clone()
     }
 
-    fn intercept(&self, head: &mut RequestHead) {
-        if let Some(ref interceptor) = self.inner.interceptor {
-            interceptor.intercept(head);
-        }
-    }
-
-    fn request_builder(&self, head: &RequestHead) -> Result<NetRequestBuilder> {
-        head.init_request(self.inner.base_url.as_ref(), &self.inner.client)
-    }
-}
-
-/// A `RequestAdapter` with all the methods left unimplemented.
-pub const NOOP: &'static ObjSafeAdapter = &NoopAdapter;
-
-struct NoopAdapter;
-
-impl ObjSafeAdapter for NoopAdapter {
-    fn intercept(&self, _: &mut RequestHead) {}
-
-    fn enqueue(&self, _: Box<ExecBox>) {}
-
-    fn request_builder(&self, _: &RequestHead) -> Result<NetRequestBuilder> {
-        unimplemented!()
+    fn interceptor(&self) -> Option<Arc<Interceptor>> {
+        self.interceptor.clone()
     }
 }

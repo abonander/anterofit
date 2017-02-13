@@ -10,7 +10,7 @@ pub type DefaultExecutor = threaded::SingleThread;
 /// A trait describing a type which can execute tasks (in the background or otherwise).
 ///
 /// Invoking `ExecBox` *may* panic, so the executor should
-pub trait Executor: Send + Clone + 'static {
+pub trait Executor {
     /// Initialize the executor, polling `recv` for jobs.
     ///
     /// When `Receiver::recv()` returns `None`, the job queue is closed and the executor can quit.

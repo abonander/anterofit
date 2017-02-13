@@ -172,10 +172,6 @@ macro_rules! service {
             trait $servicenm {
                 $($guts)*
             }
-
-            impl[T: $crate::net::AbsAdapter] for T {
-                |this| this
-            }
         }
     );
     (
@@ -189,41 +185,40 @@ macro_rules! service {
             pub trait $servicenm {
                 $($guts)*
             }
-
-            impl[T: $crate::net::AbsAdapter] for T {
-                |this| this
-            }
         }
     );
     (
         $(#[$meta:meta])*
-        trait $servicenm:ident {
+        trait $servicenm:ident: $supert:ty {
             $($guts:tt)*
         }
-
-        $($delegates:tt)+
     ) => (
         $(#[$meta])*
         trait $servicenm {
             method_proto!($($guts)*);
         }
 
-        delegate_impl!($servicenm; [$($guts)*] $($delegates)+);
+        impl $supert for $servicenm {}
+            fn from_adapter<A>(adpt: ::std::sync::Arc<A>) -> ::std::sync::Arc<Self> {
+            where A: ::anterofit::AbsAdapter {
+
+            }
+        }
+
+        impl<A: ::anterofit::AbsAdapter> $servicenm for A
     );
     (
         $(#[$meta:meta])*
-        pub trait $servicenm:ident {
+        pub trait $servicenm:ident: $supert:ty {
             $($guts:tt)*
         }
-
-        $($delegates:tt)+
     ) => (
         $(#[$meta])*
         pub trait $servicenm {
             method_proto!($($guts)*);
         }
 
-        delegate_impl!($servicenm; [$($guts)*] $($delegates)+);
+        service_impl!($supert; $($guts)*);
     );
 }
 
@@ -379,10 +374,10 @@ macro_rules! method_impl(
 
 #[doc(hidden)]
 #[macro_export]
-macro_rules! delegate_impl {
+macro_rules! service_impl {
     (
         $servicenm:ident; [$($guts:tt)*]
-        impl for $delegate:ty {
+        impl $servicetrait for $delegate:ty {
             $getadapt:expr
         }
 
