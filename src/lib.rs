@@ -154,7 +154,7 @@
 //! `Future::poll()` and `Future::wait()` without external types so you
 //! have a choice over whether you want to use futures in your app or not.
 #![warn(missing_docs)]
-#![cfg_attr(feature = "nightly", feature(insert_str, specialization))]
+#![cfg_attr(feature = "nightly", feature(specialization))]
 #![recursion_limit="100"]
 
 #[macro_use]
@@ -198,7 +198,7 @@ pub use error::Error;
 
 pub use hyper::Url;
 
-pub use adapter::{Adapter, AbsAdapter, AdapterBuilder, ObjSafeAdapter, InterceptorMut};
+pub use adapter::{Adapter, AbsAdapter, AdapterBuilder, InterceptorMut};
 
 #[cfg(any(feature = "rustc-serialize", feature = "serde-json"))]
 pub use adapter::JsonAdapter;

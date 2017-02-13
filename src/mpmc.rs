@@ -89,7 +89,7 @@ impl<'a> IntoIterator for &'a Receiver {
     type Item = Box<ExecBox>;
     type IntoIter = RecvIter<'a>;
 
-    fn into_iter(self) -> Self::Iterator {
+    fn into_iter(self) -> Self::IntoIter {
         self.iter()
     }
 }
@@ -98,7 +98,7 @@ impl IntoIterator for Receiver {
     type Item = Box<ExecBox>;
     type IntoIter = RecvIntoIter;
 
-    fn into_iter(self) -> Self::Iterator {
+    fn into_iter(self) -> Self::IntoIter {
         RecvIntoIter(self)
     }
 }
