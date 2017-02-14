@@ -207,6 +207,8 @@ pub use net::body::RawBody;
 
 pub use net::request::Request;
 
+pub use service::ServiceDelegate;
+
 /// The result type for this crate; used frequently in public APIs.
 ///
 /// Recommended to be used as `anterofit::Result` to avoid confusing

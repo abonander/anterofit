@@ -35,7 +35,7 @@ impl AdapterBuilder<NoSerializer, FromStrDeserializer, DefaultExecutor, NoInterc
         AdapterBuilder {
             base_url: None,
             client: None,
-            executor: DefaultExecutor::new,
+            executor: DefaultExecutor::new(),
             interceptor: NoIntercept,
             serializer: NoSerializer,
             deserializer: FromStrDeserializer,

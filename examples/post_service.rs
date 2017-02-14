@@ -73,14 +73,14 @@ fn main() {
         .serialize_json()
         .build();
 
-    create_post(&adapter);
-    fetch_posts(&adapter);
+    let service = adapter.service::<PostService>();
+
+    create_post(&*service);
+    fetch_posts(&*service);
 }
 
 /// Create a new Post.
-// Since the same adapter will implement all service traits, you can arbitrarily concatenate them
-// in generic bounds.
-fn create_post<T: PostService>(post_service: &T) {
+fn create_post(post_service: &PostService) {
     let post = post_service.new_post(42, "Hello", "World!")
         // If you don't want to block, the return value of exec() can be used as a Future
         // to poll for the result. However, it does shadow a couple methods of Future

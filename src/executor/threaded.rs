@@ -44,7 +44,7 @@ impl SingleThread {
     /// Create a new single-threaded executor.
     ///
     /// The background thread will not be spawned until `Executor::start()` is called.
-    pub fn new() {
+    pub fn new() -> Self {
         SingleThread(())
     }
 }
