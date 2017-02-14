@@ -166,61 +166,104 @@ macro_rules! service {
         trait $servicenm:ident {
             $($guts:tt)*
         }
-    ) => (
-        service! {
-            $(#[$meta])*
-            trait $servicenm {
-                $($guts)*
-            }
-        }
-    );
-    (
-        $(#[$meta:meta])*
-        pub trait $servicenm:ident {
-            $($guts:tt)*
-        }
-    ) => (
-        service! {
-            $(#[$meta])*
-            pub trait $servicenm {
-                $($guts)*
-            }
-        }
-    );
-    (
-        $(#[$meta:meta])*
-        trait $servicenm:ident: $supert:ty {
-            $($guts:tt)*
-        }
+
+        $($no_delegate:ident)*
     ) => (
         $(#[$meta])*
         trait $servicenm {
             method_proto!($($guts)*);
         }
 
-        impl $supert for $servicenm {}
-            fn from_adapter<A>(adpt: ::std::sync::Arc<A>) -> ::std::sync::Arc<Self> {
-            where A: ::anterofit::AbsAdapter {
+        service_impl!($servicenm { $($guts)* });
 
-            }
-        }
-
-        impl<A: ::anterofit::AbsAdapter> $servicenm for A
+        delegate!($($no_delegate);* $servicenm);
     );
     (
         $(#[$meta:meta])*
-        pub trait $servicenm:ident: $supert:ty {
+        pub trait $servicenm:ident {
             $($guts:tt)*
         }
+
+        $($no_delegate:ident)*
     ) => (
         $(#[$meta])*
         pub trait $servicenm {
             method_proto!($($guts)*);
         }
 
-        service_impl!($supert; $($guts)*);
+        service_impl!($servicenm { $($guts)* });
+
+        delegate!($($no_delegate);* $servicenm);
+    );
+    (
+        $(#[$meta:meta])*
+        trait $servicenm:ident: $supert:ty {
+            $($guts:tt)*
+        }
+
+        $($no_delegate:ident)*
+    ) => (
+        service! {
+            $(#[$meta])*
+            trait $servicenm {
+                $($guts)*
+            }
+
+            $($no_delegate)*
+        }
+
+        impl $supert for $servicenm {}
+    );
+    (
+        $(#[$meta:meta])*
+        pub trait $servicenm:ident: $supert:ty {
+            $($guts:tt)*
+        }
+
+        $($no_delegate:ident)*
+    ) => (
+        service! {
+            $(#[$meta])*
+            pub trait $servicenm {
+                $($guts)*
+            }
+
+            $($no_delegate)*
+        }
+        impl $supert for $servicenm {}
     );
 }
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! service_impl {
+    ($servicenm:ident { $($guts:tt)* }) => (
+        #[doc(hidden)]
+        impl<A> $servicenm for A where A: ::anterofit::AbsAdapter {
+            method_impl!($($guts)*);
+        }
+    )
+}
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! delegate(
+    (NO_DELEGATE; $servicenm:ident) => ();
+    ($servicenm:ident) => (
+        impl ::anterofit::ServiceDelegate for $servicenm {
+            type Wrapped = $servicenm;
+
+            fn from_adapter<A>(adapter: ::std::sync::Arc<A>) -> ::std::sync::Arc<Self>
+            where A: ::anterofit::AbsAdapter {
+                adapter
+            }
+
+            fn from_ref_adapter<A>(adapter: &A) -> &Self where A: ::anterofit::AbsAdapter {
+                adapter
+            }
+        }
+    )
+);
 
 #[doc(hidden)]
 #[macro_export]
@@ -290,8 +333,6 @@ macro_rules! method_proto(
 macro_rules! method_impl(
     // Plain declaration
     (
-        $getadapt:expr;
-
         $(#[$fnmeta:meta])*
         fn $fnname:ident (&self $($args:tt)*) $(-> $ret:ty)* {
             $($body:tt)+
@@ -302,16 +343,14 @@ macro_rules! method_impl(
         $(#[$fnmeta])*
         fn $fnname (&self $($args)*)  -> $crate::net::Request<$($ret)*> {
             request_impl! {
-                $crate::get_adapter(self, $getadapt); $($body)+
+                self; $($body)+
             }
         }
         
-        method_impl!($getadapt; $($rem)*);
+        method_impl!($($rem)*);
     );
     // Generics
     (
-        $getadapt:expr;
-
         $(#[$fnmeta:meta])*
         fn $fnname:ident [$($generics:tt)+] (&self $($args:tt)*) $(-> $ret:ty)* {
             $($body:tt)+
@@ -322,16 +361,14 @@ macro_rules! method_impl(
         $(#[$fnmeta])*
         fn $fnname <$($generics)+> (&self $($args)*) -> $crate::net::Request<$($ret)*> {
             request_impl! {
-                $crate::get_adapter(self, $getadapt); $($body)+
+                self; $($body)+
             }
         }
         
-        method_impl!($getadapt; $($rem)*);
+        method_impl!($($rem)*);
     );
     // Where clause
     (
-        $getadapt:expr;
-
         $(#[$fnmeta:meta])*
         fn $fnname:ident  (&self $($args:tt)*) $(-> $ret:ty)* [where $($wheres:tt)+] {
             $($body:tt)+
@@ -342,16 +379,14 @@ macro_rules! method_impl(
         $(#[$fnmeta])*
         fn $fnname (&self $($args)*) -> $crate::net::Request<$($ret)*> where $($wheres)+ {
             request_impl! {
-                $crate::get_adapter(self, $getadapt); $($body)+
+                self; $($body)+
             }
         }
         
-        method_impl!($getadapt; $($rem)*);
+        method_impl!($($rem)*);
     );
     // Generics + Where clause
     (
-        $getadapt:expr;
-
         $(#[$fnmeta:meta])*
         fn $fnname:ident [$($generics:tt)+] (&self $($args:tt)*) $(-> $ret:ty)* [where $($wheres:tt)+] {
             $($body:tt)+
@@ -362,78 +397,15 @@ macro_rules! method_impl(
         $(#[$fnmeta])*
         fn $fnname <$($generics)+> (&self $($args)*) -> $crate::net::Request<$($ret)*> where $($wheres)+ {
             request_impl! {
-                $crate::get_adapter(self, $getadapt); $($body)+
+                self; $($body)+
             }
         }
         
-        method_impl!($getadapt; $($rem)*);
+        method_impl!($($rem)*);
     );
     // Empty end-case for recursion
-    ($_getadapt:expr; ) => ();
+    () => ();
 );
-
-#[doc(hidden)]
-#[macro_export]
-macro_rules! service_impl {
-    (
-        $servicenm:ident; [$($guts:tt)*]
-        impl $servicetrait for $delegate:ty {
-            $getadapt:expr
-        }
-
-        $($rem:tt)*
-    ) => (
-        impl $servicenm for $delegate {
-            method_impl!($getadapt; $($guts)*);
-        }
-
-        delegate_impl!($servicenm; [$($guts)*] $($rem)*);
-    );
-    (
-        $servicenm:ident; [$($guts:tt)*]
-        impl [$($decls:tt)*] for $delegate:ty {
-            $getadapt:expr
-        }
-
-        $($rem:tt)*
-    ) => (
-        impl<$($decls)*> $servicenm for $delegate {
-            method_impl!($getadapt; $($guts)*);
-        }
-
-        delegate_impl!($servicenm; [$($guts)*] $($rem)*);
-    );
-    (
-        $servicenm:ident; [$($guts:tt)*]
-        impl for $delegate:ty [where $($wheres:tt)+]{
-            $getadapt:expr
-        }
-
-        $($rem:tt)*
-    ) => (
-        impl $servicenm for $delegate where $($wheres)+ {
-            method_impl!($getadapt; $($guts)*);
-        }
-
-        impl_impl!($servicenm; [$($guts)*] $($rem)*);
-    );
-    (
-        $servicenm:ident; [$($guts:tt)*]
-        impl [$($decls:tt)*] for $delegate:ty [where $($wheres:tt)+]{
-            $getadapt:expr
-        }
-
-        $($rem:tt)*
-    ) => (
-        impl<$($decls)*> $servicenm for $delegate where $($wheres)+ {
-            method_impl!($getadapt; $($guts)*);
-        }
-
-        delegate_impl!($servicenm; [$($guts)*] $($rem)*);
-    );
-    // Empty end-case for recursion
-    ($servicenm:ident; [$($guts:tt)*]) => ();
-}
 
 /// Create a meta-service trait which combines the listed service traits.
 ///

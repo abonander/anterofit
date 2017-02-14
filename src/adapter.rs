@@ -20,8 +20,6 @@ use serialize::FromStrDeserializer;
 
 use service::ServiceDelegate;
 
-use Result;
-
 /// A builder for `Adapter`. Call `Adapter::builder()` to get an instance.
 pub struct AdapterBuilder<S, D, E, I> {
     base_url: Option<Url>,
@@ -37,7 +35,7 @@ impl AdapterBuilder<NoSerializer, FromStrDeserializer, DefaultExecutor, NoInterc
         AdapterBuilder {
             base_url: None,
             client: None,
-            executor: DefaultExecutor::new,
+            executor: DefaultExecutor::new(),
             interceptor: NoIntercept,
             serializer: NoSerializer,
             deserializer: FromStrDeserializer,
@@ -205,16 +203,23 @@ impl<S, D> Adapter<S, D> {
     }
 }
 
-impl<S, D> fmt::Debug for Adapter<S, D>
+impl<S, D> fmt::Debug for Adapter_<S, D>
 where S: fmt::Debug, D: fmt::Debug {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_struct("anterofit::Adapter")
-            .field("base_url", &self.inner.base_url)
-            .field("client", &self.inner.client)
-            .field("serializer", &self.inner.serializer)
-            .field("deserializer", &self.inner.deserializer)
-            .field("interceptor", &self.inner.interceptor)
+            .field("base_url", &self.consts.base_url)
+            .field("client", &self.consts.client)
+            .field("serializer", &self.consts.serializer)
+            .field("deserializer", &self.consts.deserializer)
+            .field("interceptor", &self.interceptor)
             .finish()
+    }
+}
+
+impl<S, D> fmt::Debug for Adapter<S, D>
+where S: fmt::Debug, D: fmt::Debug {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        self.inner.fmt(f)
     }
 }
 
@@ -297,6 +302,10 @@ impl<S, D> Clone for Adapter_<S, D> {
 impl<S: Serializer, D: Deserializer> Adapter<S, D> {
     pub fn service<Serv: ?Sized>(&self) -> Arc<Serv::Wrapped> where Serv: ServiceDelegate {
         Serv::from_adapter(self.inner.clone())
+    }
+
+    pub fn ref_service<Serv: ?Sized>(&self) -> &Serv::Wrapped where Serv: ServiceDelegate {
+        Serv::from_ref_adapter(&*self.inner)
     }
 }
 

@@ -20,6 +20,8 @@ use net::body::{Body, EmptyFields, EagerBody, RawBody};
 
 use net::call::Call;
 
+use net::intercept::Interceptor;
+
 use net::response::FromResponse;
 
 use executor::ExecBox;
@@ -257,7 +259,7 @@ impl<'a, A: 'a, B> RequestBuilder<'a, A, B> {
         functor(self)
     }
 }
-impl<'a, A: 'a, B> RequestBuilder<'a, A, B> {
+impl<'a, A: 'a, B> RequestBuilder<'a, A, B> where A: AbsAdapter {
     /// Immediately serialize `body` on the current thread and set the result as the body
     /// of this request.
     ///
@@ -284,19 +286,25 @@ impl<'a, A: 'a, B> RequestBuilder<'a, A, B> {
             adapter, head, body
         } = self;
 
-        let adapter_ = adapter.clone();
+        let consts = adapter.consts();
+        let interceptor = adapter.interceptor();
 
         let (mut guard, call) = super::call::oneshot(Some(head));
 
-        let exec = Box::new(move || {
-            let res = exec_request(&adapter_, guard.head_mut(), body)
-                .and_then(|response| T::from_response(&adapter_, response));
+        let exec = ExecRequest {
+            sender: &adapter.ref_consts().sender,
+            exec: Box::new(move || {
+                let interceptor = interceptor.as_ref().map(|i| &**i);
 
-            guard.complete(res);
-        });
+                let res = exec_request(&consts, interceptor, guard.head_mut(), body)
+                    .and_then(|response| T::from_response(&consts.deserializer, response));
+
+                guard.complete(res);
+            }),
+        };
 
         Request {
-            exec: exec,
+            exec: Some(exec),
             call: call,
         }
     }
@@ -378,6 +386,7 @@ impl<'a, T> Request<'a, T> where T: Send + 'static {
     /// Panics in `on_complete` will cause the return value to be lost. There is no safety
     /// issue and subsequent requests shouldn't be affected, but it may be harder to debug
     /// without knowing which request caused the panic.
+    #[cfg(any())]
     pub fn on_complete<F, R>(self, on_complete: F) -> Request<'a, R>
     where F: FnOnce(T) -> R + Send + 'static, R: Send + 'static {
         self.on_result(|res| res.map(on_complete))
@@ -402,6 +411,7 @@ impl<'a, T> Request<'a, T> where T: Send + 'static {
     ///
     /// If the result is immediately available, panics in `on_result` will occur on the
     /// current thread.
+    #[cfg(any())]
     pub fn on_result<F, R>(self, on_result: F) -> Request<'a, R>
     where F: FnOnce(Result<T>) -> Result<R> + Send + 'static, R: Send + 'static {
         let Request { exec, call } = self;
@@ -433,20 +443,20 @@ impl<'a, T> Request<'a, T> where T: Send + 'static {
     }
 }
 
-fn exec_request<S, D, B>(adpt: &AdapterConsts<S, D>, head: &mut RequestHead, body: B) -> Result<Response>
+fn exec_request<S, D, B>(consts: &AdapterConsts<S, D>, interceptor: Option<&Interceptor>, head: &mut RequestHead, body: B) -> Result<Response>
 where S: Serializer, D: Deserializer, B: Body {
+    if let Some(interceptor) = interceptor {
+        interceptor.intercept(head);
+    }
 
-    adpt.intercept(head);
-
-    let mut readable = try!(body.into_readable(adpt));
+    let mut readable = try!(body.into_readable(&consts.serializer));
 
     if let Some(content_type) = readable.content_type {
         head.header(ContentType(content_type));
     }
 
-    let request = try!(adpt.request_builder(head));
-
-    request.body(&mut readable.readable).send().map_err(Into::into)
+    head.init_request(consts.base_url.as_ref(), &consts.client)?
+        .body(&mut readable.readable).send().map_err(Into::into)
 }
 
 fn prepend_str(prepend: &str, to: &mut String) {

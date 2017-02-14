@@ -9,14 +9,18 @@ use std::sync::Arc;
 use executor::ExecBox;
 
 pub fn channel() -> (Sender, Receiver) {
-    Arc::new(
+    let inner = Arc::new(
         Inner {
             queue: SegQueue::new(),
             mutex: Mutex::new(()),
             cvar: Condvar::new(),
             closed: AtomicBool::new(false)
         }
-    )
+    );
+
+    let inner_ = inner.clone();
+
+    (Sender(inner), Receiver(inner_))
 }
 
 pub struct Sender(Arc<Inner>);
@@ -64,7 +68,7 @@ impl Receiver {
                 return Some(val);
             }
 
-            if self.0.closed.load(Ordering::Aquire) {
+            if self.0.closed.load(Ordering::Acquire) {
                 // Wake any remaining blocked threads so they can observe the closed status
                 self.0.cvar.notify_all();
                 return None;
