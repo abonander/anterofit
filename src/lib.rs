@@ -209,16 +209,10 @@ pub use net::body::RawBody;
 
 pub use net::request::Request;
 
-pub use service::ServiceDelegate;
+pub use service::{AbsService, ServiceDelegate};
 
 /// The result type for this crate; used frequently in public APIs.
 ///
 /// Recommended to be used as `anterofit::Result` to avoid confusing
 /// shadowing of `std::result::Result`.
 pub type Result<T> = ::std::result::Result<T, Error>;
-
-/// Strong typing hint for delegate adapter-getters.
-#[doc(hidden)]
-pub fn get_adapter<D, A: AbsAdapter, F: FnOnce(&D) -> &A>(delegate: &D, map: F) -> &A {
-    map(delegate)
-}

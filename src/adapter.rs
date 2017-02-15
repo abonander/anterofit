@@ -300,11 +300,11 @@ impl<S, D> Clone for Adapter_<S, D> {
 }
 
 impl<S: Serializer, D: Deserializer> Adapter<S, D> {
-    pub fn service<Serv: ?Sized>(&self) -> Arc<Serv::Wrapped> where Serv: ServiceDelegate {
+    pub fn service<Serv: ?Sized>(&self) -> Arc<Serv::Wrapped> where Serv: ServiceDelegate<S, D> {
         Serv::from_adapter(self.inner.clone())
     }
 
-    pub fn ref_service<Serv: ?Sized>(&self) -> &Serv::Wrapped where Serv: ServiceDelegate {
+    pub fn ref_service<Serv: ?Sized>(&self) -> &Serv::Wrapped where Serv: ServiceDelegate<S, D> {
         Serv::from_ref_adapter(&*self.inner)
     }
 }
@@ -313,9 +313,7 @@ impl<S: Serializer, D: Deserializer> Adapter<S, D> {
 pub trait AbsAdapter: PrivAdapter {}
 
 pub trait PrivAdapter: Send + 'static {
-    /// The adapter's serializer type.
     type Ser: Serializer;
-    /// The adapter's deserializer type.
     type De: Deserializer;
 
     fn ref_consts(&self) -> &AdapterConsts<Self::Ser, Self::De>;

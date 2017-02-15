@@ -170,9 +170,7 @@ macro_rules! service {
         $($no_delegate:ident)*
     ) => (
         $(#[$meta])*
-        trait $servicenm {
-            method_proto!($($guts)*);
-        }
+        trait $servicenm {}
 
         service_impl!($servicenm { $($guts)* });
 
@@ -187,9 +185,7 @@ macro_rules! service {
         $($no_delegate:ident)*
     ) => (
         $(#[$meta])*
-        pub trait $servicenm {
-            method_proto!($($guts)*);
-        }
+        pub trait $servicenm {}
 
         service_impl!($servicenm { $($guts)* });
 
@@ -239,9 +235,12 @@ macro_rules! service {
 macro_rules! service_impl {
     ($servicenm:ident { $($guts:tt)* }) => (
         #[doc(hidden)]
-        impl<A> $servicenm for A where A: ::anterofit::AbsAdapter {
-            method_impl!($($guts)*);
-        }
+        impl<Serv, S, D> $servicenm for Serv where Serv: ::anterofit::AbsService<Ser=S, De=D>,
+                                                   S: ::anterofit::serialize::Serializer,
+                                                   D: ::anterofit::serialize::Deserializer {}
+
+        impl<S, D> $servicenm<Ser=S, De=D> where S: ::anterofit::serialize::Serializer,
+                                    D: ::anterofit::serialize::Deserializer {}
     )
 }
 
