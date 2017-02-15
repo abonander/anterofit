@@ -28,7 +28,7 @@ pub trait Executor: Send + Clone + 'static {
 /// Does not allocate or spawn threads.
 ///
 /// Panics are allowed to unwind back into calling code.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Blocking;
 
 impl Executor for Blocking {
