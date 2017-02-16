@@ -166,67 +166,110 @@ macro_rules! service {
         trait $servicenm:ident {
             $($guts:tt)*
         }
-
-        $($no_delegate:ident)*
     ) => (
-        $(#[$meta])*
-        trait $servicenm {}
+        service_delegated!{
+            $(#[$meta])*
+            trait $servicenm { $($guts)* }
+        }
 
-        service_impl!($servicenm { $($guts)* });
-
-        delegate!($($no_delegate);* $servicenm);
+        delegate!($servicenm);
     );
     (
         $(#[$meta:meta])*
         pub trait $servicenm:ident {
             $($guts:tt)*
         }
-
-        $($no_delegate:ident)*
     ) => (
-        $(#[$meta])*
-        pub trait $servicenm {}
+        service_delegated! {
+            $(#[$meta])*
+            pub trait $servicenm {$($guts)*}
+        }
 
-        service_impl!($servicenm { $($guts)* });
-
-        delegate!($($no_delegate);* $servicenm);
+        delegate!($servicenm);
     );
     (
         $(#[$meta:meta])*
         trait $servicenm:ident: $supert:ty {
             $($guts:tt)*
         }
-
-        $($no_delegate:ident)*
     ) => (
-        service! {
+        service_delegated! {
             $(#[$meta])*
-            trait $servicenm {
+            trait $servicenm: $supert {
                 $($guts)*
             }
-
-            $($no_delegate)*
         }
 
-        impl $supert for $servicenm {}
+        delegate!($servicenm);
     );
     (
         $(#[$meta:meta])*
         pub trait $servicenm:ident: $supert:ty {
             $($guts:tt)*
         }
-
-        $($no_delegate:ident)*
     ) => (
-        service! {
+        service_delegated! {
             $(#[$meta])*
-            pub trait $servicenm {
+            pub trait $servicenm : supert {
                 $($guts)*
             }
-
-            $($no_delegate)*
         }
-        impl $supert for $servicenm {}
+
+        delegate!($servicenm);
+    );
+}
+
+#[macro_export]
+macro_rules! service_delegated {
+    (
+        $(#[$meta:meta])*
+        trait $servicenm:ident {
+            $($guts:tt)*
+        }
+    ) => (
+        $(#[$meta])*
+        trait $servicenm { method_proto!($($guts)*); }
+
+        impl<A
+    );
+    (
+        $(#[$meta:meta])*
+        pub trait $servicenm:ident {
+            $($guts:tt)*
+        }
+    ) => (
+        service_delegated! {
+            $(#[$meta])*
+            pub trait $servicenm {$($guts)*}
+        }
+
+        delegate!($servicenm);
+    );
+    (
+        $(#[$meta:meta])*
+        trait $servicenm:ident: $supert:ty {
+            $($guts:tt)*
+        }
+    ) => (
+        service_delegated! {
+            $(#[$meta])*
+            trait $servicenm: $supert {
+                $($guts)*
+            }
+        }
+    );
+    (
+        $(#[$meta:meta])*
+        pub trait $servicenm:ident: $supert:ty {
+            $($guts:tt)*
+        }
+    ) => (
+        service_delegated! {
+            $(#[$meta])*
+            pub trait $servicenm : supert {
+                $($guts)*
+            }
+        }
     );
 }
 
@@ -235,9 +278,7 @@ macro_rules! service {
 macro_rules! service_impl {
     ($servicenm:ident { $($guts:tt)* }) => (
         #[doc(hidden)]
-        impl<Serv, S, D> $servicenm for Serv where Serv: ::anterofit::AbsService<Ser=S, De=D>,
-                                                   S: ::anterofit::serialize::Serializer,
-                                                   D: ::anterofit::serialize::Deserializer {}
+        impl<Serv, S, D> $servicenm for Serv where Serv: ::anterofit::AbsService {}
 
         impl<S, D> $servicenm<Ser=S, De=D> where S: ::anterofit::serialize::Serializer,
                                     D: ::anterofit::serialize::Deserializer {}

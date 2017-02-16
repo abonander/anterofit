@@ -300,7 +300,7 @@ impl<S, D> Clone for Adapter_<S, D> {
 }
 
 impl<S: Serializer, D: Deserializer> Adapter<S, D> {
-    pub fn service<Serv: ?Sized>(&self) -> Arc<Serv::Wrapped> where Serv: ServiceDelegate<S, D> {
+    pub fn arc_service<Serv: ?Sized>(&self) -> Arc<Serv::Wrapped> where Serv: ServiceDelegate<S, D> {
         Serv::from_adapter(self.inner.clone())
     }
 
@@ -341,3 +341,23 @@ impl<S, D> PrivAdapter for Adapter_<S, D> where S: Serializer, D: Deserializer {
         self.interceptor.clone()
     }
 }
+
+impl<S, D> AbsAdapter for Adapter<S, D> where S: Serializer, D: Deserializer {}
+
+impl<S, D> PrivAdapter for Adapter<S, D> where S: Serializer, D: Deserializer {
+    type Ser = S;
+    type De = D;
+
+    fn ref_consts(&self) -> &AdapterConsts<S, D> {
+        &self.inner.consts
+    }
+
+    fn consts(&self) -> Arc<AdapterConsts<S, D>> {
+        self.inner.consts.clone()
+    }
+
+    fn interceptor(&self) -> Option<Arc<Interceptor>> {
+        self.inner.interceptor.clone()
+    }
+}
+
