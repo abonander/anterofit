@@ -293,8 +293,8 @@ impl<S, D> Clone for Adapter_<S, D> {
 }
 
 impl<S, D> Adapter<S, D> {
-    pub fn service<S, D, Service: ?Sized>(&self) -> Arc<Service> where Adapter_<S, D>: Service {
-        unimplemented!();
+    pub fn service<Serv: AbsAdapter + ?Sized>(&self) -> Arc<Serv> {
+        self.inner.clone()
     }
 }
 
@@ -312,6 +312,25 @@ pub trait PrivAdapter: Send + 'static {
     fn consts(&self) -> Arc<AdapterConsts<Self::Ser, Self::De>>;
 
     fn interceptor(&self) -> Option<Arc<Interceptor>>;
+}
+
+impl<S, D> AbsAdapter for Adapter<S, D> where S: Serializer, D: Deserializer {}
+
+impl<S, D> PrivAdapter for Adapter<S, D> where S: Serializer, D: Deserializer {
+    type Ser = S;
+    type De = D;
+
+    fn ref_consts(&self) -> &AdapterConsts<S, D> {
+        &self.inner.consts
+    }
+
+    fn consts(&self) -> Arc<AdapterConsts<S, D>> {
+        self.inner.consts.clone()
+    }
+
+    fn interceptor(&self) -> Option<Arc<Interceptor>> {
+        self.inner.interceptor.clone()
+    }
 }
 
 impl<S, D> AbsAdapter for Adapter_<S, D> where S: Serializer, D: Deserializer {}
