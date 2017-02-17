@@ -161,61 +161,9 @@ mod request;
 #[cfg(not(feature = "service-attr"))]
 #[macro_export]
 macro_rules! service {
-    (
-        $(#[$meta:meta])*
-        trait $servicenm:ident {
-            $($guts:tt)*
-        }
-    ) => (
-        service_delegated!{
-            $(#[$meta])*
-            trait $servicenm { $($guts)* }
-        }
-
-        delegate!($servicenm);
-    );
-    (
-        $(#[$meta:meta])*
-        pub trait $servicenm:ident {
-            $($guts:tt)*
-        }
-    ) => (
-        service_delegated! {
-            $(#[$meta])*
-            pub trait $servicenm {$($guts)*}
-        }
-
-        delegate!($servicenm);
-    );
-    (
-        $(#[$meta:meta])*
-        trait $servicenm:ident: $supert:ty {
-            $($guts:tt)*
-        }
-    ) => (
-        service_delegated! {
-            $(#[$meta])*
-            trait $servicenm: $supert {
-                $($guts)*
-            }
-        }
-
-        delegate!($servicenm);
-    );
-    (
-        $(#[$meta:meta])*
-        pub trait $servicenm:ident: $supert:ty {
-            $($guts:tt)*
-        }
-    ) => (
-        service_delegated! {
-            $(#[$meta])*
-            pub trait $servicenm : supert {
-                $($guts)*
-            }
-        }
-
-        delegate!($servicenm);
+    ($($tokens:tt)*) => (
+        service_delegated! {$($tokens)*}
+        delegate!($($tokens)*);
     );
 }
 
@@ -230,7 +178,9 @@ macro_rules! service_delegated {
         $(#[$meta])*
         trait $servicenm { method_proto!($($guts)*); }
 
-        impl<A
+        impl<A: ::anterofit::AbsAdapter> $servicenm for A {
+            method_impl!($($guts)*);
+        }
     );
     (
         $(#[$meta:meta])*
@@ -238,57 +188,50 @@ macro_rules! service_delegated {
             $($guts:tt)*
         }
     ) => (
-        service_delegated! {
-            $(#[$meta])*
-            pub trait $servicenm {$($guts)*}
-        }
+        $(#[$meta])*
+        pub trait $servicenm { method_proto!($($guts)*); }
 
-        delegate!($servicenm);
-    );
-    (
-        $(#[$meta:meta])*
-        trait $servicenm:ident: $supert:ty {
-            $($guts:tt)*
-        }
-    ) => (
-        service_delegated! {
-            $(#[$meta])*
-            trait $servicenm: $supert {
-                $($guts)*
-            }
+        impl<A: ::anterofit::AbsAdapter> $servicenm for A {
+            method_impl!($($guts)*);
         }
     );
     (
         $(#[$meta:meta])*
-        pub trait $servicenm:ident: $supert:ty {
+        trait $servicenm:ident[$($paramtt:tt)*] {
             $($guts:tt)*
         }
     ) => (
-        service_delegated! {
-            $(#[$meta])*
-            pub trait $servicenm : supert {
-                $($guts)*
-            }
+        $(#[$meta])*
+        trait $servicenm[$($paramtt:tt)*] { method_proto!($($guts)*); }
+
+        impl<A: ::anterofit::AbsAdapter, $($paramtt)*> $servicenm<just_params!{$($paramtt)*}> for A {
+            method_impl!($($guts)*);
         }
     );
 }
 
 #[doc(hidden)]
 #[macro_export]
-macro_rules! service_impl {
-    ($servicenm:ident { $($guts:tt)* }) => (
-        #[doc(hidden)]
-        impl<Serv, S, D> $servicenm for Serv where Serv: ::anterofit::AbsService {}
-
-        impl<S, D> $servicenm<Ser=S, De=D> where S: ::anterofit::serialize::Serializer,
-                                    D: ::anterofit::serialize::Deserializer {}
-    )
+macro_rules! just_params {
+    ($param:ident) => ($param);
+    ($param:ident, $($rest:tt)*) => ($param, just_params! {$($rest)*});
+    ($param:ident: $bnd:path) => ($param);
+    ($param:ident: $bnd:path, $($rest:tt)*) => (
+        $param, just_params{ $($rest)* }
+    );
+    // Empty case for recursion
+    () => ();
 }
 
 #[doc(hidden)]
 #[macro_export]
 macro_rules! delegate(
-    (NO_DELEGATE; $servicenm:ident) => ();
+    ($(#[$meta:meta])* trait $servicenm:ident $($rest:tt)*) => (
+        delegate!($servicenm);
+    );
+    ($(#[$meta:meta])* pub trait $servicenm:ident $($rest:tt)*) => (
+        delegate!($servicenm);
+    );
     ($servicenm:ident) => (
         impl ::anterofit::ServiceDelegate for $servicenm {
             type Wrapped = $servicenm;

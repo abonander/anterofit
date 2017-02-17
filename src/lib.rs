@@ -209,7 +209,7 @@ pub use net::body::RawBody;
 
 pub use net::request::Request;
 
-pub use service::{AbsService, ServiceDelegate};
+pub use service::ServiceDelegate;
 
 /// The result type for this crate; used frequently in public APIs.
 ///

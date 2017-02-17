@@ -300,11 +300,11 @@ impl<S, D> Clone for Adapter_<S, D> {
 }
 
 impl<S: Serializer, D: Deserializer> Adapter<S, D> {
-    pub fn arc_service<Serv: ?Sized>(&self) -> Arc<Serv::Wrapped> where Serv: ServiceDelegate<S, D> {
+    pub fn service<Serv: ?Sized>(&self) -> Arc<Serv::Wrapped> where Serv: ServiceDelegate {
         Serv::from_adapter(self.inner.clone())
     }
 
-    pub fn ref_service<Serv: ?Sized>(&self) -> &Serv::Wrapped where Serv: ServiceDelegate<S, D> {
+    pub fn ref_service<Serv: ?Sized>(&self) -> &Serv::Wrapped where Serv: ServiceDelegate {
         Serv::from_ref_adapter(&*self.inner)
     }
 }
