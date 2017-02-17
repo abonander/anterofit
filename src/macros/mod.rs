@@ -173,7 +173,7 @@ macro_rules! service {
                 $($guts)*
             }
 
-            impl[T: $crate::net::AbsAdapter] for T {
+            impl[T: $crate::AbsAdapter] for T {
                 |this| this
             }
         }
@@ -190,7 +190,7 @@ macro_rules! service {
                 $($guts)*
             }
 
-            impl[T: $crate::net::AbsAdapter] for T {
+            impl[T: $crate::AbsAdapter] for T {
                 |this| this
             }
         }
