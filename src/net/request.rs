@@ -407,7 +407,6 @@ impl<'a, T> Request<'a, T> where T: Send + 'static {
     /// Panics in `on_complete` will cause the return value to be lost. There is no safety
     /// issue and subsequent requests shouldn't be affected, but it may be harder to debug
     /// without knowing which request caused the panic.
-    #[cfg(any())]
     pub fn on_complete<F, R>(self, on_complete: F) -> Request<'a, R>
     where F: FnOnce(T) -> R + Send + 'static, R: Send + 'static {
         self.on_result(|res| res.map(on_complete))
@@ -432,7 +431,6 @@ impl<'a, T> Request<'a, T> where T: Send + 'static {
     ///
     /// If the result is immediately available, panics in `on_result` will occur on the
     /// current thread.
-    #[cfg(any())]
     pub fn on_result<F, R>(self, on_result: F) -> Request<'a, R>
     where F: FnOnce(Result<T>) -> Result<R> + Send + 'static, R: Send + 'static {
         let Request { exec, call } = self;
@@ -442,12 +440,12 @@ impl<'a, T> Request<'a, T> where T: Send + 'static {
             return Request::immediate(res);
         }
 
-        let exec = exec.expect("`self.exec` was `None` when it shouldn't be");
+        let ExecRequest { exec, sender } = exec.expect("`self.exec` was `None` when it shouldn't be");
 
         let (mut guard, new_call) = super::call::oneshot(None);
 
         let new_exec = ExecRequest {
-            sender: exec.sender,
+            sender: sender,
             exec: Box::new(move || {
                 exec.exec();
 
