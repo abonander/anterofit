@@ -201,13 +201,13 @@ impl fmt::Display for RequestHead {
 ///
 /// Used in the body of service methods to construct a request.
 #[derive(Debug)]
-pub struct RequestBuilder<'a, A: 'a, B> {
-    adapter: &'a A,
+pub struct RequestBuilder<'a, A: 'a + ?Sized, B> {
     head: RequestHead,
     body: B,
+    adapter: &'a A,
 }
 
-impl<'a, A: 'a> RequestBuilder<'a, A, EmptyFields> {
+impl<'a, A: 'a + ?Sized> RequestBuilder<'a, A, EmptyFields> {
     /// Create a new request builder with the given method and URL.
     ///
     /// `url` can be `String` or `&'static str`.
@@ -220,7 +220,7 @@ impl<'a, A: 'a> RequestBuilder<'a, A, EmptyFields> {
     }
 }
 
-impl<'a, A: 'a, B> RequestBuilder<'a, A, B> {
+impl<'a, A: 'a + ?Sized, B> RequestBuilder<'a, A, B> {
     /// Get a reference to the header of the request to inspect it.
     pub fn head(&self) -> &RequestHead {
         &self.head
@@ -259,7 +259,7 @@ impl<'a, A: 'a, B> RequestBuilder<'a, A, B> {
         functor(self)
     }
 }
-impl<'a, A: 'a, B> RequestBuilder<'a, A, B> where A: AbsAdapter {
+impl<'a, A: 'a + ?Sized, B> RequestBuilder<'a, A, B> where A: AbsAdapter {
     /// Immediately serialize `body` on the current thread and set the result as the body
     /// of this request.
     ///

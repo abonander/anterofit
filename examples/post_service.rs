@@ -13,6 +13,8 @@ extern crate rustc_serialize;
 // which may cause some confusing type-mismatch errors.
 use anterofit::{Adapter, Url};
 
+use std::sync::Arc;
+
 #[derive(Debug, RustcDecodable)]
 struct Post {
     pub userid: Option<u64>,
@@ -73,14 +75,12 @@ fn main() {
         .serialize_json()
         .build();
 
-    let service = adapter.service::<PostService>();
-
-    create_post(&*service);
-    fetch_posts(&*service);
+    create_post(&adapter);
+    fetch_posts(&adapter);
 }
 
 /// Create a new Post.
-fn create_post(post_service: &PostService) {
+fn create_post<P: PostService>(post_service: &P) {
     let post = post_service.new_post(42, "Hello", "World!")
         // If you don't want to block, the return value of exec() can be used as a Future
         // to poll for the result. However, it does shadow a couple methods of Future

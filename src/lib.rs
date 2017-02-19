@@ -207,6 +207,8 @@ pub use net::body::RawBody;
 
 pub use net::request::Request;
 
+use std::sync::Arc;
+
 /// The result type for this crate; used frequently in public APIs.
 ///
 /// Recommended to be used as `anterofit::Result` to avoid confusing
@@ -217,4 +219,10 @@ pub type Result<T> = ::std::result::Result<T, Error>;
 #[doc(hidden)]
 pub fn get_adapter<D, A: AbsAdapter, F: FnOnce(&D) -> &A>(delegate: &D, map: F) -> &A {
     map(delegate)
+}
+
+pub trait ServiceDelegate {
+    type Wrapped: ?Sized;
+
+    fn from_adapter<A>(adpt: Arc<A>) -> Arc<Self> where A: AbsAdapter;
 }

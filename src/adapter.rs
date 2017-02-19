@@ -173,6 +173,7 @@ pub type JsonAdapter= Adapter<::serialize::json::Serializer, ::serialize::json::
 /// The starting point of all Anterofit requests.
 ///
 /// Use `builder()` to start constructing an instance.
+#[derive(Debug)]
 pub struct Adapter<S = NoSerializer, D = FromStrDeserializer> {
     inner: Arc<Adapter_<S, D>>,
 }
@@ -203,15 +204,15 @@ impl<S, D> Adapter<S, D> {
     }
 }
 
-impl<S, D> fmt::Debug for Adapter<S, D>
+impl<S, D> fmt::Debug for Adapter_<S, D>
 where S: fmt::Debug, D: fmt::Debug {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_struct("anterofit::Adapter")
-            .field("base_url", &self.inner.base_url)
-            .field("client", &self.inner.client)
-            .field("serializer", &self.inner.serializer)
-            .field("deserializer", &self.inner.deserializer)
-            .field("interceptor", &self.inner.interceptor)
+            .field("base_url", &self.consts.base_url)
+            .field("client", &self.consts.client)
+            .field("serializer", &self.consts.serializer)
+            .field("deserializer", &self.consts.deserializer)
+            .field("interceptor", &self.interceptor)
             .finish()
     }
 }
@@ -292,8 +293,8 @@ impl<S, D> Clone for Adapter_<S, D> {
     }
 }
 
-impl<S, D> Adapter<S, D> {
-    pub fn service<Serv: AbsAdapter + ?Sized>(&self) -> Arc<Serv> {
+impl<S, D> Adapter<S, D> where S: Serializer, D: Deserializer {
+    pub fn arc_service<Serv: ?Sized>(&self) -> Arc<Serv> where Serv: ServiceDelegate {
         self.inner.clone()
     }
 }

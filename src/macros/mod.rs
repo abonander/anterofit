@@ -177,6 +177,13 @@ macro_rules! service {
                 |this| this
             }
         }
+
+        impl $crate::ServiceDelegate for $servicenm {
+            fn from_adapter<A>(adpt: std::sync::Arc<A>) -> std::sync::Arc<Self>
+            where A: $crate::AbsAdapter {
+                adpt
+            }
+        }
     );
     (
         $(#[$meta:meta])*
@@ -192,6 +199,13 @@ macro_rules! service {
 
             impl[T: $crate::AbsAdapter] for T {
                 |this| this
+            }
+        }
+
+        impl $crate::ServiceDelegate for $servicenm {
+            fn from_adapter<A>(adpt: std::sync::Arc<A>) -> std::sync::Arc<Self>
+            where A: $crate::AbsAdapter {
+                adpt
             }
         }
     );
