@@ -2,7 +2,7 @@
 
 use hyper::client::{Client, Response, RequestBuilder as NetRequestBuilder};
 use hyper::header::{Headers, Header, HeaderFormat, ContentType};
-use hyper::method::Method;
+use hyper::method::Method as HyperMethod;
 
 use url::Url;
 use url::form_urlencoded::Serializer as FormUrlEncoded;
@@ -22,6 +22,8 @@ use net::call::Call;
 
 use net::intercept::Interceptor;
 
+use net::method::{Method, TakesBody};
+
 use net::response::FromResponse;
 
 use executor::ExecBox;
@@ -35,12 +37,12 @@ use ::Result;
 pub struct RequestHead {
     url: Cow<'static, str>,
     query: String,
-    method: Method,
+    method: HyperMethod,
     headers: Headers
 }
 
 impl RequestHead {
-    fn new(method: Method, url: Cow<'static, str>) -> Self {
+    fn new(method: HyperMethod, url: Cow<'static, str>) -> Self {
         RequestHead {
             url: url.into(),
             query: String::new(),
@@ -181,7 +183,7 @@ impl RequestHead {
     }
 
     /// Get the HTTP method of this request.
-    pub fn get_method(&self) -> &Method {
+    pub fn get_method(&self) -> &HyperMethod {
         &self.method
     }
 
@@ -201,26 +203,28 @@ impl fmt::Display for RequestHead {
 ///
 /// Used in the body of service methods to construct a request.
 #[derive(Debug)]
-pub struct RequestBuilder<'a, A: 'a + ?Sized, B> {
+pub struct RequestBuilder<'a, A: 'a + ?Sized, M, B> {
     head: RequestHead,
+    method: M,
     body: B,
     adapter: &'a A,
 }
 
-impl<'a, A: 'a + ?Sized> RequestBuilder<'a, A, EmptyFields> {
+impl<'a, A: 'a + ?Sized, M> RequestBuilder<'a, A, M, EmptyFields> where M: Method {
     /// Create a new request builder with the given method and URL.
     ///
     /// `url` can be `String` or `&'static str`.
-    pub fn new(adapter: &'a A, method: Method, url: Cow<'static, str>) -> Self {
+    pub fn new(adapter: &'a A, method: M, url: Cow<'static, str>) -> Self {
         RequestBuilder {
             adapter: adapter,
-            head: RequestHead::new(method, url),
+            head: RequestHead::new(method.to_hyper(), url),
+            method: method,
             body: EmptyFields,
         }
     }
 }
 
-impl<'a, A: 'a + ?Sized, B> RequestBuilder<'a, A, B> {
+impl<'a, A: 'a + ?Sized, M, B> RequestBuilder<'a, A, M, B> {
     /// Get a reference to the header of the request to inspect it.
     pub fn head(&self) -> &RequestHead {
         &self.head
@@ -234,32 +238,30 @@ impl<'a, A: 'a + ?Sized, B> RequestBuilder<'a, A, B> {
         &mut self.head
     }
 
-    /// Set a body to be sent with the request.
-    ///
-    /// ##Panics
-    /// If this is a GET request (cannot have a body).
-    pub fn body<B_>(self, body: B_) -> RequestBuilder<'a, A, B_> {
-        if let Method::Get = self.head.method {
-            panic!("Cannot supply a body with GET requests!");
-        }
-
-        RequestBuilder {
-            adapter: self.adapter,
-            head: self.head,
-            body: body,
-        }
-    }
-
     /// Pass `self` to the closure, allowing it to mutate and transform the builder
     /// arbitrarily.
     ///
     /// `try!()` will work in this closure.
-    pub fn apply<F, B_>(self, functor: F) -> Result<RequestBuilder<'a, A, B_>>
-    where F: FnOnce(Self) -> Result<RequestBuilder<'a, A, B_>> {
+    pub fn apply<F, B_>(self, functor: F) -> Result<RequestBuilder<'a, A, M, B_>>
+    where F: FnOnce(Self) -> Result<RequestBuilder<'a, A, M, B_>> {
         functor(self)
     }
 }
-impl<'a, A: 'a + ?Sized, B> RequestBuilder<'a, A, B> where A: AbsAdapter {
+
+impl<'a, A: 'a + ?Sized, M, B> RequestBuilder<'a, A, M, B> where A: AbsAdapter, M: TakesBody {
+    /// Set a body to be sent with the request.
+    ///
+    /// Generally, `GET` and `DELETE` are not to have bodies
+    // If you need to have a body on a GET or DELETE request
+    pub fn body<B_>(self, body: B_) -> RequestBuilder<'a, A, M, B_> {
+        RequestBuilder {
+            adapter: self.adapter,
+            head: self.head,
+            method: self.method,
+            body: body,
+        }
+    }
+
     /// Immediately serialize `body` on the current thread and set the result as the body
     /// of this request.
     ///
@@ -267,23 +269,23 @@ impl<'a, A: 'a + ?Sized, B> RequestBuilder<'a, A, B> where A: AbsAdapter {
     ///
     /// ##Panics
     /// If this is a GET request (cannot have a body).
-    pub fn body_eager<B_>(self, body: B_) -> Result<RequestBuilder<'a, A, RawBody<<B_ as EagerBody>::Readable>>>
-    where B_: EagerBody {
-        if let Method::Get = self.head.method {
-            panic!("Cannot supply a body with GET requests!");
-        }
+    pub fn body_eager<B_>(self, body: B_)
+        -> Result<RequestBuilder<'a, A, M, RawBody<<B_ as EagerBody>::Readable>>>
+        where B_: EagerBody {
 
         let body = try!(body.into_readable(&self.adapter.ref_consts().serializer)).into();
         Ok(self.body(body))
     }
+}
 
+impl<'a, A: 'a + ?Sized, M, B> RequestBuilder<'a, A, M, B> where A: AbsAdapter {
     /// Prepare a `Request` to be executed with the parameters supplied in this builder.
     ///
     /// This request will need to be executed (using `exec()` or `exec_here()`) before anything
     /// else is done. As much work as possible will be relegated to the adapter's executor.
     pub fn build<T>(self) -> Request<'a, T> where B: Body, T: FromResponse {
         let RequestBuilder {
-            adapter, head, body
+            adapter, head, method: _method, body
         } = self;
 
         let consts = adapter.consts();
@@ -307,6 +309,25 @@ impl<'a, A: 'a + ?Sized, B> RequestBuilder<'a, A, B> where A: AbsAdapter {
             exec: Some(exec),
             call: call,
         }
+    }
+
+    /// Equivalent to `body()` but is not restricted from `GET` or `DELETE` requests.
+    pub fn force_body<B_>(self, body: B_) -> RequestBuilder<'a, A, M, B_> {
+        RequestBuilder {
+            adapter: self.adapter,
+            head: self.head,
+            method: self.method,
+            body: body,
+        }
+    }
+
+    /// Equivalent to `body_eager()` but is not restricted from `GET` or `DELETE` requests.
+    pub fn force_body_eager<B_>(self, body: B_)
+        -> Result<RequestBuilder<'a, A, M, RawBody<<B_ as EagerBody>::Readable>>>
+        where B_: EagerBody {
+
+        let body = try!(body.into_readable(&self.adapter.ref_consts().serializer)).into();
+        Ok(self.force_body(body))
     }
 }
 

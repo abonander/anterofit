@@ -22,6 +22,8 @@ mod call;
 
 pub mod intercept;
 
+pub mod method;
+
 pub mod request;
 
 pub mod response;
