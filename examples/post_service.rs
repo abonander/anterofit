@@ -13,8 +13,6 @@ extern crate rustc_serialize;
 // which may cause some confusing type-mismatch errors.
 use anterofit::{Adapter, Url};
 
-use std::sync::Arc;
-
 #[derive(Debug, RustcDecodable)]
 struct Post {
     pub userid: Option<u64>,
@@ -65,6 +63,8 @@ service! {
     }
 }
 
+service_delegate!(PostService);
+
 fn main() {
     // Navigate to this URL in your browser for details. Very useful test API.
     let url = Url::parse("https://jsonplaceholder.typicode.com").unwrap();
@@ -75,8 +75,11 @@ fn main() {
         .serialize_json()
         .build();
 
+    let service = adapter.arc_service::<PostService>();
+
     create_post(&adapter);
     fetch_posts(&adapter);
+    user_posts(&*service);
 }
 
 /// Create a new Post.
@@ -89,13 +92,11 @@ fn create_post<P: PostService>(post_service: &P) {
         .exec().block()
         .unwrap();
 
-    println!("{:?}", post);
+    println!("Created post: {:?}", post);
 }
 
 /// Fetch the top 3 posts in the database.
-// Service traits are object-safe, but you can't concatenate them arbitrarily (language limitation).
-// If you use multiple services in the same scope, it might help clarify your intent
-// to coerce the same adapter reference into different service trait objects.
+// Service traits can be object-safe
 fn fetch_posts(post_service: &PostService) {
     let posts = post_service.get_posts()
         // Shorthand for .exec().wait(), but executes the request on the current thread.
@@ -103,6 +104,13 @@ fn fetch_posts(post_service: &PostService) {
         .unwrap();
 
     for post in posts.into_iter().take(3) {
-        println!("{:?}", post);
+        println!("Fetched post: {:?}", post);
     }
+}
+
+fn user_posts(post_service: &PostService) {
+    post_service.posts_by_user(1)
+        // This will be executed asynchronously when the request is completed
+        .on_complete(|posts| for post in posts { println!("User post: {:?}", post); })
+        .exec().ignore();
 }

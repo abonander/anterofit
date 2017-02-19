@@ -226,5 +226,6 @@ pub trait ServiceDelegate {
     /// The wrapped service trait.
     type Service: ?Sized;
 
+    /// Coerce an `Arc<A>` to `Arc<Self::Service>`
     fn from_adapter<A>(adpt: Arc<A>) -> Arc<Self::Service> where A: AbsAdapter;
 }

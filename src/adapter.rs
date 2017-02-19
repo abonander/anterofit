@@ -3,6 +3,7 @@ use hyper::client::{Client, RequestBuilder as NetRequestBuilder};
 
 use parking_lot::{RwLock, RwLockWriteGuard};
 
+use std::borrow::Borrow;
 use std::sync::Arc;
 use std::fmt;
 
@@ -294,14 +295,19 @@ impl<S, D> Clone for Adapter_<S, D> {
 }
 
 impl<S, D> Adapter<S, D> where S: Serializer, D: Deserializer {
+    /// Create an `Arc` of a service without creating a new allocation.
+    ///
+    /// Use the `service_delegate!()` macro to create an impl of `ServiceDelegate` for your
+    /// service.
     pub fn arc_service<Del: ?Sized>(&self) -> Arc<Del::Service> where Del: ::ServiceDelegate {
         Del::from_adapter(self.inner.clone())
     }
 }
 
-/// Implemented by private types.
+/// Used by Anterofit's various APIs.
 pub trait AbsAdapter: PrivAdapter {}
 
+/// Private adapter trait
 pub trait PrivAdapter: Send + 'static {
     /// The adapter's serializer type.
     type Ser: Serializer;
