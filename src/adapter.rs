@@ -294,8 +294,8 @@ impl<S, D> Clone for Adapter_<S, D> {
 }
 
 impl<S, D> Adapter<S, D> where S: Serializer, D: Deserializer {
-    pub fn arc_service<Serv: ?Sized>(&self) -> Arc<Serv> where Serv: ServiceDelegate {
-        self.inner.clone()
+    pub fn arc_service<Del: ?Sized>(&self) -> Arc<Del::Service> where Del: ::ServiceDelegate {
+        Del::from_adapter(self.inner.clone())
     }
 }
 

@@ -179,6 +179,8 @@ macro_rules! service {
         }
 
         impl $crate::ServiceDelegate for $servicenm {
+            type Service = Self;
+
             fn from_adapter<A>(adpt: std::sync::Arc<A>) -> std::sync::Arc<Self>
             where A: $crate::AbsAdapter {
                 adpt
@@ -203,6 +205,8 @@ macro_rules! service {
         }
 
         impl $crate::ServiceDelegate for $servicenm {
+            type Service = Self;
+
             fn from_adapter<A>(adpt: std::sync::Arc<A>) -> std::sync::Arc<Self>
             where A: $crate::AbsAdapter {
                 adpt
