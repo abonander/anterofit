@@ -173,7 +173,7 @@ macro_rules! service {
                 $($guts)*
             }
 
-            impl[T: $crate::net::AbsAdapter] for T {
+            impl[T: $crate::AbsAdapter] for T {
                 |this| this
             }
         }
@@ -190,7 +190,7 @@ macro_rules! service {
                 $($guts)*
             }
 
-            impl[T: $crate::net::AbsAdapter] for T {
+            impl[T: $crate::AbsAdapter] for T {
                 |this| this
             }
         }
@@ -226,6 +226,22 @@ macro_rules! service {
         delegate_impl!($servicenm; [$($guts)*] $($delegates)+);
     );
 }
+
+/// Create an implementation of `UnsizeService` for the given service trait.
+///
+/// Note that this only works with object-safe traits. Can be invoked with more than
+/// one name at a time.
+#[macro_export]
+macro_rules! unsizeable(
+    ($($servicenm:ty),+) => (
+        $(impl ::anterofit::UnsizeService for $servicenm {
+            fn from_adapter<A>(adpt: ::std::sync::Arc<A>) -> ::std::sync::Arc<Self>
+            where A: ::anterofit::AbsAdapter {
+                adpt
+            }
+        })*
+    )
+);
 
 #[doc(hidden)]
 #[macro_export]

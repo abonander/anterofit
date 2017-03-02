@@ -2,7 +2,7 @@
 
 use hyper::client::{Client, Response, RequestBuilder as NetRequestBuilder};
 use hyper::header::{Headers, Header, HeaderFormat, ContentType};
-use hyper::method::Method;
+use hyper::method::Method as HyperMethod;
 
 use url::Url;
 use url::form_urlencoded::Serializer as FormUrlEncoded;
@@ -12,15 +12,23 @@ use std::borrow::{Borrow, Cow};
 use std::fmt::{self, Write};
 use std::mem;
 
-use net::adapter::{ObjSafeAdapter, AbsAdapter};
+use adapter::{AbsAdapter, AdapterConsts};
+
+use mpmc::Sender;
 
 use net::body::{Body, EmptyFields, EagerBody, RawBody};
 
 use net::call::Call;
 
+use net::intercept::Interceptor;
+
+use net::method::{Method, TakesBody};
+
 use net::response::FromResponse;
 
 use executor::ExecBox;
+
+use serialize::{Serializer, Deserializer};
 
 use ::Result;
 
@@ -29,12 +37,12 @@ use ::Result;
 pub struct RequestHead {
     url: Cow<'static, str>,
     query: String,
-    method: Method,
+    method: HyperMethod,
     headers: Headers
 }
 
 impl RequestHead {
-    fn new(method: Method, url: Cow<'static, str>) -> Self {
+    fn new(method: HyperMethod, url: Cow<'static, str>) -> Self {
         RequestHead {
             url: url.into(),
             query: String::new(),
@@ -175,7 +183,7 @@ impl RequestHead {
     }
 
     /// Get the HTTP method of this request.
-    pub fn get_method(&self) -> &Method {
+    pub fn get_method(&self) -> &HyperMethod {
         &self.method
     }
 
@@ -195,26 +203,28 @@ impl fmt::Display for RequestHead {
 ///
 /// Used in the body of service methods to construct a request.
 #[derive(Debug)]
-pub struct RequestBuilder<'a, A: 'a, B> {
-    adapter: &'a A,
+pub struct RequestBuilder<'a, A: 'a + ?Sized, M, B> {
     head: RequestHead,
+    method: M,
     body: B,
+    adapter: &'a A,
 }
 
-impl<'a, A> RequestBuilder<'a, A, EmptyFields> {
+impl<'a, A: 'a + ?Sized, M> RequestBuilder<'a, A, M, EmptyFields> where M: Method {
     /// Create a new request builder with the given method and URL.
     ///
     /// `url` can be `String` or `&'static str`.
-    pub fn new(adapter: &'a A, method: Method, url: Cow<'static, str>) -> Self {
+    pub fn new(adapter: &'a A, method: M, url: Cow<'static, str>) -> Self {
         RequestBuilder {
             adapter: adapter,
-            head: RequestHead::new(method, url),
+            head: RequestHead::new(method.to_hyper(), url),
+            method: method,
             body: EmptyFields,
         }
     }
 }
 
-impl<'a, A, B> RequestBuilder<'a, A, B> {
+impl<'a, A: 'a + ?Sized, M, B> RequestBuilder<'a, A, M, B> {
     /// Get a reference to the header of the request to inspect it.
     pub fn head(&self) -> &RequestHead {
         &self.head
@@ -228,32 +238,30 @@ impl<'a, A, B> RequestBuilder<'a, A, B> {
         &mut self.head
     }
 
-    /// Set a body to be sent with the request.
-    ///
-    /// ##Panics
-    /// If this is a GET request (cannot have a body).
-    pub fn body<B_>(self, body: B_) -> RequestBuilder<'a, A, B_> {
-        if let Method::Get = self.head.method {
-            panic!("Cannot supply a body with GET requests!");
-        }
-
-        RequestBuilder {
-            adapter: self.adapter,
-            head: self.head,
-            body: body,
-        }
-    }
-
     /// Pass `self` to the closure, allowing it to mutate and transform the builder
     /// arbitrarily.
     ///
     /// `try!()` will work in this closure.
-    pub fn apply<F, B_>(self, functor: F) -> Result<RequestBuilder<'a, A, B_>>
-    where F: FnOnce(Self) -> Result<RequestBuilder<'a, A, B_>> {
+    pub fn apply<F, B_>(self, functor: F) -> Result<RequestBuilder<'a, A, M, B_>>
+    where F: FnOnce(Self) -> Result<RequestBuilder<'a, A, M, B_>> {
         functor(self)
     }
 }
-impl<'a, A, B> RequestBuilder<'a, A, B> where A: AbsAdapter {
+
+impl<'a, A: 'a + ?Sized, M, B> RequestBuilder<'a, A, M, B> where A: AbsAdapter, M: TakesBody {
+    /// Set a body to be sent with the request.
+    ///
+    /// Generally, `GET` and `DELETE` are not to have bodies
+    // If you need to have a body on a GET or DELETE request
+    pub fn body<B_>(self, body: B_) -> RequestBuilder<'a, A, M, B_> {
+        RequestBuilder {
+            adapter: self.adapter,
+            head: self.head,
+            method: self.method,
+            body: body,
+        }
+    }
+
     /// Immediately serialize `body` on the current thread and set the result as the body
     /// of this request.
     ///
@@ -261,41 +269,80 @@ impl<'a, A, B> RequestBuilder<'a, A, B> where A: AbsAdapter {
     ///
     /// ##Panics
     /// If this is a GET request (cannot have a body).
-    pub fn body_eager<B_>(self, body: B_) -> Result<RequestBuilder<'a, A, RawBody<<B_ as EagerBody>::Readable>>>
-    where B_: EagerBody {
-        if let Method::Get = self.head.method {
-            panic!("Cannot supply a body with GET requests!");
-        }
+    pub fn body_eager<B_>(self, body: B_)
+        -> Result<RequestBuilder<'a, A, M, RawBody<<B_ as EagerBody>::Readable>>>
+        where B_: EagerBody {
 
-        let body = try!(body.into_readable(self.adapter)).into();
+        let body = try!(body.into_readable(&self.adapter.ref_consts().serializer)).into();
         Ok(self.body(body))
     }
+}
 
+impl<'a, A: 'a + ?Sized, M, B> RequestBuilder<'a, A, M, B> where A: AbsAdapter {
     /// Prepare a `Request` to be executed with the parameters supplied in this builder.
     ///
     /// This request will need to be executed (using `exec()` or `exec_here()`) before anything
     /// else is done. As much work as possible will be relegated to the adapter's executor.
     pub fn build<T>(self) -> Request<'a, T> where B: Body, T: FromResponse {
         let RequestBuilder {
-            adapter, head, body
+            adapter, head, method: _method, body
         } = self;
 
-        let adapter_ = adapter.clone();
+        let consts = adapter.consts();
+        let interceptor = adapter.interceptor();
 
         let (mut guard, call) = super::call::oneshot(Some(head));
 
-        let exec = Box::new(move || {
-            let res = exec_request(&adapter_, guard.head_mut(), body)
-                .and_then(|response| T::from_response(&adapter_, response));
+        let exec = ExecRequest {
+            sender: &adapter.ref_consts().sender,
+            exec: Box::new(move || {
+                let interceptor = interceptor.as_ref().map(|i| &**i);
 
-            guard.complete(res);
-        });
+                let res = exec_request(&consts, interceptor, guard.head_mut(), body)
+                    .and_then(|response| T::from_response(&consts.deserializer, response));
+
+                guard.complete(res);
+            }),
+        };
 
         Request {
-            adapter: adapter,
-            exec: exec,
+            exec: Some(exec),
             call: call,
         }
+    }
+
+    /// Equivalent to `body()` but is not restricted from `GET` or `DELETE` requests.
+    pub fn force_body<B_>(self, body: B_) -> RequestBuilder<'a, A, M, B_> {
+        RequestBuilder {
+            adapter: self.adapter,
+            head: self.head,
+            method: self.method,
+            body: body,
+        }
+    }
+
+    /// Equivalent to `body_eager()` but is not restricted from `GET` or `DELETE` requests.
+    pub fn force_body_eager<B_>(self, body: B_)
+        -> Result<RequestBuilder<'a, A, M, RawBody<<B_ as EagerBody>::Readable>>>
+        where B_: EagerBody {
+
+        let body = try!(body.into_readable(&self.adapter.ref_consts().serializer)).into();
+        Ok(self.force_body(body))
+    }
+}
+
+struct ExecRequest<'a> {
+    sender: &'a Sender,
+    exec: Box<ExecBox>,
+}
+
+impl<'a> ExecRequest<'a> {
+    fn exec(self) {
+        self.sender.send(self.exec);
+    }
+
+    fn exec_here(self) {
+        self.exec.exec();
     }
 }
 
@@ -308,8 +355,7 @@ impl<'a, A, B> RequestBuilder<'a, A, B> where A: AbsAdapter {
 /// returned when the request is executed; no network or disk activity will occur.
 #[must_use = "Request has not been sent yet"]
 pub struct Request<'a, T = ()> {
-    adapter: &'a ObjSafeAdapter,
-    exec: Box<ExecBox>,
+    exec: Option<ExecRequest<'a>>,
     call: Call<T>,
 }
 
@@ -319,21 +365,20 @@ impl<'a, T> Request<'a, T> {
     /// No network or disk activity will occur when this request is executed.
     pub fn immediate(res: Result<T>) -> Request<'static, T> {
         Request {
-            adapter: super::adapter::NOOP,
-            exec: ExecBox::noop(),
+            exec: None,
             call: super::call::immediate(res),
         }
     }
 
     /// Execute this request on the current thread, **blocking** until the result is available.
     pub fn exec_here(self) -> Result<T> {
-        self.exec.exec();
+        self.exec.map(ExecRequest::exec_here);
         self.call.block()
     }
 
     /// Returns `true` if a result is immediately available (`exec_here()` will not block).
     pub fn is_immediate(&self) -> bool {
-        self.call.is_immediate()
+        self.call.is_available()
     }
 }
 
@@ -341,7 +386,7 @@ impl<'a, T> Request<'a, T> where T: Send + 'static {
     /// Execute this request on the adapter's executor, returning a type which can
     /// be polled for the result.
     pub fn exec(self) -> Call<T> {
-        self.adapter.execute(self.exec);
+        self.exec.map(ExecRequest::exec);
         self.call
     }
 
@@ -388,61 +433,51 @@ impl<'a, T> Request<'a, T> where T: Send + 'static {
     /// current thread.
     pub fn on_result<F, R>(self, on_result: F) -> Request<'a, R>
     where F: FnOnce(Result<T>) -> Result<R> + Send + 'static, R: Send + 'static {
-        let Request { adapter, exec, call } = self;
+        let Request { exec, call } = self;
 
-        if call.is_immediate() {
+        if call.is_available() {
             let res = on_result(call.block());
             return Request::immediate(res);
         }
 
+        let ExecRequest { exec, sender } = exec.expect("`self.exec` was `None` when it shouldn't be");
+
         let (mut guard, new_call) = super::call::oneshot(None);
 
-        let new_exec = Box::new(move || {
-            exec.exec();
+        let new_exec = ExecRequest {
+            sender: sender,
+            exec: Box::new(move || {
+                exec.exec();
 
-            guard.complete(
-                on_result(call.block())
-            );
-        });
+                guard.complete(
+                    on_result(call.block())
+                );
+            })
+        };
 
         Request {
-            adapter: adapter,
-            exec: new_exec,
+            exec: Some(new_exec),
             call: new_call,
         }
     }
 }
 
-fn exec_request<A, B>(adpt: &A, head: &mut RequestHead, body: B) -> Result<Response>
-where A: AbsAdapter, B: Body {
+fn exec_request<S, D, B>(consts: &AdapterConsts<S, D>, interceptor: Option<&Interceptor>, head: &mut RequestHead, body: B) -> Result<Response>
+where S: Serializer, D: Deserializer, B: Body {
+    if let Some(interceptor) = interceptor {
+        interceptor.intercept(head);
+    }
 
-    adpt.intercept(head);
-
-    let mut readable = try!(body.into_readable(adpt));
+    let mut readable = try!(body.into_readable(&consts.serializer));
 
     if let Some(content_type) = readable.content_type {
         head.header(ContentType(content_type));
     }
 
-    let request = try!(adpt.request_builder(head));
-
-    request.body(&mut readable.readable).send().map_err(Into::into)
+    head.init_request(consts.base_url.as_ref(), &consts.client)?
+        .body(&mut readable.readable).send().map_err(Into::into)
 }
 
-// FIXME: remove the inferior version and inline this when this is stabilized.
-#[cfg(feature = "nightly")]
 fn prepend_str(prepend: &str, to: &mut String) {
     to.insert_str(0, prepend);
-}
-
-// Stable workaround that avoids unsafe code at the cost of an additional allocation.
-#[cfg(not(feature = "nightly"))]
-fn prepend_str(prepend: &str, to: &mut String) {
-    let cap = prepend.len().checked_add(to.len())
-        .expect("Overflow evaluating capacity");
-
-    let append = mem::replace(to, String::with_capacity(cap));
-
-    *to += prepend;
-    *to += &*append;
 }

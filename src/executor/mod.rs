@@ -1,42 +1,20 @@
 //! Types which can take a boxed closure and execute it, preferably in the background.
 
-#[cfg(feature = "pool")]
-mod pool;
+pub mod threaded;
 
-mod single;
-
-#[cfg(feature = "pool")]
-pub use self::pool::Pooled;
-
-pub use self::single::SingleThread;
+pub use mpmc::{Receiver, RecvIter, RecvIntoIter};
 
 /// The default executor which should be suitable for most use-cases.
-pub type DefaultExecutor = SingleThread;
+pub type DefaultExecutor = threaded::SingleThread;
 
 /// A trait describing a type which can execute tasks (in the background or otherwise).
 ///
-/// It is up to the implementing type to decide how to handle panics.
-pub trait Executor: Send + Clone + 'static {
-    /// Execute `exec` on this executor.
+/// Invoking `ExecBox` *may* panic, so the executor should
+pub trait Executor {
+    /// Initialize the executor, polling `recv` for jobs.
     ///
-    /// This may or may not block the current thread, but documenting this behavior is preferable.
-    fn execute(&self, exec: Box<ExecBox>);
-}
-
-/// An executor which executes all tasks immediately on the current thread (blocking).
-///
-/// Does not allocate or spawn threads.
-///
-/// Panics are allowed to unwind back into calling code.
-#[derive(Clone, Debug)]
-pub struct Blocking;
-
-impl Executor for Blocking {
-    /// ## Blocks
-    /// Executes `exec` on the current thread, blocking until it returns.
-    fn execute(&self, exec: Box<ExecBox>) {
-        exec.exec();
-    }
+    /// When `Receiver::recv()` returns `None`, the job queue is closed and the executor can quit.
+    fn start(self, recv: Receiver);
 }
 
 /// A wrapper for `FnOnce() + Send + 'static` which can be invoked from a `Box`.

@@ -367,9 +367,9 @@ macro_rules! with_builder {
 #[doc(hidden)]
 #[macro_export]
 macro_rules! http_verb {
-    (GET) => ($crate::net::Method::Get);
-    (POST) => ($crate::net::Method::Post);
-    (PUT) => ($crate::net::Method::Put);
-    (PATCH) => ($crate::net::Method::Patch);
-    (DELETE) => ($crate::net::Method::Delete);
+    (GET) => ($crate::net::method::Get);
+    (POST) => ($crate::net::method::Post);
+    (PUT) => ($crate::net::method::Put);
+    (PATCH) => ($crate::net::method::Patch);
+    (DELETE) => ($crate::net::method::Delete);
 }

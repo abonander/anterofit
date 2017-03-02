@@ -4,7 +4,6 @@
 // and `serialize::serde::json::Deserializer` instead at the appropriate places.
 
 #[macro_use] extern crate anterofit;
-
 extern crate rustc_serialize;
 
 // The minimum imports needed to get this example working.
@@ -63,6 +62,9 @@ service! {
     }
 }
 
+// So we can use `PostService` with `Adapter::arc_service`.
+unsizeable!(PostService);
+
 fn main() {
     // Navigate to this URL in your browser for details. Very useful test API.
     let url = Url::parse("https://jsonplaceholder.typicode.com").unwrap();
@@ -73,14 +75,15 @@ fn main() {
         .serialize_json()
         .build();
 
+    let service = adapter.arc_service::<PostService>();
+
     create_post(&adapter);
     fetch_posts(&adapter);
+    user_posts(&*service);
 }
 
 /// Create a new Post.
-// Since the same adapter will implement all service traits, you can arbitrarily concatenate them
-// in generic bounds.
-fn create_post<T: PostService>(post_service: &T) {
+fn create_post<P: PostService>(post_service: &P) {
     let post = post_service.new_post(42, "Hello", "World!")
         // If you don't want to block, the return value of exec() can be used as a Future
         // to poll for the result. However, it does shadow a couple methods of Future
@@ -89,13 +92,11 @@ fn create_post<T: PostService>(post_service: &T) {
         .exec().block()
         .unwrap();
 
-    println!("{:?}", post);
+    println!("Created post: {:?}", post);
 }
 
 /// Fetch the top 3 posts in the database.
-// Service traits are object-safe, but you can't concatenate them arbitrarily (language limitation).
-// If you use multiple services in the same scope, it might help clarify your intent
-// to coerce the same adapter reference into different service trait objects.
+// Service traits can be object-safe
 fn fetch_posts(post_service: &PostService) {
     let posts = post_service.get_posts()
         // Shorthand for .exec().wait(), but executes the request on the current thread.
@@ -103,6 +104,13 @@ fn fetch_posts(post_service: &PostService) {
         .unwrap();
 
     for post in posts.into_iter().take(3) {
-        println!("{:?}", post);
+        println!("Fetched post: {:?}", post);
     }
+}
+
+fn user_posts(post_service: &PostService) {
+    post_service.posts_by_user(1)
+        // This will be executed asynchronously when the request is completed
+        .on_complete(|posts| for post in posts { println!("User post: {:?}", post); })
+        .exec().ignore();
 }

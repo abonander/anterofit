@@ -154,16 +154,19 @@
 //! `Future::poll()` and `Future::wait()` without external types so you
 //! have a choice over whether you want to use futures in your app or not.
 #![warn(missing_docs)]
-#![cfg_attr(feature = "nightly", feature(insert_str, specialization))]
+#![cfg_attr(feature = "nightly", feature(specialization))]
 #![recursion_limit="100"]
+
+#[macro_use]
+extern crate mime as mime_;
 
 #[macro_use]
 extern crate quick_error;
 
 extern crate futures;
 
-#[macro_use]
-extern crate mime as mime_;
+extern crate crossbeam;
+extern crate parking_lot;
 
 extern crate multipart;
 
@@ -174,8 +177,12 @@ extern crate url;
 
 pub extern crate hyper;
 
+mod adapter;
+
 #[macro_use]
 mod macros;
+
+mod mpmc;
 
 pub mod mime;
 
@@ -191,14 +198,16 @@ pub use error::Error;
 
 pub use hyper::Url;
 
-pub use net::{Adapter, AbsAdapter};
+pub use adapter::{Adapter, AbsAdapter, AdapterBuilder, InterceptorMut};
 
 #[cfg(any(feature = "rustc-serialize", feature = "serde-json"))]
-pub use net::JsonAdapter;
+pub use adapter::JsonAdapter;
 
 pub use net::body::RawBody;
 
 pub use net::request::Request;
+
+use std::sync::Arc;
 
 /// The result type for this crate; used frequently in public APIs.
 ///
@@ -210,4 +219,14 @@ pub type Result<T> = ::std::result::Result<T, Error>;
 #[doc(hidden)]
 pub fn get_adapter<D, A: AbsAdapter, F: FnOnce(&D) -> &A>(delegate: &D, map: F) -> &A {
     map(delegate)
+}
+
+/// Unsizeable service trait. Used with `Adapter::arc_service()`.
+///
+/// Use `unsizeable!()` to create an impl of this trait for your service trait.
+///
+/// Mutually exclusive with delegate service impls for the foreseeable future.
+pub trait UnsizeService {
+    /// Unsize the given `Arc<A: AbsAdapter>` to the service trait object.
+    fn from_adapter<A>(adpt: Arc<A>) -> Arc<Self> where A: AbsAdapter;
 }

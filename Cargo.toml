@@ -14,13 +14,13 @@ documentation = "https://docs.rs/anterofit"
 license = "MIT OR Apache-2.0"
 
 [dependencies]
-futures = "0.1.3"
+crossbeam = "0.2"
+futures = "0.1"
 hyper = "0.9.12"
 mime = ">= 0.2.2, < 0.3"
+parking_lot = "0.3.7"
 quick-error = "1.1.0"
 url = "1.0"
-
-threadpool = { version = "1.3", optional = true }
 
 rustc-serialize = { version = "0.3", optional = true }
 
@@ -35,9 +35,8 @@ default-features = false
 features = ["client", "hyper"]
 
 [features]
-default = ["rustc-serialize", "pool"]
+default = ["rustc-serialize"]
 serde-all = ["serde", "serde_json" ]
-pool = ["threadpool"]
 nightly = ["multipart/nightly"]
 # Enable this when using the `#[service]` attribute from `anterofit_service_attr`
 service-attr = []
