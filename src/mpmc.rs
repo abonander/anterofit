@@ -78,6 +78,7 @@ impl Receiver {
         }
     }
 
+    /// Get a blocking iterator that yields `None` when the queue is closed.
     pub fn iter(&self) -> RecvIter {
         RecvIter(self)
     }
@@ -107,6 +108,7 @@ impl IntoIterator for Receiver {
     }
 }
 
+/// Blocking owned iterator type.
 pub struct RecvIntoIter(Receiver);
 
 impl Iterator for RecvIntoIter {
@@ -117,6 +119,7 @@ impl Iterator for RecvIntoIter {
     }
 }
 
+/// Blocking shared iterator type.
 pub struct RecvIter<'a>(&'a Receiver);
 
 impl<'a> Iterator for RecvIter<'a> {

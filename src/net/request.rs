@@ -378,7 +378,7 @@ impl<'a, T> Request<'a, T> {
 
     /// Returns `true` if a result is immediately available (`exec_here()` will not block).
     pub fn is_immediate(&self) -> bool {
-        self.call.is_immediate()
+        self.call.is_available()
     }
 }
 
@@ -435,7 +435,7 @@ impl<'a, T> Request<'a, T> where T: Send + 'static {
     where F: FnOnce(Result<T>) -> Result<R> + Send + 'static, R: Send + 'static {
         let Request { exec, call } = self;
 
-        if call.is_immediate() {
+        if call.is_available() {
             let res = on_result(call.block());
             return Request::immediate(res);
         }

@@ -2,8 +2,6 @@
 
 use serialize::{Serialize, Serializer};
 
-use adapter::AbsAdapter;
-
 use mime::{self, Mime};
 
 use serialize::PairMap;

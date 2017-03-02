@@ -1,25 +1,20 @@
 use hyper::Url;
-use hyper::client::{Client, RequestBuilder as NetRequestBuilder};
+use hyper::client::Client;
 
-use parking_lot::{RwLock, RwLockWriteGuard};
-
-use std::borrow::Borrow;
 use std::sync::Arc;
 use std::fmt;
 
-use executor::{DefaultExecutor, Executor, ExecBox};
+use executor::{DefaultExecutor, Executor};
 
 use mpmc::{self, Sender};
 
 use net::intercept::{Interceptor, Chain, NoIntercept};
 
-use net::request::RequestHead;
-
 use serialize::{self, Serializer, Deserializer};
 use serialize::none::NoSerializer;
 use serialize::FromStrDeserializer;
 
-use Result;
+use ServiceDelegate;
 
 /// A builder for `Adapter`. Call `Adapter::builder()` to get an instance.
 pub struct AdapterBuilder<S, D, E, I> {
@@ -295,12 +290,9 @@ impl<S, D> Clone for Adapter_<S, D> {
 }
 
 impl<S, D> Adapter<S, D> where S: Serializer, D: Deserializer {
-    /// Create an `Arc` of a service without creating a new allocation.
-    ///
-    /// Use the `service_delegate!()` macro to create an impl of `ServiceDelegate` for your
-    /// service.
-    pub fn arc_service<Del: ?Sized>(&self) -> Arc<Del::Service> where Del: ::ServiceDelegate {
-        Del::from_adapter(self.inner.clone())
+    /// Get a service trait object from an existing shared allocation.
+    pub fn arc_service<Serv: ?Sized>(&self) -> Arc<Serv::Wrapped> where Serv: ServiceDelegate {
+        Serv::from_adapter(self.inner.clone())
     }
 }
 

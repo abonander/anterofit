@@ -1,7 +1,10 @@
-use futures::{Future, Complete, Oneshot, Async, Poll};
+use futures::{Future, Canceled, Complete, Oneshot, Async, Poll};
+use futures::executor::{self, Unpark, Spawn};
 use ::{Result, Error};
 
 use std::mem;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 
 use error::RequestPanicked;
 
@@ -14,13 +17,18 @@ use super::request::RequestHead;
 /// Depending on the stage of the request, this may return immediately.
 #[must_use = "Result of request is unknown unless polled for"]
 //#[derive(Debug)]
-pub struct Call<T>(Call_<T>);
+pub struct Call<T> {
+    state: CallState<T>,
+    notify: Arc<Notify>,
+}
 
-enum Call_<T> {
-    Waiting(Oneshot<Result<T>>),
+enum CallState<T> {
+    Waiting(CallFuture<T>),
     Immediate(Result<T>),
     Taken
 }
+
+type CallFuture<T> = Spawn<Oneshot<Result<T>>>;
 
 impl<T> Call<T> {
     /// Ignore the result of this call.
@@ -42,14 +50,14 @@ impl<T> Call<T> {
 
     /// Poll this call for a result.
     ///
-    /// Convenience method for those that don't want to take on the complexity of `futures`.
+    /// Convenience wrapper for `poll_no_task()` which doesn't use types from `futures`.
     ///
     /// Returns `None` in two cases:
     ///
     /// * The result is not ready yet
     /// * The result has already been taken
     pub fn check(&mut self) -> Option<Result<T>> {
-        match self.poll() {
+        match self.poll_no_task() {
             Ok(Async::Ready(val)) => Some(Ok(val)),
             Ok(Async::NotReady) => None,
             Err(Error::ResultTaken) => None,
@@ -57,22 +65,45 @@ impl<T> Call<T> {
         }
     }
 
-    /// Return `true` if a result is immediately available
+    /// Return `true` if a result is available
     /// (a call to `check()` will return the result).
-    pub fn is_immediate(&self) -> bool {
-        if let Call_::Immediate(_) = self.0 {
+    pub fn is_available(&self) -> bool {
+        if let CallState::Immediate(_) = self.state {
+            true
+        } else {
+            self.notify.check()
+        }
+    }
+
+    /// Returns `true` if the result has already been taken.
+    pub fn result_taken(&self) -> bool {
+        if let CallState::Taken = self.state {
             true
         } else {
             false
         }
     }
 
-    /// Returns `true` if the result has already been taken.
-    pub fn result_taken(&self) -> bool {
-        if let Call_::Taken = self.0 {
-            true
+    /// Poll the inner future without requiring a task.
+    ///
+    /// You can call `is_available()` to check readiness.
+    pub fn poll_no_task(&mut self) -> Poll<T, Error> {
+        let notify = self.notify.clone();
+        self.poll_by(move |fut| fut.poll_future(notify))
+    }
+
+    fn poll_by<F>(&mut self, poll: F) -> Poll<T, Error>
+    where F: FnOnce(&mut CallFuture<T>) -> Poll<Result<T>, Canceled> {
+        match self.state {
+            CallState::Waiting(ref mut future) => return map_poll(poll(future)),
+            CallState::Taken => return Err(Error::ResultTaken),
+            _ => (),
+        }
+
+        if let CallState::Immediate(res) = mem::replace(&mut self.state, CallState::Taken) {
+            res.map(Async::Ready)
         } else {
-            false
+            unreachable!();
         }
     }
 }
@@ -81,18 +112,27 @@ impl<T> Future for Call<T> {
     type Item = T;
     type Error = Error;
 
+    /// ### Panics
+    /// If the current thread is not running a futures task.
+    ///
+    /// Use `poll_no_task()` instead if you want to poll outside of a task.
     fn poll(&mut self) -> Poll<T, Error> {
-        match self.0 {
-            Call_::Waiting(ref mut oneshot) => return poll_for_result(oneshot),
-            Call_::Taken => return Err(Error::ResultTaken),
-            _ => (),
-        }
+        self.poll_by(|fut| fut.get_mut().poll())
+    }
+}
 
-        if let Call_::Immediate(res) = mem::replace(&mut self.0, Call_::Taken) {
-            res.map(Async::Ready)
-        } else {
-            unreachable!();
-        }
+#[derive(Default)]
+struct Notify(AtomicBool);
+
+impl Notify {
+    fn check(&self) -> bool {
+        self.0.load(Ordering::Relaxed)
+    }
+}
+
+impl Unpark for Notify {
+    fn unpark(&self) {
+        self.0.store(true, Ordering::Relaxed);
     }
 }
 
@@ -105,12 +145,18 @@ pub fn oneshot<T>(head: Option<RequestHead>) -> (PanicGuard<T>, Call<T>) {
         tx: Some(tx)
     };
 
-    (guard, Call(Call_::Waiting(rx)))
+    (guard, Call {
+        state: CallState::Waiting(executor::spawn(rx)),
+        notify: Default::default(),
+    })
 }
 
 /// Implementation detail
 pub fn immediate<T>(res: Result<T>) -> Call<T> {
-    Call(Call_::Immediate(res))
+    Call {
+        state: CallState::Immediate(res),
+        notify: Default::default(),
+    }
 }
 
 /// Sends the request head on panic.
@@ -141,8 +187,8 @@ impl<T> Drop for PanicGuard<T> {
     }
 }
 
-fn poll_for_result<T>(oneshot: &mut Oneshot<Result<T>>) -> Poll<T, Error> {
-    let ret = match try!(oneshot.poll()) {
+fn map_poll<T>(poll: Poll<Result<T>, Canceled>) -> Poll<T, Error> {
+    let ret = match try!(poll) {
         Async::Ready(val) => Async::Ready(try!(val)),
         Async::NotReady => Async::NotReady,
     };

@@ -221,11 +221,13 @@ pub fn get_adapter<D, A: AbsAdapter, F: FnOnce(&D) -> &A>(delegate: &D, map: F) 
     map(delegate)
 }
 
-/// Describes a type which can produce an unsized service trait from an adapter.
+/// Automatically implemented for service traits.
+///
+/// Mutually exclusive with delegate service impls (for now).
 pub trait ServiceDelegate {
-    /// The wrapped service trait.
-    type Service: ?Sized;
+    /// The wrapped service trait object.
+    type Wrapped: ?Sized;
 
-    /// Coerce an `Arc<A>` to `Arc<Self::Service>`
-    fn from_adapter<A>(adpt: Arc<A>) -> Arc<Self::Service> where A: AbsAdapter;
+    /// Unsize the given `Arc<A: AbsAdapter>` to the service trait object.
+    fn from_adapter<A>(adpt: Arc<A>) -> Arc<Self::Wrapped> where A: AbsAdapter;
 }
