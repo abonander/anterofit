@@ -14,7 +14,7 @@ use serialize::{self, Serializer, Deserializer};
 use serialize::none::NoSerializer;
 use serialize::FromStrDeserializer;
 
-use ServiceDelegate;
+use UnsizeService;
 
 /// A builder for `Adapter`. Call `Adapter::builder()` to get an instance.
 pub struct AdapterBuilder<S, D, E, I> {
@@ -291,7 +291,7 @@ impl<S, D> Clone for Adapter_<S, D> {
 
 impl<S, D> Adapter<S, D> where S: Serializer, D: Deserializer {
     /// Get a service trait object from an existing shared allocation.
-    pub fn arc_service<Serv: ?Sized>(&self) -> Arc<Serv::Wrapped> where Serv: ServiceDelegate {
+    pub fn arc_service<Serv: ?Sized>(&self) -> Arc<Serv> where Serv: UnsizeService {
         Serv::from_adapter(self.inner.clone())
     }
 }

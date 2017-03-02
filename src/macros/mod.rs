@@ -177,6 +177,13 @@ macro_rules! service {
                 |this| this
             }
         }
+
+        impl ::anterofit::UnsizeService for $servicenm {
+            fn from_adapter<A>(adpt: ::std::sync::Arc<A>) -> ::std::sync::Arc<Self>
+            where A: ::anterofit::AbsAdapter {
+                adpt
+            }
+        }
     );
     (
         $(#[$meta:meta])*
@@ -192,6 +199,13 @@ macro_rules! service {
 
             impl[T: $crate::AbsAdapter] for T {
                 |this| this
+            }
+        }
+
+        impl ::anterofit::UnsizeService for $servicenm {
+            fn from_adapter<A>(adpt: ::std::sync::Arc<A>) -> ::std::sync::Arc<Self>
+            where A: ::anterofit::AbsAdapter {
+                adpt
             }
         }
     );
@@ -224,23 +238,6 @@ macro_rules! service {
         }
 
         delegate_impl!($servicenm; [$($guts)*] $($delegates)+);
-    );
-}
-
-/// Create an impl of `ServiceDelegate` for `$servicenm`.
-///
-/// This enables it to be used with `Adapter::arc_service()`.
-#[macro_export]
-macro_rules! service_delegate {
-    ($servicenm:ident) => (
-        impl ::anterofit::ServiceDelegate for $servicenm {
-            type Service = Self;
-
-            fn from_adapter<A>(adpt: ::std::sync::Arc<A>) -> ::std::sync::Arc<Self>
-            where A: ::anterofit::AbsAdapter {
-                adpt
-            }
-        }
     );
 }
 

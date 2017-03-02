@@ -223,11 +223,8 @@ pub fn get_adapter<D, A: AbsAdapter, F: FnOnce(&D) -> &A>(delegate: &D, map: F) 
 
 /// Automatically implemented for service traits.
 ///
-/// Mutually exclusive with delegate service impls (for now).
-pub trait ServiceDelegate {
-    /// The wrapped service trait object.
-    type Wrapped: ?Sized;
-
+/// Mutually exclusive with delegate service impls for the foreseeable future.
+pub trait UnsizeService {
     /// Unsize the given `Arc<A: AbsAdapter>` to the service trait object.
-    fn from_adapter<A>(adpt: Arc<A>) -> Arc<Self::Wrapped> where A: AbsAdapter;
+    fn from_adapter<A>(adpt: Arc<A>) -> Arc<Self> where A: AbsAdapter;
 }
