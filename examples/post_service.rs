@@ -4,7 +4,6 @@
 // and `serialize::serde::json::Deserializer` instead at the appropriate places.
 
 #[macro_use] extern crate anterofit;
-
 extern crate rustc_serialize;
 
 // The minimum imports needed to get this example working.
