@@ -10,7 +10,7 @@ use mpmc::{self, Sender};
 
 use net::intercept::{Interceptor, Chain, NoIntercept};
 
-use serialize::{Serializer, Deserializer};
+use serialize::{self, Serializer, Deserializer};
 use serialize::none::NoSerializer;
 use serialize::FromStrDeserializer;
 
@@ -164,7 +164,7 @@ where S: Serializer, D: Deserializer, E: Executor, I: Interceptor {
 
 /// A shorthand for an adapter with JSON serialization enabled.
 #[cfg(any(feature = "rustc-serialize", feature = "serde-json"))]
-pub type JsonAdapter= Adapter<::serialize::json::Serializer, ::serialize::json::Deserializer>;
+pub type JsonAdapter= Adapter<serialize::json::Serializer, serialize::json::Deserializer>;
 
 /// The starting point of all Anterofit requests.
 ///
