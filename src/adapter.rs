@@ -10,7 +10,7 @@ use mpmc::{self, Sender};
 
 use net::intercept::{Interceptor, Chain, NoIntercept};
 
-use serialize::{self, Serializer, Deserializer};
+use serialize::{Serializer, Deserializer};
 use serialize::none::NoSerializer;
 use serialize::FromStrDeserializer;
 
