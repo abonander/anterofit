@@ -229,8 +229,8 @@ macro_rules! service {
 
 /// Create an implementation of `UnsizeService` for the given service trait.
 ///
-/// Note that this only works with object-safe traits. Can be invoked with more than
-/// one name at a time.
+/// Note that this only works with object-safe traits, and does *not* work with
+/// traits that have delegate impls. Can be invoked with more than one name at a time.
 #[macro_export]
 macro_rules! unsizeable(
     ($($servicenm:ty),+) => (
