@@ -62,6 +62,9 @@ service! {
     }
 }
 
+// So we can use `PostService` with `Adapter::arc_service`.
+unsizeable!(PostService);
+
 fn main() {
     // Navigate to this URL in your browser for details. Very useful test API.
     let url = Url::parse("https://jsonplaceholder.typicode.com").unwrap();

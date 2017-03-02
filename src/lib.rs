@@ -221,7 +221,9 @@ pub fn get_adapter<D, A: AbsAdapter, F: FnOnce(&D) -> &A>(delegate: &D, map: F) 
     map(delegate)
 }
 
-/// Automatically implemented for service traits.
+/// Unsizeable service trait. Used with `Adapter::arc_service()`.
+///
+/// Use `unsizeable!()` to create an impl of this trait for your service trait.
 ///
 /// Mutually exclusive with delegate service impls for the foreseeable future.
 pub trait UnsizeService {
