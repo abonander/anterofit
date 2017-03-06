@@ -105,15 +105,12 @@ Enabled by default with the `serde-all` feature.
 ```toml
 [dependencies]
 anterofit = "0.1"
-serde = "0.9"
-serde_json = "0.9"
 serde_derive = "0.9"
 ```
 
 Crate Root:
 ```rust
 #[macro_use] extern crate anterofit;
-extern crate serde;
 #[macro_use] extern crate serde_derive;
 ```
 
