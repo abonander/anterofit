@@ -5,6 +5,7 @@ rust:
   # FIXME: when 1.16 stable releases
   # - 1.16
   # - stable
+  - beta
   - nightly
 os:
   - linux
