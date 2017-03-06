@@ -34,8 +34,11 @@ version = "0.10"
 default-features = false
 features = ["client", "hyper"]
 
+[dev-dependencies]
+serde_derive = "0.9"
+
 [features]
-default = ["rustc-serialize"]
+default = ["serde-all"]
 serde-all = ["serde", "serde_json" ]
 nightly = ["multipart/nightly"]
 # Enable this when using the `#[service]` attribute from `anterofit_service_attr`

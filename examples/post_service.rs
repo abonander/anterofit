@@ -4,7 +4,8 @@
 // and `serialize::serde::json::Deserializer` instead at the appropriate places.
 
 #[macro_use] extern crate anterofit;
-extern crate rustc_serialize;
+extern crate serde;
+#[macro_use] extern crate serde_derive;
 
 // The minimum imports needed to get this example working.
 //
@@ -12,7 +13,7 @@ extern crate rustc_serialize;
 // which may cause some confusing type-mismatch errors.
 use anterofit::{Adapter, Url};
 
-#[derive(Debug, RustcDecodable)]
+#[derive(Debug, Deserialize)]
 struct Post {
     pub userid: Option<u64>,
     pub id: u64,
@@ -21,7 +22,7 @@ struct Post {
 }
 
 /// Used to create a new Post.
-#[derive(Debug, RustcEncodable)]
+#[derive(Debug, Serialize)]
 struct NewPost<'a> {
     pub userid: u64,
     pub title: &'a str,

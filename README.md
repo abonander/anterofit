@@ -97,13 +97,37 @@ Or an in-depth look with our [Documentation](https://docs.rs/anterofit)
 
 ###Setup
 
-####[`rustc-serialize`](https://crates.io/crates/rustc-serialize):
+#### [Serde](https://crates.io/crates/serde) and JSON serialization:
+
+Enabled by default with the `serde-all` feature.
 
 `Cargo.toml`:
 ```toml
 [dependencies]
 anterofit = "0.1"
+serde = "0.9"
+serde_json = "0.9"
+serde_derive = "0.9"
+```
+
+Crate Root:
+```rust
+#[macro_use] extern crate anterofit;
+extern crate serde;
+#[macro_use] extern crate serde_derive;
+```
+
+####[`rustc-serialize`](https://crates.io/crates/rustc-serialize):
+
+`Cargo.toml`:
+```toml
+[dependencies]
 rustc-serialize = "0.3"
+
+[dependencies.anterofit]
+version = "0.1"
+default-features = false
+features = ["rustc-serialize"]
 ```
 
 Crate Root:
@@ -111,79 +135,6 @@ Crate Root:
 #[macro_use] extern crate anterofit;
 extern crate rustc_serialize;
 ```
--------------------
-
-#### [Serde](https://crates.io/crates/serde) and JSON serialization:
-
-`Cargo.toml`:
-```toml
-[dependencies]
-serde = "0.8"
-
-[dependencies.anterofit]
-version = "0.1"
-default-features = false
-features = ["serde", "serde_json"]
-```
-
-Then see [Serde's *Setting Up Codegen* guide](https://serde.rs/codegen.html).
-
-###Choosing a serialization framework
-
-`rustc-serialize` and Serde both have their pros and cons. Neither is a clear winner over the other; it depends
-entirely on your needs.
-
-<table>
-    <tr>
-        <td />
-        <td><code>rustc-serialize</code></td>
-        <td>Serde</td>
-    </tr>
-    <tr>
-        <td>Pros</td>
-        <td>
-            <ul>
-                <li> <code>#[derive]</code> has been stable for a long time </li>
-                <li> (Potentially) Faster Compilation:
-                    <ul>
-                        <li> No Transitive Dependencies </li>
-                        <li> Uses compiler datastructures / doesn't have to reparse </li>
-                    </ul>
-                </li>
-            </ul>
-        </td>
-        <td>
-            <ul>
-                <li> More/extensible serialization options </li>
-                <li> Likely more performant serialization </li>
-            </ul>
-        </td>
-    </tr>
-    <tr>
-        <td>Cons</td>
-        <td>
-            <ul>
-                <li> Likely less performant serialization </li>
-                <li> Still somewhat unstable (may go away or change forms) </li>
-                <li> (Useful) serialization limited to JSON </li>
-            </ul>
-        </td>
-        <td>
-            <ul>
-                <li> <code>#[derive]</code> only recently stabilized </li>
-                <li> Slower compilation:
-                    <ul>
-                        <li> Several transitive dependencies </li>
-                        <li>
-                            Procedural macros currently have to reparse the token stream instead
-                            of reusing compiler datastructures
-                        </li>
-                    </ul>
-                </li>
-            </ul>
-        </td>
-    </tr>
-</table>
 
 License
 -------

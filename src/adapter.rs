@@ -121,7 +121,7 @@ impl<S, D, E, I> AdapterBuilder<S, D, E, I> {
     }
 }
 
-#[cfg(any(feature = "rustc-serialize", feature = "serde-json"))]
+#[cfg(any(feature = "rustc-serialize", feature = "serde_json"))]
 impl<S, D, E, I> AdapterBuilder<S, D, E, I> {
     /// Convenience method for using JSON serialization.
     ///
@@ -163,7 +163,7 @@ where S: Serializer, D: Deserializer, E: Executor, I: Interceptor {
 }
 
 /// A shorthand for an adapter with JSON serialization enabled.
-#[cfg(any(feature = "rustc-serialize", feature = "serde-json"))]
+#[cfg(any(feature = "rustc-serialize", feature = "serde_json"))]
 pub type JsonAdapter= Adapter<serialize::json::Serializer, serialize::json::Deserializer>;
 
 /// The starting point of all Anterofit requests.

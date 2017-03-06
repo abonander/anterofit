@@ -200,7 +200,7 @@ pub use hyper::Url;
 
 pub use adapter::{Adapter, AbsAdapter, AdapterBuilder, InterceptorMut};
 
-#[cfg(any(feature = "rustc-serialize", feature = "serde-json"))]
+#[cfg(any(feature = "rustc-serialize", feature = "serde_json"))]
 pub use adapter::JsonAdapter;
 
 pub use net::body::RawBody;

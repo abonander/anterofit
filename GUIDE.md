@@ -8,7 +8,7 @@ generation of service traits, eliminating the noisy boilerplate
 involved in creating and issuing HTTP requests. The
 focal point of this power lies in the `service!{}` macro.
 
-See the [README](README.md) for setting up dependencies and choosing a serialization framework.
+See the [README](README.md) for setting up dependencies.
 
 ####Note
 This document is a work-in-progress. If there is any information which you think would be helpful
@@ -53,11 +53,11 @@ of borrowed parameters.
 The return type of a trait method can be any type that implements the correct deserialization trait
 for the serialization framework you're using:
 
-* `rustc-serialize`: `Decodable`, derived with `#[derive(RustcDecodable)]`
-
-* Serde: `Deserialize`, derived with `#[derive(Deserialize)]` via either 
+* Serde (enabled by default): `Deserialize`, derived with `#[derive(Deserialize)]` via either 
 [`serde_codegen`](https://crates.io/crates/serde_codegen) (build script) or 
 [`serde_derive`](https://crates.io/crates/serde_derive) (procedural macro).
+
+* `rustc-serialize`: `Decodable`, derived with `#[derive(RustcDecodable)]`
 
 The return type can also be omitted. Just like in regular Rust, it is implied to be `()`.
 
