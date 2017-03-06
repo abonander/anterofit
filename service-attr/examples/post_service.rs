@@ -8,7 +8,7 @@
 
 extern crate anterofit_service_attr;
 
-extern crate rustc_serialize;
+#[macro_use] extern crate serde_derive;
 
 // The minimum imports needed to get this example working.
 //
@@ -18,7 +18,7 @@ use anterofit::{Adapter, Url};
 
 use anterofit_service_attr::service;
 
-#[derive(Debug, RustcDecodable)]
+#[derive(Debug, Deserialize)]
 struct Post {
     pub userid: Option<u64>,
     pub id: u64,
@@ -27,7 +27,7 @@ struct Post {
 }
 
 /// Used to create a new Post.
-#[derive(Debug, RustcEncodable)]
+#[derive(Debug, Serialize)]
 struct NewPost<'a> {
     pub userid: u64,
     pub title: &'a str,
