@@ -517,3 +517,11 @@ macro_rules! meta_service (
         impl<T: $($superr)+> $metanm for T {}
     );
 );
+
+// No-op macro to silence errors in IDEs when using `#[service]`
+#[cfg(feature = "service-attr")]
+#[doc(hidden)]
+#[macro_export]
+macro_rules! delegate (
+    ($($a:tt)*) => ()
+);
