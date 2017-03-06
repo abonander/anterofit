@@ -30,7 +30,7 @@ serde_json = { version = "0.9", optional = true }
 # serde_xml = { version = "0.9.1", optional = true }
 
 [dependencies.multipart]
-version = "0.9.0"
+version = "0.10"
 default-features = false
 features = ["client", "hyper"]
 
