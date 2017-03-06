@@ -291,6 +291,8 @@ impl<S, D> Clone for Adapter_<S, D> {
 
 impl<S, D> Adapter<S, D> where S: Serializer, D: Deserializer {
     /// Get a service trait object from an existing shared allocation.
+    ///
+    /// Requires that the service implement `UnsizeService`.
     pub fn arc_service<Serv: ?Sized>(&self) -> Arc<Serv> where Serv: UnsizeService {
         Serv::from_adapter(self.inner.clone())
     }

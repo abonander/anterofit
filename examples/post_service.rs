@@ -75,10 +75,13 @@ fn main() {
         .serialize_json()
         .build();
 
+    // You can also get an `Arc<YourService>` like this.
     let service = adapter.arc_service::<PostService>();
 
     create_post(&adapter);
     fetch_posts(&adapter);
+    // have to deref-reref because coercion doesn't work as expected
+    // see https://github.com/rust-lang/rust/issues/39801
     user_posts(&*service);
 }
 
