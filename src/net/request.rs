@@ -478,6 +478,14 @@ where S: Serializer, D: Deserializer, B: Body {
         .body(&mut readable.readable).send().map_err(Into::into)
 }
 
+// FIXME: stable in 1.16
+#[cfg(feature = "nightly")]
 fn prepend_str(prepend: &str, to: &mut String) {
     to.insert_str(0, prepend);
+}
+
+// Slower workaround for 1.15
+#[cfg(not(feature = "nightly"))]
+fn prepend_str(prepend: &str, to: &mut String) {
+    *to = prepend.to_string() + to;
 }

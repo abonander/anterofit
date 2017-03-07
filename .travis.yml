@@ -4,12 +4,12 @@ sudo: false
 rust:
   # FIXME: when 1.16 stable releases
   # - 1.16
-  # - stable
+  - stable
   - beta
   - nightly
 os:
   - linux
-  # - osx
+  - osx
 branches:
   except:
     - proc_macro
