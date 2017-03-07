@@ -11,6 +11,7 @@ syn = { version = "0.10", features = ["full"] }
 # The `service-attr` feature disables the `service!{}` macro
 # so that the `#[service]` attribute doesn't get shadowed
 anterofit = { path = "../", features = ["service-attr"]}
+serde = "*"
 serde_derive = "*"
 
 [lib]

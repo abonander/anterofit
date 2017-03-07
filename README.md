@@ -3,6 +3,9 @@
 Anterofit is a collection of Rust macros coupled to a lightweight, self-contained HTTP framework that
 allows you to create strongly-typed Rust wrappers around REST APIs with ease.
 
+**Note**: This crate currently requires Rust Beta 1.16 or Nightly 1.17 because it uses an API which was just
+recently stabilized.
+
 ```rust
 // See examples/post_service.rs for more details
 #[macro_use] extern crate anterofit;
@@ -105,6 +108,8 @@ Enabled by default with the `serde-all` feature.
 ```toml
 [dependencies]
 anterofit = "0.1"
+# `serde` is required in the dependencies but not in the crate root.
+serde = "0.9"
 serde_derive = "0.9"
 ```
 

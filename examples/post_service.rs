@@ -1,7 +1,7 @@
-// This example assumes the `rustc-serialize` feature.
+// This example assumes the `serde` and `serde-json` features.
 //
-// If you are using the `serde` feature, use `#[derive(Deserialize)]`
-// and `serialize::serde::json::Deserializer` instead at the appropriate places.
+// If you are using the `rustc-serialize` feature, use `RustcDecodable` and `RustcEncodable`
+// instead of `Deserialize` and `Serialize`, respectively.
 
 #[macro_use] extern crate anterofit;
 #[macro_use] extern crate serde_derive;
