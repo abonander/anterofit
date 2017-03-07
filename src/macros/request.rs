@@ -60,8 +60,11 @@ macro_rules! request_impl {
 /// ## Overwrites Body
 /// Setting a new body will overwrite any previous body on the request.
 ///
-/// ## Panics
-/// If the request is a GET request (cannot have a body).
+/// ## Disallowed verbs: `GET, DELETE`
+/// `GET` and `DELETE` requests are generally not expected to have bodies. As an
+/// anti-footgun, Anterofit does not allow bodies on these requests by default.
+///
+/// See [`net::method::TakesBody`](net/method/trait.TakesBody.html) for more details.
 #[macro_export]
 macro_rules! body (
     ($body:expr) => (
@@ -89,8 +92,11 @@ macro_rules! body (
 /// ## Overwrites Body
 /// Setting a new body will overwrite any previous body on the request.
 ///
-/// ## Panics
-/// If the request is a GET request (cannot have a body).
+/// ## Disallowed verbs: `GET, DELETE`
+/// `GET` and `DELETE` requests are generally not expected to have bodies. As an
+/// anti-footgun, Anterofit does not allow bodies on these requests by default.
+///
+/// See [`net::method::TakesBody`](net/method/trait.TakesBody.html) for more details.
 #[macro_export]
 macro_rules! body_map {
     ($($key:expr => $val:expr),+) => ({
@@ -143,13 +149,16 @@ macro_rules! body_map {
 /// However, if you use the `path!()` or `stream!()` macros as a value expression,
 /// it will transform the request to a `multipart/form-data` request.
 ///
+/// In some server stacks (e.g. PHP), these would be called `POST` parameters.
+///
 /// ## Overwrites Body
 /// Setting a new body will overwrite any previous body on the request.
 ///
-/// ## Panics
-/// If the request is a GET request (cannot have a body).
+/// ## Disallowed verbs: `GET, DELETE`
+/// `GET` and `DELETE` requests are generally not expected to have bodies. As an
+/// anti-footgun, Anterofit does not allow bodies on these requests by default.
 ///
-/// In some server stacks (e.g. PHP), these would be called `POST` parameters.
+/// See [`net::method::TakesBody`](net/method/trait.TakesBody.html) for more details.
 #[macro_export]
 macro_rules! fields {
     ($($key:expr $(=> $val:expr)*),*) => ({
