@@ -246,6 +246,21 @@ impl<'a, A: 'a + ?Sized, M, B> RequestBuilder<'a, A, M, B> {
     where F: FnOnce(Self) -> Result<RequestBuilder<'a, A, M, B_>> {
         functor(self)
     }
+
+    #[doc(hidden)]
+    pub fn swap_method<M_>(self, method: M_) -> (RequestBuilder<'a, A, M_, B>, M) {
+        let old_method = self.method;
+
+        (
+            RequestBuilder {
+                head: self.head,
+                method: method,
+                body: self.body,
+                adapter: self.adapter,
+            },
+            old_method
+        )
+    }
 }
 
 impl<'a, A: 'a + ?Sized, M, B> RequestBuilder<'a, A, M, B> where A: AbsAdapter, M: TakesBody {
@@ -309,25 +324,6 @@ impl<'a, A: 'a + ?Sized, M, B> RequestBuilder<'a, A, M, B> where A: AbsAdapter {
             exec: Some(exec),
             call: call,
         }
-    }
-
-    /// Equivalent to `body()` but is not restricted from `GET` or `DELETE` requests.
-    pub fn force_body<B_>(self, body: B_) -> RequestBuilder<'a, A, M, B_> {
-        RequestBuilder {
-            adapter: self.adapter,
-            head: self.head,
-            method: self.method,
-            body: body,
-        }
-    }
-
-    /// Equivalent to `body_eager()` but is not restricted from `GET` or `DELETE` requests.
-    pub fn force_body_eager<B_>(self, body: B_)
-        -> Result<RequestBuilder<'a, A, M, RawBody<<B_ as EagerBody>::Readable>>>
-        where B_: EagerBody {
-
-        let body = try!(body.into_readable(&self.adapter.ref_consts().serializer)).into();
-        Ok(self.force_body(body))
     }
 }
 

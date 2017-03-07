@@ -49,7 +49,17 @@ method! {
     pub struct Delete;
 }
 
-takes_body! { Post, Put, Patch }
+#[doc(hidden)]
+pub struct ForceBody;
+
+impl Method for ForceBody {
+    fn to_hyper(&self) -> ::hyper::method::Method {
+        panic!("`ForceBody` is not an actual HTTP method; you must have caught a panic \
+                during a `force_body!()` invocation and continued outside.")
+    }
+}
+
+takes_body! { Post, Put, Patch, ForceBody }
 
 /// The HTTP method of a request in Anterofit.
 pub trait Method {
@@ -68,8 +78,7 @@ pub trait Method {
 /// `GET` or `DELETE` request when you actually meant `POST` or `PUT` or `PATCH`.
 ///
 /// If you must have a body on a `GET` or `DELETE` request, you can use the
-/// `force_body()` or `force_body_eager()` methods on `RequestBuilder` in conjunction
-/// with `map_builder!()` in a service method definition.
+/// `force_body!()` macro to override this protection.
 ///
 /// [rfc2616-4.3]: https://tools.ietf.org/html/rfc2616#section-4.3
 pub trait TakesBody {}

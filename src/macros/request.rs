@@ -43,6 +43,37 @@ macro_rules! request_impl {
     })
 }
 
+/// Allows the inside expression to set a body on a request which doesn't regularly take one.
+///
+/// ```rust
+/// # #[macro_use] extern crate anterofit;
+/// # fn main() {}
+///
+/// service! {
+///     pub trait ForcedBodyService {
+///         fn get_with_fields(&self) -> String {
+///             // `GET` requests are not regularly allowed to take bodies;
+///             // this is checked at compile time.
+///             GET("/foo");
+///             force_body! {
+///                 fields! {
+///                     "Hello" => "World"
+///                 }
+///             }
+///         }
+///     }
+/// }
+/// ```
+#[macro_export]
+macro_rules! force_body {
+    ($expr:expr) => (
+        move | builder | {
+            let (builder, method) = builder.swap_method(::anterofit::net::method::ForceBody);
+            builder.apply($expr).map(move |builder| builder.swap_method(method).0)
+        }
+    )
+}
+
 /// Serialize the given value as the request body.
 ///
 /// Serialization will be performed on the adapter's executor, using the adapter's serializer,
@@ -63,6 +94,8 @@ macro_rules! request_impl {
 /// ## Disallowed verbs: `GET, DELETE`
 /// `GET` and `DELETE` requests are generally not expected to have bodies. As an
 /// anti-footgun, Anterofit does not allow bodies on these requests by default.
+///
+/// Wrap this invocation in `force_body!()` if you want to set a body anyways.
 ///
 /// See [`net::method::TakesBody`](net/method/trait.TakesBody.html) for more details.
 #[macro_export]
@@ -95,6 +128,8 @@ macro_rules! body (
 /// ## Disallowed verbs: `GET, DELETE`
 /// `GET` and `DELETE` requests are generally not expected to have bodies. As an
 /// anti-footgun, Anterofit does not allow bodies on these requests by default.
+///
+/// Wrap this invocation in `force_body!()` if you want to set a body anyways.
 ///
 /// See [`net::method::TakesBody`](net/method/trait.TakesBody.html) for more details.
 #[macro_export]
@@ -157,6 +192,8 @@ macro_rules! body_map {
 /// ## Disallowed verbs: `GET, DELETE`
 /// `GET` and `DELETE` requests are generally not expected to have bodies. As an
 /// anti-footgun, Anterofit does not allow bodies on these requests by default.
+///
+/// Wrap this invocation in `force_body!()` if you want to set a body anyways.
 ///
 /// See [`net::method::TakesBody`](net/method/trait.TakesBody.html) for more details.
 #[macro_export]
