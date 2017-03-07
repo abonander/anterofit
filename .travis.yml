@@ -9,7 +9,8 @@ rust:
   - nightly
 os:
   - linux
-  - osx
+  # Mac takes too long to spin up sometimes
+  # - osx
 branches:
   except:
     - proc_macro
