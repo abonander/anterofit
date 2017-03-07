@@ -79,6 +79,8 @@ impl Receiver {
     }
 
     /// Get a blocking iterator that yields `None` when the queue is closed.
+    ///
+    /// `IntoIter` is also implemented for `&Receiver`.
     pub fn iter(&self) -> RecvIter {
         RecvIter(self)
     }
