@@ -1,7 +1,7 @@
 # anterofit [![Build Status](https://travis-ci.org/abonander/anterofit.svg?branch=master)](https://travis-ci.org/abonander/anterofit) [![On Crates.io](https://img.shields.io/crates/v/anterofit.svg)](https://crates.io/crates/anterofit)
 
 Anterofit is a collection of Rust macros coupled to a lightweight, self-contained HTTP framework that
-allows you to create strongly-typed Rust wrappers around REST APIs with ease.
+allows you to easily create strongly-typed Rust wrappers for calling REST APIs.
 
 ```rust
 // See examples/post_service.rs for more details
