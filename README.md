@@ -6,11 +6,11 @@ allows you to easily create strongly-typed Rust wrappers for calling REST APIs.
 ```rust
 // See examples/post_service.rs for more details
 #[macro_use] extern crate anterofit;
-extern crate rustc_serialize;
+#[macro_use] extern crate serde_derive;
 
 use anterofit::{Adapter, Url};
 
-#[derive(Debug, RustcDecodable)]
+#[derive(Debug, Deserialize)]
 struct Post {
     pub userid: Option<u64>,
     pub id: u64,
