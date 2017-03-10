@@ -184,6 +184,23 @@ macro_rules! body_map {
 /// However, if you use the `path!()` or `stream!()` macros as a value expression,
 /// it will transform the request to a `multipart/form-data` request.
 ///
+/// ```rust,no_run
+/// # #[macro_use] extern crate anterofit;
+/// # fn main() {::anterofit::Adapter::builder().build().upload_file("file.txt".as_ref()).exec_here().unwrap()}
+/// use std::path::Path;
+///
+/// service! {
+///     pub trait UploadService {
+///         fn upload_file(&self, file: &Path) {
+///             POST("/upload");
+///             fields! {
+///                 "file" => path!(file),
+///             }
+///         }
+///     }
+/// }
+/// ```
+///
 /// In some server stacks (e.g. PHP), these would be called `POST` parameters.
 ///
 /// ## Overwrites Body
@@ -208,7 +225,18 @@ macro_rules! fields {
         )*;
 
         move |builder| Ok(builder.body(fields))
-    })
+    });
+    ($($key:expr $(=> $val:expr)*),*,) => ({
+        use $crate::net::body::EmptyFields;
+
+        let fields = EmptyFields;
+
+        $(
+            let fields = (field!($key, $($val)*)) (fields);
+        )*;
+
+        move |builder| Ok(builder.body(fields))
+    });
 }
 
 #[doc(hidden)]
