@@ -59,8 +59,7 @@ impl<T> Call<T> {
     pub fn check(&mut self) -> Option<Result<T>> {
         match self.poll_no_task() {
             Ok(Async::Ready(val)) => Some(Ok(val)),
-            Ok(Async::NotReady) => None,
-            Err(Error::ResultTaken) => None,
+            Ok(Async::NotReady) | Err(Error::ResultTaken) => None,
             Err(e) => Some(Err(e))
         }
     }
