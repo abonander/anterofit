@@ -173,7 +173,7 @@ impl<T> PanicGuard<T> {
     /// Send a result, which will prevent the head being sent on-panic.
     pub fn complete(&mut self, res: Result<T>) {
         if let Some(tx) = self.tx.take() {
-            tx.complete(res);
+            let _ = tx.send(res);
         }
     }
 }
