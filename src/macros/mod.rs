@@ -245,152 +245,111 @@ macro_rules! unsizeable(
 
 #[doc(hidden)]
 #[macro_export]
-macro_rules! method_proto(
-    // Plain declaration
-    (
-        $(#[$fnmeta:meta])*
-        fn $fnname:ident (&self $($args:tt)*) $(-> $ret:ty)* {
-            $($body:tt)+
-        }
-        
-        $($rem:tt)*
-    ) => (
-        $(#[$fnmeta])*
-        fn $fnname (&self $($args)*)  -> $crate::net::Request<$($ret)*>;
-        
-        method_proto!($($rem)*);
-    );
-    // Generics
-    (
-        $(#[$fnmeta:meta])*
-        fn $fnname:ident [$($generics:tt)+] (&self $($args:tt)*) $(-> $ret:ty)* {
-            $($body:tt)+
-        }
-        
-        $($rem:tt)*
-    ) => (
-        $(#[$fnmeta])*
-        fn $fnname <$($generics)+> (&self $($args)*) -> $crate::net::Request<$($ret)*>;
-        
-        method_proto!($($rem)*);
-    );
-    // Where clause
-    (
-        $(#[$fnmeta:meta])*
-        fn $fnname:ident  (&self $($args:tt)*) $(-> $ret:ty)* [where $($wheres:tt)+] {
-            $($body:tt)+
-        }
-        
-        $($rem:tt)*
-    ) => (
-        $(#[$fnmeta])*
-        fn $fnname (&self $($args)*) -> $crate::net::Request<$($ret)*> where $($wheres)+ ;
-        
-        method_proto!($($rem)*);
-    );
-    // Generics + where clause
-    (
-        $(#[$fnmeta:meta])*
-        fn $fnname:ident [$($generics:tt)+] (&self $($args:tt)*) $(-> $ret:ty)* [where $($wheres:tt)+] {
-            $($body:tt)+
-        }
-        
-        $($rem:tt)*
-    ) => (
-        $(#[$fnmeta])*
-        fn $fnname <$($generics)+> (&self $($args)*) -> $crate::net::Request<$($ret)*> where $($wheres)+;
-        
-        method_proto!($($rem)*);
-    );
-    // Empty end case for recursion
-    () => ();
+macro_rules! method_proto (
+    ($($body:tt)*) => (
+        parse_fn_decl!(without_block!(), $($body)*);
+    )
 );
 
 #[doc(hidden)]
 #[macro_export]
-macro_rules! method_impl(
+macro_rules! method_impl (
+    ($getadpt:expr; $($body:tt)*) => (
+        parse_fn_decl!(with_block!($getadpt; ), $($body)*);
+    )
+);
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! without_block (
     // Plain declaration
     (
-        $getadapt:expr;
-
-        $(#[$fnmeta:meta])*
-        fn $fnname:ident (&self $($args:tt)*) $(-> $ret:ty)* {
-            $($body:tt)+
-        }
-        
-        $($rem:tt)*
+        [$($proto:tt)+][(&self $($args:tt)*) -> $ret:ty][$($clause:tt)*][$blk:block]
     ) => (
-        $(#[$fnmeta])*
-        fn $fnname (&self $($args)*)  -> $crate::net::Request<$($ret)*> {
-            request_impl! {
-                $crate::get_adapter(self, $getadapt); $($body)+
-            }
-        }
-        
-        method_impl!($getadapt; $($rem)*);
+        $($proto)+ (&self $($args)*) -> $ret $($clause)*;
     );
-    // Generics
+);
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! with_block (
+    // Plain declaration
     (
-        $getadapt:expr;
-
-        $(#[$fnmeta:meta])*
-        fn $fnname:ident [$($generics:tt)+] (&self $($args:tt)*) $(-> $ret:ty)* {
-            $($body:tt)+
-        }
-        
-        $($rem:tt)*
+        $getadapt:expr; [$($proto:tt)+][(&self $($args:tt)*) -> $ret:ty][$($clause:tt)*][ { $($body:tt)+ } ]
     ) => (
-        $(#[$fnmeta])*
-        fn $fnname <$($generics)+> (&self $($args)*) -> $crate::net::Request<$($ret)*> {
+        $($proto)+ (&self $($args)*) -> $ret $($clause)* {
             request_impl! {
                 $crate::get_adapter(self, $getadapt); $($body)+
             }
         }
-        
-        method_impl!($getadapt; $($rem)*);
     );
-    // Where clause
-    (
-        $getadapt:expr;
+);
 
-        $(#[$fnmeta:meta])*
-        fn $fnname:ident  (&self $($args:tt)*) $(-> $ret:ty)* [where $($wheres:tt)+] {
-            $($body:tt)+
-        }
-        
-        $($rem:tt)*
-    ) => (
-        $(#[$fnmeta])*
-        fn $fnname (&self $($args)*) -> $crate::net::Request<$($ret)*> where $($wheres)+ {
-            request_impl! {
-                $crate::get_adapter(self, $getadapt); $($body)+
-            }
-        }
-        
-        method_impl!($getadapt; $($rem)*);
+#[doc(hidden)]
+#[macro_export]
+macro_rules! parse_fn_decl (
+    (@emit [$($b4gen:tt)+][$($constr:tt)*] $cb:ident ! ($($cbargs:tt)*), [$($sig:tt)+]{ clause: [$($clause:tt)*]}, {$($body:tt)+} $($rest:tt)*) => (
+        $cb!($($cbargs)* [$($b4gen)+ $($constr)*][$($sig)+][$($clause)*] [{ $($body)+ }]);
+        parse_fn_decl!($cb! ($($cbargs)*), $($rest)*);
     );
-    // Generics + Where clause
-    (
-        $getadapt:expr;
+    (@transform [$($b4gen:tt)+] $cb:ident ! ($($cbargs:tt)*), { constr: [$($constr:tt)*], $($other:tt)*}, $($rest:tt)+) => (
+        transform_sig! {
+            (@emit [$($b4gen)+][$($constr)*] $cb ! ($($cbargs)*), )
+            $($rest)+
+        }
+    );
+    (@generics [$($b4gen:tt)+] $cb:ident ! ($($cbargs:tt)*), [$($rest:tt)+]) => (
+        parse_generics_shim! {
+            { constr },
+            then parse_fn_decl ! (@transform [$($b4gen)+] $cb ! ($($cbargs)*), ),
+            $($rest)+
+        }
+    );
+    ($cb:ident ! ($($cbargs:tt)*), $(#[$meta:meta])* fn $fnname:ident $($rest:tt)+) => (
+        parse_fn_decl!(@generics [$(#[$meta])* fn $fnname] $cb ! ($($cbargs)*), [$($rest)+]);
+    );
+    ($cb:ident ! ($($cbargs:tt)*), $(#[$meta:meta])* pub fn $fnname:ident $($rest:tt)+) => (
+        parse_fn_decl!(@generics [$(#[$meta])* pub fn $fnname] $cb ! ($($cbargs)*), [$($rest)+]);
+    );
+    ($cb:ident ! ($($cbargs:tt)*), ) => ()
+);
 
-        $(#[$fnmeta:meta])*
-        fn $fnname:ident [$($generics:tt)+] (&self $($args:tt)*) $(-> $ret:ty)* [where $($wheres:tt)+] {
-            $($body:tt)+
-        }
-        
-        $($rem:tt)*
-    ) => (
-        $(#[$fnmeta])*
-        fn $fnname <$($generics)+> (&self $($args)*) -> $crate::net::Request<$($ret)*> where $($wheres)+ {
-            request_impl! {
-                $crate::get_adapter(self, $getadapt); $($body)+
-            }
-        }
-        
-        method_impl!($getadapt; $($rem)*);
+#[doc(hidden)]
+#[macro_export]
+macro_rules! transform_sig (
+    // Force return type
+    (($($preargs:tt)*) (&self $($args:tt)*) -!> $ret:ty {$($body:tt)*} $($rest:tt)* ) => (
+        parse_fn_decl!($($preargs)* [(&self $($args)*) -> $ret] { clause: []}, {$($body)*} $($rest)*)
     );
-    // Empty end-case for recursion
-    ($_getadapt:expr; ) => ();
+    (($($preargs:tt)*) (&self $($args:tt)*) -!> $ret:ty where $($rest:tt)+ ) => (
+        parse_where_shim! {
+            { clause },
+            then parse_fn_decl!($($preargs)* [(&self $($args)*) -> $ret] ),
+            where $($rest)+
+        }
+    );
+    (($($preargs:tt)*) (&self $($args:tt)*) -> $ret:ty {$($body:tt)*} $($rest:tt)*) => (
+        parse_fn_decl!($($preargs)* [(&self $($args)*) -> $crate::Request<$ret>]
+                       { clause: []}, {$($body)*} $($rest)*);
+    );
+    (($($preargs:tt)*) (&self $($args:tt)*) -> $ret:ty where $($rest:tt)+ ) => (
+        parse_where_shim! {
+            { clause },
+            then parse_fn_decl!($($preargs)* [(&self $($args)*) -> $crate::Request<$ret>] ),
+            where $($rest)+
+        }
+    );
+    (($($preargs:tt)*) (&self $($args:tt)*) {$($body:tt)*} $($rest:tt)*) => (
+        parse_fn_decl!($($preargs)* [(&self $($args)*) -> $crate::Request]
+                       { clause: []}, {$($body)*} $($rest)*);
+    );
+    (($($preargs:tt)*) (&self $($args:tt)*) where $($rest:tt)+ ) => (
+        parse_where_shim! {
+            { clause },
+            then parse_fn_decl!($($preargs)* [(&self $($args)*) -> $crate::Request] ),
+            where $($rest)+
+        }
+    );
 );
 
 #[doc(hidden)]
