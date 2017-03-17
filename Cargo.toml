@@ -42,6 +42,6 @@ serde_derive = "0.9"
 [features]
 default = ["serde-all"]
 serde-all = ["serde", "serde_json" ]
-nightly = ["multipart/nightly"]
+nightly = ["multipart/nightly", "clippy"]
 # Enable this when using the `#[service]` attribute from `anterofit_service_attr`
 service-attr = []
