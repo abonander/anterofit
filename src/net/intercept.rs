@@ -182,6 +182,7 @@ impl<S: AsRef<str> + Send + Sync + 'static> Interceptor for AppendUrl<S> {
 ///
 /// This will not overwrite previous query pairs with the same key; it is left
 /// to the server to decide which duplicate keys to keep.
+#[derive(Default)]
 pub struct AppendQuery(Vec<(Cow<'static, str>, Cow<'static, str>)>);
 
 impl AppendQuery {

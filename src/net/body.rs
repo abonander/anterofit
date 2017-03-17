@@ -357,12 +357,12 @@ enum FileField_ {
 }
 
 trait StreamField: Read + Send + 'static {
-    fn add_self(self: Box<Self>, name: String, filename: Option<String>, content_type: Option<Mime>, to: &mut Multipart);
+    fn add_self(self: Self, name: String, filename: Option<String>, content_type: Option<Mime>, to: &mut Multipart);
 }
 
 impl<T> StreamField for T where T: Read + Send + 'static {
-    fn add_self(self: Box<Self>, name: String, filename: Option<String>, content_type: Option<Mime>, to: &mut Multipart) {
-        to.add_stream(name, *self, filename, content_type);
+    fn add_self(self: Self, name: String, filename: Option<String>, content_type: Option<Mime>, to: &mut Multipart) {
+        to.add_stream(name, self, filename, content_type);
     }
 }
 

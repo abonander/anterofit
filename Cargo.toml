@@ -29,6 +29,8 @@ serde_json = { version = "0.9", optional = true }
 # Disabled until updated to serde 0.9
 # serde_xml = { version = "0.9.1", optional = true }
 
+clippy = { version = ">=0.0, <0.1", optional = true}
+
 [dependencies.multipart]
 version = "0.10"
 default-features = false
@@ -40,6 +42,6 @@ serde_derive = "0.9"
 [features]
 default = ["serde-all"]
 serde-all = ["serde", "serde_json" ]
-nightly = ["multipart/nightly"]
+nightly = ["multipart/nightly", "clippy"]
 # Enable this when using the `#[service]` attribute from `anterofit_service_attr`
 service-attr = []
