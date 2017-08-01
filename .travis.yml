@@ -2,7 +2,6 @@ language: rust
 cache: cargo
 sudo: false
 rust:
-  - 1.16.0
   - stable
   - nightly
 branches:
