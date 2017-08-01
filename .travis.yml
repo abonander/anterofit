@@ -2,7 +2,7 @@ language: rust
 cache: cargo
 sudo: false
 rust:
-  - 1.16
+  - 1.16.0
   - stable
   - nightly
 branches:
@@ -16,7 +16,7 @@ script:
       cargo build --verbose --features "nightly";
       cargo test --verbose --features "nightly";
       (cd service-attr && cargo test --verbose);
-      cargo build --verbose --features "nightly clippy"
+      cargo build --verbose --features "nightly clippy";
     fi
   - cargo build --verbose;
   - cargo test --verbose;
