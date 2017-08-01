@@ -141,8 +141,8 @@ impl RequestHead {
             vbuf.clear();
 
             // Errors here should be rare and usually indicate more serious problems.
-            let _ = write!(kbuf, "{}", key).expect("Error returned from Display::fmt()");
-            let _ = write!(vbuf, "{}", val).expect("Error returned from Display::fmt()");
+            write!(kbuf, "{}", key).expect("Error returned from Display::fmt()");
+            write!(vbuf, "{}", val).expect("Error returned from Display::fmt()");
 
             query_out.append_pair(&kbuf, &vbuf);
         }

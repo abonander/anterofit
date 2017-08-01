@@ -1,5 +1,7 @@
 //! Types which can take a boxed closure and execute it, preferably in the background.
 
+#![cfg_attr(feature="clippy", allow(boxed_local))]
+
 pub mod threaded;
 
 pub use mpmc::{Receiver, RecvIter, RecvIntoIter};

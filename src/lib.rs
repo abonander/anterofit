@@ -153,6 +153,10 @@
 //! the result will be available immediately. `Call` provides alternative methods wrapping
 //! `Future::poll()` and `Future::wait()` without external types so you
 //! have a choice over whether you want to use futures in your app or not.
+
+#![cfg_attr(feature="clippy", feature(plugin))]
+#![cfg_attr(feature="clippy", plugin(clippy))]
+#![cfg_attr(feature="clippy", deny(clippy))]
 #![warn(missing_docs)]
 #![cfg_attr(feature = "nightly", feature(specialization))]
 #![recursion_limit="100"]

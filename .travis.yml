@@ -2,24 +2,20 @@ language: rust
 cache: cargo
 sudo: false
 rust:
-  # FIXME: when 1.16 stable releases
-  # - 1.16
   - stable
-  - beta
   - nightly
-os:
-  - linux
-  # Mac takes too long to spin up sometimes
-  # - osx
 branches:
   except:
     - proc_macro
+matrix:
+  allow_failures:
+    - rust: nightly
 script:
   - if [ ${TRAVIS_RUST_VERSION} = "nightly" ]; then
       cargo build --verbose --features "nightly";
       cargo test --verbose --features "nightly";
-      cargo build --verbose --no-default-features --features "serde-all nightly";
       (cd service-attr && cargo test --verbose);
+      cargo build --verbose --features "nightly clippy";
     fi
   - cargo build --verbose;
   - cargo test --verbose;

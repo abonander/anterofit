@@ -95,7 +95,7 @@ Get started with our [User Guide](GUIDE.md)
 
 Or an in-depth look with our [Documentation](https://docs.rs/anterofit)
 
-###Setup
+### Setup
 
 #### [Serde](https://crates.io/crates/serde) and JSON serialization:
 
@@ -116,7 +116,7 @@ Crate Root:
 #[macro_use] extern crate serde_derive;
 ```
 
-####[`rustc-serialize`](https://crates.io/crates/rustc-serialize):
+#### [`rustc-serialize`](https://crates.io/crates/rustc-serialize):
 
 `Cargo.toml`:
 ```toml

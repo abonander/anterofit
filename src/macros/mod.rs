@@ -436,7 +436,7 @@ macro_rules! delegate_impl {
             method_impl!($getadapt; $($guts)*);
         }
 
-        impl_impl!($servicenm; [$($guts)*] $($rem)*);
+        delegate_impl!($servicenm; [$($guts)*] $($rem)*);
     );
     (
         $servicenm:ident; [$($guts:tt)*]
