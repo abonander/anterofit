@@ -32,7 +32,7 @@ impl<K: Display, V: Serialize> Serialize for super::PairMap<K, V> {
             key_buf.clear();
             write!(key_buf, "{}", key).expect("Error formatting key");
 
-            try!(map_s.serialize_entry(&key_buf, val));
+            map_s.serialize_entry(&key_buf, val)?;
         }
 
         map_s.end()
@@ -47,11 +47,11 @@ impl Error for ::Error {
 }
 
 impl super::Deserializer for super::FromStrDeserializer {
-    fn deserialize<T: Deserialize, R: Read>(&self, read: &mut R) -> ::Result<T> {
-        use self::serde::de::value::ValueDeserializer;
+    fn deserialize<T: Deserialize<'static>, R: Read>(&self, read: &mut R) -> ::Result<T> {
+        use self::serde::de::IntoDeserializer;
 
         let mut string = String::new();
-        let string = try!(read.read_to_string(&mut string));
+        let string = read.read_to_string(&mut string)?;
         T::deserialize(string.into_deserializer())
     }
 }

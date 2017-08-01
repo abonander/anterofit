@@ -6,6 +6,8 @@ use std::io::{self, Read};
 
 use serialize::{Deserialize, Deserializer};
 
+use serialize::serde::
+
 use ::Result;
 
 /// A trait describing types which can be converted from raw response bodies.
@@ -20,7 +22,7 @@ pub trait FromResponse: Send + Sized + 'static {
         where D: Deserializer;
 }
 
-impl<T> FromResponse for T where T: Deserialize + Send + 'static {
+impl<T> FromResponse for T where T: DeserializeOwned + Send + 'static {
     fn from_response<D>(des: &D, mut response: Response) -> Result<Self>
         where D: Deserializer {
         des.deserialize(&mut response)
@@ -71,7 +73,7 @@ pub struct WithRaw<T> {
     pub value: T,
 }
 
-impl<T> FromResponse for WithRaw<T> where T: Deserialize + Send + 'static {
+impl<T> FromResponse for WithRaw<T> where T: Deserialize<'static> + Send + 'static {
     fn from_response<D>(des: &D, mut response: Response) -> Result<Self>
         where D: Deserializer {
         let val = try!(des.deserialize(&mut response));
@@ -97,7 +99,7 @@ pub struct TryWithRaw<T> {
     pub result: Result<T>,
 }
 
-impl<T> FromResponse for TryWithRaw<T> where T: Deserialize + Send + 'static {
+impl<T> FromResponse for TryWithRaw<T> where T: Deserialize<'static> + Send + 'static {
     fn from_response<D>(des: &D, mut response: Response) -> Result<Self>
         where D: Deserializer {
         let res = des.deserialize(&mut response);

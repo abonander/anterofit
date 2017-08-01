@@ -16,26 +16,24 @@ license = "MIT OR Apache-2.0"
 [dependencies]
 crossbeam = "0.2"
 futures = "0.1"
-hyper = "0.9.12"
+hyper = "0.10"
 mime = ">= 0.2.2, < 0.3"
 parking_lot = "0.3.7"
 quick-error = "1.1.0"
 url = "1.0"
 
-rustc-serialize = { version = "0.3", optional = true }
-
-serde = { version = "0.9 ", optional = true }
-serde_json = { version = "0.9", optional = true }
+serde = { version = "1.0", optional = true }
+serde_json = { version = "1.0", optional = true }
 # Disabled until updated to serde 0.9
 # serde_xml = { version = "0.9.1", optional = true }
 
 [dependencies.multipart]
-version = "0.10"
+version = "0.12"
 default-features = false
 features = ["client", "hyper"]
 
 [dev-dependencies]
-serde_derive = "0.9"
+serde_derive = "1.0"
 
 [features]
 default = ["serde-all"]

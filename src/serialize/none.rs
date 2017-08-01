@@ -27,7 +27,7 @@ impl Serializer for NoSerializer {
 pub struct NoDeserializer;
 
 impl Deserializer for NoDeserializer {
-    fn deserialize<T: Deserialize, R: Read>(&self, _: &mut R) -> Result<T> {
+    fn deserialize<T: Deserialize<'static>, R: Read>(&self, _: &mut R) -> Result<T> {
         Err(NoSerializeError::Deserialize.into())
     }
 }

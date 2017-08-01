@@ -27,16 +27,6 @@ pub mod serde;
 #[cfg(feature = "serde")]
 pub use self::serde::*;
 
-#[cfg(feature = "rustc-serialize")]
-pub mod rustc;
-
-#[cfg(feature = "rustc-serialize")]
-pub use self::rustc::{
-    json,
-    Decodable as Deserialize,
-    Encodable as Serialize
-};
-
 /// A trait describing types which can concurrently serialize other types into byte-streams.
 pub trait Serializer: Send + Sync + 'static {
     /// Serialize `T` to `write`, returning any errors.
@@ -52,7 +42,7 @@ pub trait Serializer: Send + Sync + 'static {
 /// A trait describing types which can concurrently deserialize other types from byte-streams.
 pub trait Deserializer: Send + Sync + 'static {
     /// Deserialize `T` from `read`, returning the result.
-    fn deserialize<T: Deserialize, R: Read>(&self, read: &mut R) -> Result<T>;
+    fn deserialize<T: for<'a> Deserialize<'a>, R: Read>(&self, read: &mut R) -> Result<T>;
 }
 
 /// A deserializer which attempts to parse values from the response as a string.
