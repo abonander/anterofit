@@ -6,18 +6,15 @@ use mime::{self, Mime};
 
 use std::io::{Read, Write};
 
-use super::{Serialize, Deserialize};
+use super::{Serialize, DeserializeOwned};
 
-use super::serde::de::DeserializeOwned;
-
-use serialize;
 use ::{Error, Result};
 
 /// Serializer for JSON request bodies with compact output.
 #[derive(Clone, Debug, Default)]
 pub struct Serializer;
 
-impl serialize::Serializer for Serializer {
+impl super::Serializer for Serializer {
     fn serialize<T: Serialize, W: Write>(&self, val: &T, write: &mut W) -> Result<()> {
         Error::map_serialize(self::serde_json::to_writer(write, val))
     }
@@ -32,7 +29,7 @@ impl serialize::Serializer for Serializer {
 #[derive(Clone, Debug, Default)]
 pub struct PrettySerializer;
 
-impl serialize::Serializer for PrettySerializer {
+impl super::Serializer for PrettySerializer {
     fn serialize<T: Serialize, W: Write>(&self, val: &T, write: &mut W) -> Result<()> {
         Error::map_serialize(self::serde_json::to_writer_pretty(write, val))
     }
@@ -46,7 +43,7 @@ impl serialize::Serializer for PrettySerializer {
 #[derive(Clone, Debug, Default)]
 pub struct Deserializer;
 
-impl serialize::Deserializer for Deserializer {
+impl super::Deserializer for Deserializer {
     fn deserialize<T: DeserializeOwned, R: Read>(&self, read: &mut R) -> Result<T> {
         Error::map_deserialize(self::serde_json::from_reader(read))
     }

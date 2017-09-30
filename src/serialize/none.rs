@@ -2,7 +2,7 @@
 
 use std::io::{Read, Write};
 
-use super::{Serializer, Deserializer, Serialize, Deserialize};
+use super::{Serializer, Deserializer, Serialize, DeserializeOwned};
 
 use mime::Mime;
 
@@ -27,7 +27,7 @@ impl Serializer for NoSerializer {
 pub struct NoDeserializer;
 
 impl Deserializer for NoDeserializer {
-    fn deserialize<T: Deserialize<'static>, R: Read>(&self, _: &mut R) -> Result<T> {
+    fn deserialize<T: DeserializeOwned, R: Read>(&self, _: &mut R) -> Result<T> {
         Err(NoSerializeError::Deserialize.into())
     }
 }

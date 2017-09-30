@@ -2,11 +2,11 @@
 
 pub use hyper::client::Response;
 
+use serde::de::DeserializeOwned;
+
 use std::io::{self, Read};
 
-use serialize::{Deserialize, Deserializer};
-
-use serialize::serde::
+use serialize::{Deserializer};
 
 use ::Result;
 
@@ -73,10 +73,10 @@ pub struct WithRaw<T> {
     pub value: T,
 }
 
-impl<T> FromResponse for WithRaw<T> where T: Deserialize<'static> + Send + 'static {
+impl<T> FromResponse for WithRaw<T> where T: DeserializeOwned + Send + 'static {
     fn from_response<D>(des: &D, mut response: Response) -> Result<Self>
         where D: Deserializer {
-        let val = try!(des.deserialize(&mut response));
+        let val = des.deserialize(&mut response)?;
         Ok(WithRaw {
             raw: response,
             value: val
@@ -99,7 +99,7 @@ pub struct TryWithRaw<T> {
     pub result: Result<T>,
 }
 
-impl<T> FromResponse for TryWithRaw<T> where T: Deserialize<'static> + Send + 'static {
+impl<T> FromResponse for TryWithRaw<T> where T: DeserializeOwned + Send + 'static {
     fn from_response<D>(des: &D, mut response: Response) -> Result<Self>
         where D: Deserializer {
         let res = des.deserialize(&mut response);

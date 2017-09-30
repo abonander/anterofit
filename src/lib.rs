@@ -174,8 +174,7 @@ extern crate parking_lot;
 
 extern crate multipart;
 
-#[cfg(feature = "rustc-serialize")]
-extern crate rustc_serialize;
+pub extern crate serde;
 
 extern crate url;
 
