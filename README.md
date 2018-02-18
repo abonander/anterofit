@@ -84,7 +84,7 @@ fn fetch_posts(post_service: &PostService) {
 }
 ```
 
-Inspired by [Square's Retrofit](https://sqaure.github.io/retrofit), as referenced in the name, Anterofit is even
+Inspired by [Square's Retrofit](https://square.github.io/retrofit), as referenced in the name, Anterofit is even
 more strongly typed as everything that is feasible to check at compile-time, is. Runtime errors are,
 with few exceptions, reserved for error conditions that can only be discovered at runtime.
 
