@@ -19,4 +19,4 @@ script:
     fi
   - cargo build --verbose;
   - cargo test --verbose;
-  - cargo build --verbose --no-default-features --features serde-all
+  - cargo build --verbose

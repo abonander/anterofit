@@ -9,38 +9,24 @@ use mime::Mime;
 use std::fmt;
 use std::io::{Read, Write};
 
-use ::Result;
-
 pub mod none;
 
-// It'd be nice to support both of these at once but unfortunately that's incredibly
-// unwieldy without HKT (trust me, I tried).
+#[cfg(feature = "serde_json")]
+pub mod json;
 
-// Fortunately the traits in both crates have the same signatures (at least for now)
-// so they can be used interchangeably.
+#[cfg(feature = "serde_xml")]
+pub mod xml;
 
-// Until we have a way to describe these features as mutually exclusive, this will
-// have to do.
-#[cfg(feature = "serde")]
-pub mod serde;
+pub use serde::Serialize;
+pub use serde::de::DeserializeOwned as Deserialize;
+use serde::de::IntoDeserializer;
 
-#[cfg(feature = "serde")]
-pub use self::serde::*;
-
-#[cfg(feature = "rustc-serialize")]
-pub mod rustc;
-
-#[cfg(feature = "rustc-serialize")]
-pub use self::rustc::{
-    json,
-    Decodable as Deserialize,
-    Encodable as Serialize
-};
+use serde::ser::SerializeMap;
 
 /// A trait describing types which can concurrently serialize other types into byte-streams.
 pub trait Serializer: Send + Sync + 'static {
     /// Serialize `T` to `write`, returning any errors.
-    fn serialize<T: Serialize, W: Write>(&self, val: &T, write: &mut W) -> Result<()>;
+    fn serialize<T: Serialize, W: Write>(&self, val: &T, write: &mut W) -> ::Result<()>;
 
     /// Return the MIME type of the serialized content, if applicable.
     ///
@@ -52,7 +38,7 @@ pub trait Serializer: Send + Sync + 'static {
 /// A trait describing types which can concurrently deserialize other types from byte-streams.
 pub trait Deserializer: Send + Sync + 'static {
     /// Deserialize `T` from `read`, returning the result.
-    fn deserialize<T: Deserialize, R: Read>(&self, read: &mut R) -> Result<T>;
+    fn deserialize<T: Deserialize, R: Read>(&self, read: &mut R) -> ::Result<T>;
 }
 
 /// A deserializer which attempts to parse values from the response as a string.
@@ -104,6 +90,48 @@ impl<K: fmt::Debug, V: fmt::Debug> fmt::Debug for PairMap<K, V> {
         }
 
         debug.finish()
+    }
+}
+
+use serde::de::Error;
+
+use std::error::Error as StdError;
+use std::fmt::Display;
+
+/// JSON only allows string keys, so all keys are converted to strings.
+impl<K: Display, V: Serialize> Serialize for PairMap<K, V> {
+    fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error> where S: ::serde::Serializer,
+                                                                  S::SerializeMap: SerializeMap {
+        use std::fmt::Write;
+        let pairs = self.pairs();
+
+        let mut map_s = s.serialize_map(Some(pairs.len()))?;
+
+        let mut key_buf = String::new();
+
+        for &(ref key, ref val) in pairs {
+            key_buf.clear();
+            write!(key_buf, "{}", key).expect("Error formatting key");
+            map_s.serialize_entry(&key_buf, val)?;
+        }
+
+        map_s.end()
+    }
+}
+
+impl Error for ::Error {
+    fn custom<T: Display>(msg: T) -> Self {
+        let error: Box<StdError + Send + Sync> = msg.to_string().into();
+        ::Error::Deserialize(error)
+    }
+}
+
+impl Deserializer for FromStrDeserializer {
+    fn deserialize<T: Deserialize, R: Read>(&self, read: &mut R) -> ::Result<T> {
+
+        let mut string = String::new();
+        let string = read.read_to_string(&mut string)?;
+        T::deserialize(string.into_deserializer())
     }
 }
 
