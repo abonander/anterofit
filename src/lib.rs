@@ -174,8 +174,7 @@ extern crate parking_lot;
 
 extern crate multipart;
 
-#[cfg(feature = "rustc-serialize")]
-extern crate rustc_serialize;
+extern crate serde;
 
 extern crate url;
 
@@ -204,7 +203,7 @@ pub use hyper::Url;
 
 pub use adapter::{Adapter, AbsAdapter, AdapterBuilder, InterceptorMut};
 
-#[cfg(any(feature = "rustc-serialize", feature = "serde_json"))]
+#[cfg(feature = "serde_json")]
 pub use adapter::JsonAdapter;
 
 pub use net::body::RawBody;
