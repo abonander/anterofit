@@ -4,13 +4,15 @@
 // instead of `Deserialize` and `Serialize`, respectively.
 
 #[macro_use] extern crate anterofit;
+extern crate hyper_native_tls;
 #[macro_use] extern crate serde_derive;
 
 // The minimum imports needed to get this example working.
 //
 // You can glob-import if you like, but know that it will shadow `Result`
 // which may cause some confusing type-mismatch errors.
-use anterofit::{Adapter, Url};
+use anterofit::{Adapter, Url, hyper::{net::HttpsConnector, Client}};
+use hyper_native_tls::NativeTlsClient;
 
 #[derive(Debug, Deserialize)]
 struct Post {
@@ -69,8 +71,13 @@ fn main() {
     // Navigate to this URL in your browser for details. Very useful test API.
     let url = Url::parse("https://jsonplaceholder.typicode.com").unwrap();
 
+    let ssl = NativeTlsClient::new().unwrap();
+    let connector = HttpsConnector::new(ssl);
+    let client = Client::with_connector(connector);
+
     let adapter = Adapter::builder()
         .base_url(url)
+        .client(client)
         // When your REST API uses JSON in both requests and responses
         .serialize_json()
         .build();
