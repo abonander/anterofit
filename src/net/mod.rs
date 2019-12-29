@@ -8,11 +8,11 @@ pub use hyper::header::Headers;
 
 pub use hyper::header;
 
-pub use self::intercept::{Interceptor, Chain};
+pub use self::intercept::{Chain, Interceptor};
 
 pub use self::call::Call;
 
-pub use self::request::{RequestHead, RequestBuilder, Request};
+pub use self::request::{Request, RequestBuilder, RequestHead};
 
 pub use self::response::{FromResponse, Raw as RawResponse};
 
