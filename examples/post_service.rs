@@ -3,8 +3,10 @@
 // If you are using the `rustc-serialize` feature, use `RustcDecodable` and `RustcEncodable`
 // instead of `Deserialize` and `Serialize`, respectively.
 
-#[macro_use] extern crate anterofit;
-#[macro_use] extern crate serde_derive;
+#[macro_use]
+extern crate anterofit;
+#[macro_use]
+extern crate serde_derive;
 
 // The minimum imports needed to get this example working.
 //
@@ -17,7 +19,7 @@ struct Post {
     pub userid: Option<u64>,
     pub id: u64,
     pub title: String,
-    pub body: String
+    pub body: String,
 }
 
 /// Used to create a new Post.
@@ -87,12 +89,14 @@ fn main() {
 
 /// Create a new Post.
 fn create_post<P: PostService>(post_service: &P) {
-    let post = post_service.new_post(42, "Hello", "World!")
+    let post = post_service
+        .new_post(42, "Hello", "World!")
         // If you don't want to block, the return value of exec() can be used as a Future
         // to poll for the result. However, it does shadow a couple methods of Future
         // so that you don't have to import the trait to use them.
         // See the docs of Call for more info.
-        .exec().block()
+        .exec()
+        .block()
         .unwrap();
 
     println!("Created post: {:?}", post);
@@ -101,7 +105,8 @@ fn create_post<P: PostService>(post_service: &P) {
 /// Fetch the top 3 posts in the database.
 // Service traits can be object-safe
 fn fetch_posts(post_service: &PostService) {
-    let posts = post_service.get_posts()
+    let posts = post_service
+        .get_posts()
         // Shorthand for .exec().wait(), but executes the request on the current thread.
         .exec_here()
         .unwrap();
@@ -112,8 +117,14 @@ fn fetch_posts(post_service: &PostService) {
 }
 
 fn user_posts(post_service: &PostService) {
-    post_service.posts_by_user(1)
+    post_service
+        .posts_by_user(1)
         // This will be executed asynchronously when the request is completed
-        .on_complete(|posts| for post in posts { println!("User post: {:?}", post); })
-        .exec().ignore();
+        .on_complete(|posts| {
+            for post in posts {
+                println!("User post: {:?}", post);
+            }
+        })
+        .exec()
+        .ignore();
 }

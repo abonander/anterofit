@@ -10,8 +10,7 @@ use std::io::Read;
 use super::Deserialize;
 
 use serialize;
-use ::{Error, Result};
-
+use {Error, Result};
 
 /// Deserializer for pulling values from XML responses.
 #[derive(Clone, Debug, Default)]

@@ -34,16 +34,23 @@ pub trait Interceptor: Send + Sync + 'static {
     fn intercept(&self, req: &mut RequestHead);
 
     /// Chain `self` with `then`, invoking `self` then `then` for each request.
-    fn chain<I>(self, then: I) -> Chain<Self, I> where Self: Sized, I: Interceptor {
+    fn chain<I>(self, then: I) -> Chain<Self, I>
+    where
+        Self: Sized,
+        I: Interceptor,
+    {
         Chain(self, then)
     }
 
     /// Chain `self` with two more interceptors.
     ///
     /// Saves a level in debug printing, mainly.
-    fn chain2<I1, I2>(self, then: I1, after: I2) -> Chain2<Self, I1, I2> where Self: Sized,
-                                                       I1: Interceptor, I2: Interceptor {
-
+    fn chain2<I1, I2>(self, then: I1, after: I2) -> Chain2<Self, I1, I2>
+    where
+        Self: Sized,
+        I1: Interceptor,
+        I2: Interceptor,
+    {
         Chain2(self, then, after)
     }
 
@@ -54,12 +61,18 @@ pub trait Interceptor: Send + Sync + 'static {
 
     /// Overridden by `NoIntercept`
     #[doc(hidden)]
-    fn into_opt_obj(self) -> Option<Arc<Interceptor>> where Self: Sized {
+    fn into_opt_obj(self) -> Option<Arc<Interceptor>>
+    where
+        Self: Sized,
+    {
         Some(Arc::new(self))
     }
 }
 
-impl<F> Interceptor for F where F: Fn(&mut RequestHead) + Send + Sync + 'static {
+impl<F> Interceptor for F
+where
+    F: Fn(&mut RequestHead) + Send + Sync + 'static,
+{
     fn intercept(&self, req: &mut RequestHead) {
         (*self)(req)
     }
@@ -151,9 +164,7 @@ impl<S: AsRef<str> + Send + Sync + 'static> Interceptor for PrependUrl<S> {
     }
 
     fn debug(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.debug_tuple("PrependUrl")
-            .field(&self.0.as_ref())
-            .finish()
+        f.debug_tuple("PrependUrl").field(&self.0.as_ref()).finish()
     }
 }
 
@@ -170,9 +181,7 @@ impl<S: AsRef<str> + Send + Sync + 'static> Interceptor for AppendUrl<S> {
     }
 
     fn debug(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.debug_tuple("AppendUrl")
-            .field(&self.0.as_ref())
-            .finish()
+        f.debug_tuple("AppendUrl").field(&self.0.as_ref()).finish()
     }
 }
 
@@ -197,7 +206,10 @@ impl AppendQuery {
     ///
     /// `key` and `val` can be any of: `String`, `&'static str` or `Cow<'static, str>`.
     pub fn pair<K, V>(mut self, key: K, val: V) -> Self
-        where K: Into<Cow<'static, str>>, V: Into<Cow<'static, str>> {
+    where
+        K: Into<Cow<'static, str>>,
+        V: Into<Cow<'static, str>>,
+    {
         self.pair_mut(key, val);
         self
     }
@@ -206,7 +218,10 @@ impl AppendQuery {
     ///
     /// `key` and `val` can be any of: `String`, `&'static str` or `Cow<'static, str>`.
     pub fn pair_mut<K, V>(&mut self, key: K, val: V) -> &mut Self
-        where K: Into<Cow<'static, str>>, V: Into<Cow<'static, str>> {
+    where
+        K: Into<Cow<'static, str>>,
+        V: Into<Cow<'static, str>>,
+    {
         self.0.push((key.into(), val.into()));
         self
     }
@@ -218,7 +233,9 @@ impl Interceptor for AppendQuery {
     }
 
     fn debug(&self, f: &mut fmt::Formatter) -> fmt::Result {
-         f.debug_map().entries(self.0.iter().map(|&(ref k, ref v)| (&**k, &**v))).finish()
+        f.debug_map()
+            .entries(self.0.iter().map(|&(ref k, ref v)| (&**k, &**v)))
+            .finish()
     }
 }
 

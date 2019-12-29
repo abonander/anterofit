@@ -15,9 +15,7 @@ impl MultiThread {
     ///
     /// The background threads will not be spawned until `Executor::start()` is called.
     pub fn new(threads: usize) -> Self {
-        MultiThread {
-            threads: threads
-        }
+        MultiThread { threads: threads }
     }
 }
 
@@ -30,7 +28,7 @@ impl Executor for MultiThread {
     /// ## Panics
     /// If a worker thread failed to spawn.
     fn start(self, recv: Receiver) {
-        for thread in 0 .. self.threads {
+        for thread in 0..self.threads {
             spawn_thread(thread, recv.clone());
         }
     }
@@ -64,7 +62,7 @@ impl Executor for SingleThread {
 
 struct Sentinel {
     thread: usize,
-    recv: Receiver
+    recv: Receiver,
 }
 
 impl Drop for Sentinel {
@@ -78,15 +76,15 @@ impl Drop for Sentinel {
 fn spawn_thread(thread: usize, recv: Receiver) {
     let sentinel = Sentinel {
         thread: thread,
-        recv: recv
+        recv: recv,
     };
 
-        let _ = Builder::new()
+    let _ = Builder::new()
         .name(format!("anterofit_worker_{}", thread))
-        .spawn(move ||
+        .spawn(move || {
             for exec in &sentinel.recv {
                 exec.exec();
             }
-        )
+        })
         .expect("Failed to spawn Anterofit worker thread");
 }

@@ -6,10 +6,10 @@ use mime::{self, Mime};
 
 use std::io::{Read, Write};
 
-use super::{Serialize, Deserialize};
+use super::{Deserialize, Serialize};
 
 use serialize;
-use ::{Error, Result};
+use {Error, Result};
 
 /// Serializer for JSON request bodies with compact output.
 #[derive(Clone, Debug, Default)]
