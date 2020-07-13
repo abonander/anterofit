@@ -18,9 +18,9 @@ pub type MultipartError = ::multipart::client::lazy::LazyIoError<'static>;
 use net::request::RequestHead;
 use serialize::none::NoSerializeError;
 
-use std::io::Error as IoError;
 use std::error::Error as StdError;
 use std::fmt;
+use std::io::Error as IoError;
 
 quick_error! {
     /// The error type for this crate.
@@ -123,7 +123,10 @@ impl Error {
 }
 
 /// Flatten a `Result` of a `Result` where the outer's error type is convertible to `anterofit::Result`.
-pub fn flatten_res<T, E>(res: Result<Result<T, Error>, E>) -> Result<T, Error> where Error: From<E> {
+pub fn flatten_res<T, E>(res: Result<Result<T, Error>, E>) -> Result<T, Error>
+where
+    Error: From<E>,
+{
     res?
 }
 

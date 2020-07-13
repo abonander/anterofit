@@ -4,17 +4,17 @@ pub use mime_::Mime;
 
 /// `application/octet-stream`
 pub fn octet_stream() -> Mime {
-    mime!(Application/OctetStream)
+    mime!(Application / OctetStream)
 }
 
 /// `application/json`
 pub fn json() -> Mime {
-    mime!(Application/Json)
+    mime!(Application / Json)
 }
 
 /// `application/www-form-urlencoded`
 pub fn form_urlencoded() -> Mime {
-    mime!(Application/WwwFormUrlEncoded)
+    mime!(Application / WwwFormUrlEncoded)
 }
 
 /// `multipart/form-data; boundary={boundary}`

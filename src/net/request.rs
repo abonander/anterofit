@@ -1,12 +1,12 @@
 //! Types for constructing and issuing HTTP requests.
 
-use hyper::client::{Client, Response, RequestBuilder as NetRequestBuilder};
-use hyper::header::{Headers, Header, HeaderFormat, ContentType};
+use hyper::client::{Client, RequestBuilder as NetRequestBuilder, Response};
+use hyper::header::{ContentType, Header, HeaderFormat, Headers};
 use hyper::method::Method as HyperMethod;
 
-use url::Url;
 use url::form_urlencoded::Serializer as FormUrlEncoded;
 use url::percent_encoding::{utf8_percent_encode, DEFAULT_ENCODE_SET};
+use url::Url;
 
 use std::borrow::{Borrow, Cow};
 use std::fmt::{self, Write};
@@ -16,7 +16,7 @@ use adapter::{AbsAdapter, AdapterConsts};
 
 use mpmc::Sender;
 
-use net::body::{Body, EmptyFields, EagerBody, RawBody};
+use net::body::{Body, EagerBody, EmptyFields, RawBody};
 
 use net::call::Call;
 
@@ -28,9 +28,9 @@ use net::response::FromResponse;
 
 use executor::ExecBox;
 
-use serialize::{Serializer, Deserializer};
+use serialize::{Deserializer, Serializer};
 
-use ::Result;
+use Result;
 
 /// The request header, containing all the information needed to initialize a request.
 #[derive(Debug)]
@@ -38,7 +38,7 @@ pub struct RequestHead {
     url: Cow<'static, str>,
     query: String,
     method: HyperMethod,
-    headers: Headers
+    headers: Headers,
 }
 
 impl RequestHead {
@@ -83,7 +83,9 @@ impl RequestHead {
     /// Adding a query segment via this method will not work as `?` and `=` will be encoded. Use
     /// `query()` instead to add query pairs.
     pub fn append_url<A: AsRef<str>>(&mut self, append: A) -> &mut Self {
-        self.url.to_mut().extend(utf8_percent_encode(append.as_ref(), DEFAULT_ENCODE_SET));
+        self.url
+            .to_mut()
+            .extend(utf8_percent_encode(append.as_ref(), DEFAULT_ENCODE_SET));
         self
     }
 
@@ -128,7 +130,12 @@ impl RequestHead {
     /// ##Panics
     /// If an error is returned from `<K as Display>::fmt()` or `<V as Display>::fmt()`.
     pub fn query<Q, P, K, V>(&mut self, query: Q) -> &mut Self
-    where Q: IntoIterator<Item=P>, P: Borrow<(K, V)>, K: fmt::Display, V: fmt::Display {
+    where
+        Q: IntoIterator<Item = P>,
+        P: Borrow<(K, V)>,
+        K: fmt::Display,
+        V: fmt::Display,
+    {
         let mut query_out = FormUrlEncoded::new(mem::replace(&mut self.query, String::new()));
 
         let mut kbuf = String::new();
@@ -159,7 +166,11 @@ impl RequestHead {
     ///
     /// Finally, `client` will be used to create the `RequestBuilder` and the contained headers
     /// will be added.
-    pub fn init_request<'c>(&self, base_url: Option<&Url>, client: &'c Client) -> Result<NetRequestBuilder<'c>> {
+    pub fn init_request<'c>(
+        &self,
+        base_url: Option<&Url>,
+        client: &'c Client,
+    ) -> Result<NetRequestBuilder<'c>> {
         let mut url = if let Some(base_url) = base_url {
             base_url.join(&self.url)?
         } else {
@@ -169,7 +180,9 @@ impl RequestHead {
         url.set_query(Some(&self.query));
 
         // This `.clone()` should be zero-cost, we don't expose Method::Extension at all.
-        Ok(client.request(self.method.clone(), url).headers(self.headers.clone()))
+        Ok(client
+            .request(self.method.clone(), url)
+            .headers(self.headers.clone()))
     }
 
     /// Get the current URL of this request.
@@ -210,7 +223,10 @@ pub struct RequestBuilder<'a, A: 'a + ?Sized, M, B> {
     adapter: &'a A,
 }
 
-impl<'a, A: 'a + ?Sized, M> RequestBuilder<'a, A, M, EmptyFields> where M: Method {
+impl<'a, A: 'a + ?Sized, M> RequestBuilder<'a, A, M, EmptyFields>
+where
+    M: Method,
+{
     /// Create a new request builder with the given method and URL.
     ///
     /// `url` can be `String` or `&'static str`.
@@ -243,7 +259,9 @@ impl<'a, A: 'a + ?Sized, M, B> RequestBuilder<'a, A, M, B> {
     ///
     /// `try!()` will work in this closure.
     pub fn apply<F, B_>(self, functor: F) -> Result<RequestBuilder<'a, A, M, B_>>
-    where F: FnOnce(Self) -> Result<RequestBuilder<'a, A, M, B_>> {
+    where
+        F: FnOnce(Self) -> Result<RequestBuilder<'a, A, M, B_>>,
+    {
         functor(self)
     }
 
@@ -258,12 +276,16 @@ impl<'a, A: 'a + ?Sized, M, B> RequestBuilder<'a, A, M, B> {
                 body: self.body,
                 adapter: self.adapter,
             },
-            old_method
+            old_method,
         )
     }
 }
 
-impl<'a, A: 'a + ?Sized, M, B> RequestBuilder<'a, A, M, B> where A: AbsAdapter, M: TakesBody {
+impl<'a, A: 'a + ?Sized, M, B> RequestBuilder<'a, A, M, B>
+where
+    A: AbsAdapter,
+    M: TakesBody,
+{
     /// Set a body to be sent with the request.
     ///
     /// Generally, `GET` and `DELETE` are not to have bodies
@@ -284,23 +306,38 @@ impl<'a, A: 'a + ?Sized, M, B> RequestBuilder<'a, A, M, B> where A: AbsAdapter, 
     ///
     /// ##Panics
     /// If this is a GET request (cannot have a body).
-    pub fn body_eager<B_>(self, body: B_)
-        -> Result<RequestBuilder<'a, A, M, RawBody<<B_ as EagerBody>::Readable>>>
-        where B_: EagerBody {
-
-        let body = body.into_readable(&self.adapter.ref_consts().serializer)?.into();
+    pub fn body_eager<B_>(
+        self,
+        body: B_,
+    ) -> Result<RequestBuilder<'a, A, M, RawBody<<B_ as EagerBody>::Readable>>>
+    where
+        B_: EagerBody,
+    {
+        let body = body
+            .into_readable(&self.adapter.ref_consts().serializer)?
+            .into();
         Ok(self.body(body))
     }
 }
 
-impl<'a, A: 'a + ?Sized, M, B> RequestBuilder<'a, A, M, B> where A: AbsAdapter {
+impl<'a, A: 'a + ?Sized, M, B> RequestBuilder<'a, A, M, B>
+where
+    A: AbsAdapter,
+{
     /// Prepare a `Request` to be executed with the parameters supplied in this builder.
     ///
     /// This request will need to be executed (using `exec()` or `exec_here()`) before anything
     /// else is done. As much work as possible will be relegated to the adapter's executor.
-    pub fn build<T>(self) -> Request<'a, T> where B: Body, T: FromResponse {
+    pub fn build<T>(self) -> Request<'a, T>
+    where
+        B: Body,
+        T: FromResponse,
+    {
         let RequestBuilder {
-            adapter, head, method: _method, body
+            adapter,
+            head,
+            method: _method,
+            body,
         } = self;
 
         let consts = adapter.consts();
@@ -378,7 +415,10 @@ impl<'a, T> Request<'a, T> {
     }
 }
 
-impl<'a, T> Request<'a, T> where T: Send + 'static {
+impl<'a, T> Request<'a, T>
+where
+    T: Send + 'static,
+{
     /// Execute this request on the adapter's executor, returning a type which can
     /// be polled for the result.
     pub fn exec(self) -> Call<T> {
@@ -404,7 +444,10 @@ impl<'a, T> Request<'a, T> where T: Send + 'static {
     /// issue and subsequent requests shouldn't be affected, but it may be harder to debug
     /// without knowing which request caused the panic.
     pub fn on_complete<F, R>(self, on_complete: F) -> Request<'a, R>
-    where F: FnOnce(T) -> R + Send + 'static, R: Send + 'static {
+    where
+        F: FnOnce(T) -> R + Send + 'static,
+        R: Send + 'static,
+    {
         self.on_result(|res| res.map(on_complete))
     }
 
@@ -428,7 +471,10 @@ impl<'a, T> Request<'a, T> where T: Send + 'static {
     /// If the result is immediately available, panics in `on_result` will occur on the
     /// current thread.
     pub fn on_result<F, R>(self, on_result: F) -> Request<'a, R>
-    where F: FnOnce(Result<T>) -> Result<R> + Send + 'static, R: Send + 'static {
+    where
+        F: FnOnce(Result<T>) -> Result<R> + Send + 'static,
+        R: Send + 'static,
+    {
         let Request { exec, call } = self;
 
         if call.is_available() {
@@ -436,7 +482,8 @@ impl<'a, T> Request<'a, T> where T: Send + 'static {
             return Request::immediate(res);
         }
 
-        let ExecRequest { exec, sender } = exec.expect("`self.exec` was `None` when it shouldn't be");
+        let ExecRequest { exec, sender } =
+            exec.expect("`self.exec` was `None` when it shouldn't be");
 
         let (mut guard, new_call) = super::call::oneshot(None);
 
@@ -445,10 +492,8 @@ impl<'a, T> Request<'a, T> where T: Send + 'static {
             exec: Box::new(move || {
                 exec.exec();
 
-                guard.complete(
-                    on_result(call.block())
-                );
-            })
+                guard.complete(on_result(call.block()));
+            }),
         };
 
         Request {
@@ -458,8 +503,17 @@ impl<'a, T> Request<'a, T> where T: Send + 'static {
     }
 }
 
-fn exec_request<S, D, B>(consts: &AdapterConsts<S, D>, interceptor: Option<&Interceptor>, head: &mut RequestHead, body: B) -> Result<Response>
-where S: Serializer, D: Deserializer, B: Body {
+fn exec_request<S, D, B>(
+    consts: &AdapterConsts<S, D>,
+    interceptor: Option<&Interceptor>,
+    head: &mut RequestHead,
+    body: B,
+) -> Result<Response>
+where
+    S: Serializer,
+    D: Deserializer,
+    B: Body,
+{
     if let Some(interceptor) = interceptor {
         interceptor.intercept(head);
     }
@@ -471,7 +525,9 @@ where S: Serializer, D: Deserializer, B: Body {
     }
 
     head.init_request(consts.base_url.as_ref(), &consts.client)?
-        .body(&mut readable.readable).send().map_err(Into::into)
+        .body(&mut readable.readable)
+        .send()
+        .map_err(Into::into)
 }
 
 // FIXME: stable in 1.16

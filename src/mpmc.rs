@@ -9,14 +9,12 @@ use std::sync::Arc;
 use executor::ExecBox;
 
 pub fn channel() -> (Sender, Receiver) {
-    let inner = Arc::new(
-        Inner {
-            queue: SegQueue::new(),
-            mutex: Mutex::new(()),
-            cvar: Condvar::new(),
-            closed: AtomicBool::new(false)
-        }
-    );
+    let inner = Arc::new(Inner {
+        queue: SegQueue::new(),
+        mutex: Mutex::new(()),
+        cvar: Condvar::new(),
+        closed: AtomicBool::new(false),
+    });
 
     let inner_ = inner.clone();
 

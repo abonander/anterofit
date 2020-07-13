@@ -17,9 +17,9 @@ pub mod json;
 #[cfg(feature = "serde_xml")]
 pub mod xml;
 
-pub use serde::Serialize;
 pub use serde::de::DeserializeOwned as Deserialize;
 use serde::de::IntoDeserializer;
+pub use serde::Serialize;
 
 use serde::ser::SerializeMap;
 
@@ -55,9 +55,7 @@ pub struct PairMap<K, V> {
 impl<K, V> PairMap<K, V> {
     /// Create an empty series.
     pub fn new() -> Self {
-        PairMap {
-            pairs: Vec::new()
-        }
+        PairMap { pairs: Vec::new() }
     }
 
     /// Add a key-value pair to the end of this series.
@@ -100,8 +98,11 @@ use std::fmt::Display;
 
 /// JSON only allows string keys, so all keys are converted to strings.
 impl<K: Display, V: Serialize> Serialize for PairMap<K, V> {
-    fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error> where S: ::serde::Serializer,
-                                                                  S::SerializeMap: SerializeMap {
+    fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
+    where
+        S: ::serde::Serializer,
+        S::SerializeMap: SerializeMap,
+    {
         use std::fmt::Write;
         let pairs = self.pairs();
 
@@ -128,7 +129,6 @@ impl Error for ::Error {
 
 impl Deserializer for FromStrDeserializer {
     fn deserialize<T: Deserialize, R: Read>(&self, read: &mut R) -> ::Result<T> {
-
         let mut string = String::new();
         let string = read.read_to_string(&mut string)?;
         T::deserialize(string.into_deserializer())

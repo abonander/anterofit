@@ -66,12 +66,14 @@ macro_rules! request_impl {
 /// ```
 #[macro_export]
 macro_rules! force_body {
-    ($expr:expr) => (
-        move | builder | {
+    ($expr:expr) => {
+        move |builder| {
             let (builder, method) = builder.swap_method(::anterofit::net::method::ForceBody);
-            builder.apply($expr).map(move |builder| builder.swap_method(method).0)
+            builder
+                .apply($expr)
+                .map(move |builder| builder.swap_method(method).0)
         }
-    )
+    };
 }
 
 /// Serialize the given value as the request body.
@@ -242,12 +244,12 @@ macro_rules! fields {
 #[doc(hidden)]
 #[macro_export]
 macro_rules! field {
-    ($key:expr, $val:expr) => (
+    ($key:expr, $val:expr) => {
         move |fields| $crate::net::body::AddField::add_to($val, $key, fields)
-    );
-    ($keyval:expr, ) => (
+    };
+    ($keyval:expr, ) => {
         move |fields| $crate::net::body::AddField::add_to($keyval, stringify!($keyval), fields)
-    )
+    };
 }
 
 /// A field value for anything that is `Read + Send + 'static`.
@@ -354,18 +356,18 @@ macro_rules! query {
 /// method body.
 #[macro_export]
 macro_rules! map_builder {
-    (|$builder:ident| $expr:expr) => (
+    (|$builder:ident| $expr:expr) => {
         |$builder| Ok($expr)
-    );
-    (move |$builder:ident| $expr:expr) => (
+    };
+    (move |$builder:ident| $expr:expr) => {
         move |$builder| Ok($expr)
-    );
-    (|mut $builder:ident| $expr:expr) => (
+    };
+    (|mut $builder:ident| $expr:expr) => {
         |mut $builder| Ok($expr)
-    );
-    (move |mut $builder:ident| $expr:expr) => (
+    };
+    (move |mut $builder:ident| $expr:expr) => {
         move |mut $builder| Ok($expr)
-    );
+    };
 }
 
 /// Use in a service body to access the builder without consuming it.
@@ -441,9 +443,19 @@ macro_rules! with_builder {
 #[doc(hidden)]
 #[macro_export]
 macro_rules! http_verb {
-    (GET) => ($crate::net::method::Get);
-    (POST) => ($crate::net::method::Post);
-    (PUT) => ($crate::net::method::Put);
-    (PATCH) => ($crate::net::method::Patch);
-    (DELETE) => ($crate::net::method::Delete);
+    (GET) => {
+        $crate::net::method::Get
+    };
+    (POST) => {
+        $crate::net::method::Post
+    };
+    (PUT) => {
+        $crate::net::method::Put
+    };
+    (PATCH) => {
+        $crate::net::method::Patch
+    };
+    (DELETE) => {
+        $crate::net::method::Delete
+    };
 }
