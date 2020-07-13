@@ -29,14 +29,14 @@ pub struct Sender(Arc<Inner>);
 pub struct Receiver(Arc<Inner>);
 
 struct Inner {
-    queue: SegQueue<Box<ExecBox>>,
+    queue: SegQueue<Box<dyn ExecBox>>,
     mutex: Mutex<()>,
     cvar: Condvar,
     closed: AtomicBool,
 }
 
 impl Sender {
-    pub fn send(&self, exec: Box<ExecBox>) {
+    pub fn send(&self, exec: Box<dyn ExecBox>) {
         self.0.queue.push(exec);
         self.0.cvar.notify_all();
     }
@@ -58,7 +58,7 @@ impl Receiver {
     /// Poll the queue, blocking if it is empty.
     ///
     /// Returns `None` when the sending half of the queue is closed.
-    pub fn recv(&self) -> Option<Box<ExecBox>> {
+    pub fn recv(&self) -> Option<Box<dyn ExecBox>> {
         loop {
             if let Some(val) = self.0.queue.try_pop() {
                 // Wake another thread so it can check if there's more work in the queue
@@ -91,7 +91,7 @@ impl Clone for Receiver {
 }
 
 impl<'a> IntoIterator for &'a Receiver {
-    type Item = Box<ExecBox>;
+    type Item = Box<dyn ExecBox>;
     type IntoIter = RecvIter<'a>;
 
     fn into_iter(self) -> Self::IntoIter {
@@ -100,7 +100,7 @@ impl<'a> IntoIterator for &'a Receiver {
 }
 
 impl IntoIterator for Receiver {
-    type Item = Box<ExecBox>;
+    type Item = Box<dyn ExecBox>;
     type IntoIter = RecvIntoIter;
 
     fn into_iter(self) -> Self::IntoIter {
@@ -112,7 +112,7 @@ impl IntoIterator for Receiver {
 pub struct RecvIntoIter(Receiver);
 
 impl Iterator for RecvIntoIter {
-    type Item = Box<ExecBox>;
+    type Item = Box<dyn ExecBox>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.0.recv()
@@ -123,7 +123,7 @@ impl Iterator for RecvIntoIter {
 pub struct RecvIter<'a>(&'a Receiver);
 
 impl<'a> Iterator for RecvIter<'a> {
-    type Item = Box<ExecBox>;
+    type Item = Box<dyn ExecBox>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.0.recv()

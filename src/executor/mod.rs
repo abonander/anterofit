@@ -25,7 +25,7 @@ pub trait ExecBox: Send + 'static {
     fn exec(self: Box<Self>);
 }
 
-impl ExecBox {
+impl dyn ExecBox {
     /// Create a new `ExecBox` which does nothing when called.
     ///
     /// Since it is zero-sized, this call should not allocate.

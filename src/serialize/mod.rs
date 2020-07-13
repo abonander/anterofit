@@ -122,7 +122,7 @@ impl<K: Display, V: Serialize> Serialize for PairMap<K, V> {
 
 impl Error for ::Error {
     fn custom<T: Display>(msg: T) -> Self {
-        let error: Box<StdError + Send + Sync> = msg.to_string().into();
+        let error: Box<dyn StdError + Send + Sync> = msg.to_string().into();
         ::Error::Deserialize(error)
     }
 }

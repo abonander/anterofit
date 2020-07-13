@@ -366,7 +366,7 @@ where
 
 struct ExecRequest<'a> {
     sender: &'a Sender,
-    exec: Box<ExecBox>,
+    exec: Box<dyn ExecBox>,
 }
 
 impl<'a> ExecRequest<'a> {
@@ -505,7 +505,7 @@ where
 
 fn exec_request<S, D, B>(
     consts: &AdapterConsts<S, D>,
-    interceptor: Option<&Interceptor>,
+    interceptor: Option<&dyn Interceptor>,
     head: &mut RequestHead,
     body: B,
 ) -> Result<Response>

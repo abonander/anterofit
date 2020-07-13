@@ -236,7 +236,7 @@ where
 }
 
 /// A mutator for modifying the `Interceptor` of an `Adapter`.
-pub struct InterceptorMut<'a>(&'a mut Option<Arc<Interceptor>>);
+pub struct InterceptorMut<'a>(&'a mut Option<Arc<dyn Interceptor>>);
 
 impl<'a> InterceptorMut<'a> {
     /// Remove the interceptor from the adapter.
@@ -311,7 +311,7 @@ pub struct AdapterConsts<S, D> {
 /// Public but not accessible
 pub struct Adapter_<S, D> {
     consts: Arc<AdapterConsts<S, D>>,
-    interceptor: Option<Arc<Interceptor>>,
+    interceptor: Option<Arc<dyn Interceptor>>,
 }
 
 impl<S, D> Clone for Adapter_<S, D> {
@@ -353,7 +353,7 @@ pub trait PrivAdapter: Send + 'static {
 
     fn consts(&self) -> Arc<AdapterConsts<Self::Ser, Self::De>>;
 
-    fn interceptor(&self) -> Option<Arc<Interceptor>>;
+    fn interceptor(&self) -> Option<Arc<dyn Interceptor>>;
 }
 
 impl<S, D> AbsAdapter for Adapter<S, D>
@@ -379,7 +379,7 @@ where
         self.inner.consts.clone()
     }
 
-    fn interceptor(&self) -> Option<Arc<Interceptor>> {
+    fn interceptor(&self) -> Option<Arc<dyn Interceptor>> {
         self.inner.interceptor.clone()
     }
 }
@@ -407,7 +407,7 @@ where
         self.consts.clone()
     }
 
-    fn interceptor(&self) -> Option<Arc<Interceptor>> {
+    fn interceptor(&self) -> Option<Arc<dyn Interceptor>> {
         self.interceptor.clone()
     }
 }

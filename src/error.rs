@@ -45,13 +45,13 @@ quick_error! {
             description(e.description())
         }
         /// Errors that occur during serialization.
-        Serialize(e: Box<StdError + Send + 'static>) {
+        Serialize(e: Box<dyn StdError + Send + 'static>) {
             cause(&**e)
             description(e.description())
         }
 
         /// Errors that occur during deserialization.
-        Deserialize(e: Box<StdError + Send + 'static>) {
+        Deserialize(e: Box<dyn StdError + Send + 'static>) {
             cause(&**e)
             description(e.description())
         }
@@ -80,7 +80,7 @@ quick_error! {
             description(e.description())
         }
         /// The miscellaneous error type, can be anything.
-        Other(e: Box<StdError + Send + 'static>){
+        Other(e: Box<dyn StdError + Send + 'static>){
             from()
             cause(&**e)
             description(e.description())
@@ -117,7 +117,7 @@ impl Error {
     }
 
     /// Create a value of `Error::Deserialize`
-    pub fn deserialize<E: Into<Box<StdError + Send + Sync + 'static>>>(err: E) -> Self {
+    pub fn deserialize<E: Into<Box<dyn StdError + Send + Sync + 'static>>>(err: E) -> Self {
         Error::Deserialize(err.into())
     }
 }

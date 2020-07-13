@@ -10,7 +10,7 @@ use std::fmt;
 
 use std::sync::Arc;
 
-impl fmt::Debug for Interceptor {
+impl fmt::Debug for dyn Interceptor {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         self.debug(f)
     }
@@ -61,7 +61,7 @@ pub trait Interceptor: Send + Sync + 'static {
 
     /// Overridden by `NoIntercept`
     #[doc(hidden)]
-    fn into_opt_obj(self) -> Option<Arc<Interceptor>>
+    fn into_opt_obj(self) -> Option<Arc<dyn Interceptor>>
     where
         Self: Sized,
     {
@@ -94,8 +94,8 @@ impl<I1: Interceptor, I2: Interceptor> Interceptor for Chain<I1, I2> {
 
     fn debug(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_tuple("Chain")
-            .field(&(&self.0 as &Interceptor))
-            .field(&(&self.1 as &Interceptor))
+            .field(&(&self.0 as &dyn Interceptor))
+            .field(&(&self.1 as &dyn Interceptor))
             .finish()
     }
 }
@@ -113,9 +113,9 @@ impl<I1: Interceptor, I2: Interceptor, I3: Interceptor> Interceptor for Chain2<I
 
     fn debug(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_tuple("Chain2")
-            .field(&(&self.0 as &Interceptor))
-            .field(&(&self.1 as &Interceptor))
-            .field(&(&self.2 as &Interceptor))
+            .field(&(&self.0 as &dyn Interceptor))
+            .field(&(&self.1 as &dyn Interceptor))
+            .field(&(&self.2 as &dyn Interceptor))
             .finish()
     }
 }
@@ -131,7 +131,7 @@ impl Interceptor for NoIntercept {
         <Self as fmt::Debug>::fmt(self, f)
     }
 
-    fn into_opt_obj(self) -> Option<Arc<Interceptor>> {
+    fn into_opt_obj(self) -> Option<Arc<dyn Interceptor>> {
         None
     }
 }

@@ -379,7 +379,7 @@ impl fmt::Debug for FileField {
 
 enum FileField_ {
     Stream {
-        stream: Box<StreamField>,
+        stream: Box<dyn StreamField>,
         filename: Option<String>,
         content_type: Option<Mime>,
     },
