@@ -1,18 +1,18 @@
-use hyper::Url;
 use hyper::client::Client;
+use hyper::Url;
 
-use std::sync::Arc;
 use std::fmt;
+use std::sync::Arc;
 
 use executor::{DefaultExecutor, Executor};
 
 use mpmc::{self, Sender};
 
-use net::intercept::{Interceptor, Chain, NoIntercept};
+use net::intercept::{Chain, Interceptor, NoIntercept};
 
-use serialize::{self, Serializer, Deserializer};
 use serialize::none::NoSerializer;
 use serialize::FromStrDeserializer;
+use serialize::{self, Deserializer, Serializer};
 
 use UnsizeService;
 
@@ -44,7 +44,10 @@ impl<S, D, E, I> AdapterBuilder<S, D, E, I> {
     ///
     /// If a base URL is not provided, then all service method URLs are assumed to be absolute.
     pub fn base_url(self, url: Url) -> Self {
-        AdapterBuilder { base_url: Some(url), .. self }
+        AdapterBuilder {
+            base_url: Some(url),
+            ..self
+        }
     }
 
     /// Set a `hyper::Client` instance to use with the adapter.
@@ -57,7 +60,9 @@ impl<S, D, E, I> AdapterBuilder<S, D, E, I> {
 
     /// Set a new executor for the adapter.
     pub fn executor<E_>(self, executor: E_) -> AdapterBuilder<S, D, E_, I>
-        where E: Executor {
+    where
+        E: Executor,
+    {
         AdapterBuilder {
             base_url: self.base_url,
             client: self.client,
@@ -70,7 +75,9 @@ impl<S, D, E, I> AdapterBuilder<S, D, E, I> {
 
     /// Set a new interceptor for the adapter.
     pub fn interceptor<I_>(self, interceptor: I_) -> AdapterBuilder<S, D, E, I_>
-    where I_: Interceptor {
+    where
+        I_: Interceptor,
+    {
         AdapterBuilder {
             base_url: self.base_url,
             client: self.client,
@@ -83,7 +90,10 @@ impl<S, D, E, I> AdapterBuilder<S, D, E, I> {
 
     /// Chain a new interceptor with the current one. They will be called in-order.
     pub fn chain_interceptor<I_>(self, next: I_) -> AdapterBuilder<S, D, E, Chain<I, I_>>
-    where I: Interceptor, I_: Interceptor {
+    where
+        I: Interceptor,
+        I_: Interceptor,
+    {
         AdapterBuilder {
             base_url: self.base_url,
             client: self.client,
@@ -96,7 +106,9 @@ impl<S, D, E, I> AdapterBuilder<S, D, E, I> {
 
     /// Set a new `Serializer` impl for the adapter.
     pub fn serializer<S_>(self, serialize: S_) -> AdapterBuilder<S_, D, E, I>
-    where S_: Serializer {
+    where
+        S_: Serializer,
+    {
         AdapterBuilder {
             base_url: self.base_url,
             client: self.client,
@@ -109,7 +121,9 @@ impl<S, D, E, I> AdapterBuilder<S, D, E, I> {
 
     /// Set a new `Deserializer` impl for the adapter.
     pub fn deserializer<D_>(self, deserialize: D_) -> AdapterBuilder<S, D_, E, I>
-    where D_: Deserializer {
+    where
+        D_: Deserializer,
+    {
         AdapterBuilder {
             base_url: self.base_url,
             client: self.client,
@@ -126,15 +140,21 @@ impl<S, D, E, I> AdapterBuilder<S, D, E, I> {
     /// Convenience method for using JSON serialization.
     ///
     /// Enabled with either the `rust-serialize` feature or the `serde-json` feature.
-    pub fn serialize_json(self) -> AdapterBuilder<serialize::json::Serializer, serialize::json::Deserializer, E, I> {
+    pub fn serialize_json(
+        self,
+    ) -> AdapterBuilder<serialize::json::Serializer, serialize::json::Deserializer, E, I> {
         self.serializer(serialize::json::Serializer)
             .deserializer(serialize::json::Deserializer)
     }
 }
 
 impl<S, D, E, I> AdapterBuilder<S, D, E, I>
-where S: Serializer, D: Deserializer, E: Executor, I: Interceptor {
-
+where
+    S: Serializer,
+    D: Deserializer,
+    E: Executor,
+    I: Interceptor,
+{
     /// Using the supplied types, complete the adapter.
     ///
     /// `<E as Executor>::start()` will be called here.
@@ -152,19 +172,17 @@ where S: Serializer, D: Deserializer, E: Executor, I: Interceptor {
         };
 
         Adapter {
-            inner: Arc::new(
-                Adapter_ {
-                    consts: Arc::new(consts),
-                    interceptor: self.interceptor.into_opt_obj(),
-                }
-            ),
+            inner: Arc::new(Adapter_ {
+                consts: Arc::new(consts),
+                interceptor: self.interceptor.into_opt_obj(),
+            }),
         }
     }
 }
 
 /// A shorthand for an adapter with JSON serialization enabled.
 #[cfg(any(feature = "rustc-serialize", feature = "serde_json"))]
-pub type JsonAdapter= Adapter<serialize::json::Serializer, serialize::json::Deserializer>;
+pub type JsonAdapter = Adapter<serialize::json::Serializer, serialize::json::Deserializer>;
 
 /// The starting point of all Anterofit requests.
 ///
@@ -184,7 +202,8 @@ impl<S, D> Clone for Adapter<S, D> {
 
 impl Adapter<NoSerializer, FromStrDeserializer> {
     /// Start building an impl of `Adapter` using the default inner types.
-    pub fn builder() -> AdapterBuilder<NoSerializer, FromStrDeserializer, DefaultExecutor, NoIntercept> {
+    pub fn builder(
+    ) -> AdapterBuilder<NoSerializer, FromStrDeserializer, DefaultExecutor, NoIntercept> {
         AdapterBuilder::new()
     }
 }
@@ -201,7 +220,10 @@ impl<S, D> Adapter<S, D> {
 }
 
 impl<S, D> fmt::Debug for Adapter_<S, D>
-where S: fmt::Debug, D: fmt::Debug {
+where
+    S: fmt::Debug,
+    D: fmt::Debug,
+{
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_struct("anterofit::Adapter")
             .field("base_url", &self.consts.base_url)
@@ -214,7 +236,7 @@ where S: fmt::Debug, D: fmt::Debug {
 }
 
 /// A mutator for modifying the `Interceptor` of an `Adapter`.
-pub struct InterceptorMut<'a>(&'a mut Option<Arc<Interceptor>>);
+pub struct InterceptorMut<'a>(&'a mut Option<Arc<dyn Interceptor>>);
 
 impl<'a> InterceptorMut<'a> {
     /// Remove the interceptor from the adapter.
@@ -223,7 +245,10 @@ impl<'a> InterceptorMut<'a> {
     }
 
     /// Set a new interceptor, discarding the old one.
-    pub fn set<I>(&mut self, new: I) where I: Interceptor {
+    pub fn set<I>(&mut self, new: I)
+    where
+        I: Interceptor,
+    {
         *self.0 = new.into_opt_obj();
     }
 
@@ -231,7 +256,10 @@ impl<'a> InterceptorMut<'a> {
     ///
     /// Equivalent to `set(before)` if the adapter does not have an interceptor or was constructed
     /// with `NoIntercept` as the interceptor.
-    pub fn chain_before<I>(&mut self, before: I) where I: Interceptor {
+    pub fn chain_before<I>(&mut self, before: I)
+    where
+        I: Interceptor,
+    {
         *self.0 = match self.0.take() {
             Some(current) => before.chain(current).into_opt_obj(),
             None => before.into_opt_obj(),
@@ -242,7 +270,10 @@ impl<'a> InterceptorMut<'a> {
     ///
     /// Equivalent to `set(after)` if the adapter does not have an interceptor or was constructed
     /// with `NoIntercept` as the interceptor.
-    pub fn chain_after<I>(&mut self, after: I) where I: Interceptor {
+    pub fn chain_after<I>(&mut self, after: I)
+    where
+        I: Interceptor,
+    {
         *self.0 = match self.0.take() {
             Some(current) => current.chain(after).into_opt_obj(),
             None => after.into_opt_obj(),
@@ -257,7 +288,10 @@ impl<'a> InterceptorMut<'a> {
     /// Equivalent to `set(before.chain(after))` if the adapter does not have an interceptor or
     /// was constructed with `NoIntercept` as the interceptor.
     pub fn chain_around<I1, I2>(&mut self, before: I1, after: I2)
-        where I1: Interceptor, I2: Interceptor {
+    where
+        I1: Interceptor,
+        I2: Interceptor,
+    {
         *self.0 = match self.0.take() {
             Some(current) => before.chain2(current, after).into_opt_obj(),
             None => before.chain(after).into_opt_obj(),
@@ -277,23 +311,30 @@ pub struct AdapterConsts<S, D> {
 /// Public but not accessible
 pub struct Adapter_<S, D> {
     consts: Arc<AdapterConsts<S, D>>,
-    interceptor: Option<Arc<Interceptor>>,
+    interceptor: Option<Arc<dyn Interceptor>>,
 }
 
 impl<S, D> Clone for Adapter_<S, D> {
     fn clone(&self) -> Self {
         Adapter_ {
             consts: self.consts.clone(),
-            interceptor: self.interceptor.clone()
+            interceptor: self.interceptor.clone(),
         }
     }
 }
 
-impl<S, D> Adapter<S, D> where S: Serializer, D: Deserializer {
+impl<S, D> Adapter<S, D>
+where
+    S: Serializer,
+    D: Deserializer,
+{
     /// Get a service trait object from an existing shared allocation.
     ///
     /// Requires that the service implement `UnsizeService`.
-    pub fn arc_service<Serv: ?Sized>(&self) -> Arc<Serv> where Serv: UnsizeService {
+    pub fn arc_service<Serv: ?Sized>(&self) -> Arc<Serv>
+    where
+        Serv: UnsizeService,
+    {
         Serv::from_adapter(self.inner.clone())
     }
 }
@@ -312,12 +353,21 @@ pub trait PrivAdapter: Send + 'static {
 
     fn consts(&self) -> Arc<AdapterConsts<Self::Ser, Self::De>>;
 
-    fn interceptor(&self) -> Option<Arc<Interceptor>>;
+    fn interceptor(&self) -> Option<Arc<dyn Interceptor>>;
 }
 
-impl<S, D> AbsAdapter for Adapter<S, D> where S: Serializer, D: Deserializer {}
+impl<S, D> AbsAdapter for Adapter<S, D>
+where
+    S: Serializer,
+    D: Deserializer,
+{
+}
 
-impl<S, D> PrivAdapter for Adapter<S, D> where S: Serializer, D: Deserializer {
+impl<S, D> PrivAdapter for Adapter<S, D>
+where
+    S: Serializer,
+    D: Deserializer,
+{
     type Ser = S;
     type De = D;
 
@@ -329,14 +379,23 @@ impl<S, D> PrivAdapter for Adapter<S, D> where S: Serializer, D: Deserializer {
         self.inner.consts.clone()
     }
 
-    fn interceptor(&self) -> Option<Arc<Interceptor>> {
+    fn interceptor(&self) -> Option<Arc<dyn Interceptor>> {
         self.inner.interceptor.clone()
     }
 }
 
-impl<S, D> AbsAdapter for Adapter_<S, D> where S: Serializer, D: Deserializer {}
+impl<S, D> AbsAdapter for Adapter_<S, D>
+where
+    S: Serializer,
+    D: Deserializer,
+{
+}
 
-impl<S, D> PrivAdapter for Adapter_<S, D> where S: Serializer, D: Deserializer {
+impl<S, D> PrivAdapter for Adapter_<S, D>
+where
+    S: Serializer,
+    D: Deserializer,
+{
     type Ser = S;
     type De = D;
 
@@ -348,7 +407,7 @@ impl<S, D> PrivAdapter for Adapter_<S, D> where S: Serializer, D: Deserializer {
         self.consts.clone()
     }
 
-    fn interceptor(&self) -> Option<Arc<Interceptor>> {
+    fn interceptor(&self) -> Option<Arc<dyn Interceptor>> {
         self.interceptor.clone()
     }
 }

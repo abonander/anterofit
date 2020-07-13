@@ -18,9 +18,9 @@ pub type MultipartError = ::multipart::client::lazy::LazyIoError<'static>;
 use net::request::RequestHead;
 use serialize::none::NoSerializeError;
 
-use std::io::Error as IoError;
 use std::error::Error as StdError;
 use std::fmt;
+use std::io::Error as IoError;
 
 quick_error! {
     /// The error type for this crate.
@@ -45,13 +45,13 @@ quick_error! {
             description(e.description())
         }
         /// Errors that occur during serialization.
-        Serialize(e: Box<StdError + Send + 'static>) {
+        Serialize(e: Box<dyn StdError + Send + 'static>) {
             cause(&**e)
             description(e.description())
         }
 
         /// Errors that occur during deserialization.
-        Deserialize(e: Box<StdError + Send + 'static>) {
+        Deserialize(e: Box<dyn StdError + Send + 'static>) {
             cause(&**e)
             description(e.description())
         }
@@ -80,7 +80,7 @@ quick_error! {
             description(e.description())
         }
         /// The miscellaneous error type, can be anything.
-        Other(e: Box<StdError + Send + 'static>){
+        Other(e: Box<dyn StdError + Send + 'static>){
             from()
             cause(&**e)
             description(e.description())
@@ -117,14 +117,17 @@ impl Error {
     }
 
     /// Create a value of `Error::Deserialize`
-    pub fn deserialize<E: Into<Box<StdError + Send + Sync + 'static>>>(err: E) -> Self {
+    pub fn deserialize<E: Into<Box<dyn StdError + Send + Sync + 'static>>>(err: E) -> Self {
         Error::Deserialize(err.into())
     }
 }
 
 /// Flatten a `Result` of a `Result` where the outer's error type is convertible to `anterofit::Result`.
-pub fn flatten_res<T, E>(res: Result<Result<T, Error>, E>) -> Result<T, Error> where Error: From<E> {
-    try!(res)
+pub fn flatten_res<T, E>(res: Result<Result<T, Error>, E>) -> Result<T, Error>
+where
+    Error: From<E>,
+{
+    res?
 }
 
 /// Error returned when a panic occurred while completing a request.

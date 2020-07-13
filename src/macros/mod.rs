@@ -252,12 +252,12 @@ macro_rules! method_proto(
         fn $fnname:ident (&self $($args:tt)*) $(-> $ret:ty)* {
             $($body:tt)+
         }
-        
+
         $($rem:tt)*
     ) => (
         $(#[$fnmeta])*
         fn $fnname (&self $($args)*)  -> $crate::net::Request<$($ret)*>;
-        
+
         method_proto!($($rem)*);
     );
     // Generics
@@ -266,12 +266,12 @@ macro_rules! method_proto(
         fn $fnname:ident [$($generics:tt)+] (&self $($args:tt)*) $(-> $ret:ty)* {
             $($body:tt)+
         }
-        
+
         $($rem:tt)*
     ) => (
         $(#[$fnmeta])*
         fn $fnname <$($generics)+> (&self $($args)*) -> $crate::net::Request<$($ret)*>;
-        
+
         method_proto!($($rem)*);
     );
     // Where clause
@@ -280,12 +280,12 @@ macro_rules! method_proto(
         fn $fnname:ident  (&self $($args:tt)*) $(-> $ret:ty)* [where $($wheres:tt)+] {
             $($body:tt)+
         }
-        
+
         $($rem:tt)*
     ) => (
         $(#[$fnmeta])*
         fn $fnname (&self $($args)*) -> $crate::net::Request<$($ret)*> where $($wheres)+ ;
-        
+
         method_proto!($($rem)*);
     );
     // Generics + where clause
@@ -294,12 +294,12 @@ macro_rules! method_proto(
         fn $fnname:ident [$($generics:tt)+] (&self $($args:tt)*) $(-> $ret:ty)* [where $($wheres:tt)+] {
             $($body:tt)+
         }
-        
+
         $($rem:tt)*
     ) => (
         $(#[$fnmeta])*
         fn $fnname <$($generics)+> (&self $($args)*) -> $crate::net::Request<$($ret)*> where $($wheres)+;
-        
+
         method_proto!($($rem)*);
     );
     // Empty end case for recursion
@@ -317,7 +317,7 @@ macro_rules! method_impl(
         fn $fnname:ident (&self $($args:tt)*) $(-> $ret:ty)* {
             $($body:tt)+
         }
-        
+
         $($rem:tt)*
     ) => (
         $(#[$fnmeta])*
@@ -326,7 +326,7 @@ macro_rules! method_impl(
                 $crate::get_adapter(self, $getadapt); $($body)+
             }
         }
-        
+
         method_impl!($getadapt; $($rem)*);
     );
     // Generics
@@ -337,7 +337,7 @@ macro_rules! method_impl(
         fn $fnname:ident [$($generics:tt)+] (&self $($args:tt)*) $(-> $ret:ty)* {
             $($body:tt)+
         }
-        
+
         $($rem:tt)*
     ) => (
         $(#[$fnmeta])*
@@ -346,7 +346,7 @@ macro_rules! method_impl(
                 $crate::get_adapter(self, $getadapt); $($body)+
             }
         }
-        
+
         method_impl!($getadapt; $($rem)*);
     );
     // Where clause
@@ -357,7 +357,7 @@ macro_rules! method_impl(
         fn $fnname:ident  (&self $($args:tt)*) $(-> $ret:ty)* [where $($wheres:tt)+] {
             $($body:tt)+
         }
-        
+
         $($rem:tt)*
     ) => (
         $(#[$fnmeta])*
@@ -366,7 +366,7 @@ macro_rules! method_impl(
                 $crate::get_adapter(self, $getadapt); $($body)+
             }
         }
-        
+
         method_impl!($getadapt; $($rem)*);
     );
     // Generics + Where clause
@@ -377,7 +377,7 @@ macro_rules! method_impl(
         fn $fnname:ident [$($generics:tt)+] (&self $($args:tt)*) $(-> $ret:ty)* [where $($wheres:tt)+] {
             $($body:tt)+
         }
-        
+
         $($rem:tt)*
     ) => (
         $(#[$fnmeta])*
@@ -386,7 +386,7 @@ macro_rules! method_impl(
                 $crate::get_adapter(self, $getadapt); $($body)+
             }
         }
-        
+
         method_impl!($getadapt; $($rem)*);
     );
     // Empty end-case for recursion

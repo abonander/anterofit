@@ -1,6 +1,6 @@
-use futures::{Future, Canceled, Complete, Oneshot, Async, Poll};
-use futures::executor::{self, Unpark, Spawn};
-use ::{Result, Error};
+use futures::executor::{self, Spawn, Unpark};
+use futures::{Async, Canceled, Complete, Future, Oneshot, Poll};
+use {Error, Result};
 
 use std::mem;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -25,7 +25,7 @@ pub struct Call<T> {
 enum CallState<T> {
     Waiting(CallFuture<T>),
     Immediate(Result<T>),
-    Taken
+    Taken,
 }
 
 type CallFuture<T> = Spawn<Oneshot<Result<T>>>;
@@ -38,7 +38,9 @@ impl<T> Call<T> {
 
     /// Ignore the result of this call, returning `Ok(())` so it can be used
     /// in a `try!()`.
-    pub fn ignore_ok(self) -> Result<()> { Ok(()) }
+    pub fn ignore_ok(self) -> Result<()> {
+        Ok(())
+    }
 
     /// Block on this call until a result is available.
     ///
@@ -60,7 +62,7 @@ impl<T> Call<T> {
         match self.poll_no_task() {
             Ok(Async::Ready(val)) => Some(Ok(val)),
             Ok(Async::NotReady) | Err(Error::ResultTaken) => None,
-            Err(e) => Some(Err(e))
+            Err(e) => Some(Err(e)),
         }
     }
 
@@ -92,7 +94,9 @@ impl<T> Call<T> {
     }
 
     fn poll_by<F>(&mut self, poll: F) -> Poll<T, Error>
-    where F: FnOnce(&mut CallFuture<T>) -> Poll<Result<T>, Canceled> {
+    where
+        F: FnOnce(&mut CallFuture<T>) -> Poll<Result<T>, Canceled>,
+    {
         match self.state {
             CallState::Waiting(ref mut future) => return map_poll(poll(future)),
             CallState::Taken => return Err(Error::ResultTaken),
@@ -141,13 +145,16 @@ pub fn oneshot<T>(head: Option<RequestHead>) -> (PanicGuard<T>, Call<T>) {
 
     let guard = PanicGuard {
         head: head,
-        tx: Some(tx)
+        tx: Some(tx),
     };
 
-    (guard, Call {
-        state: CallState::Waiting(executor::spawn(rx)),
-        notify: Default::default(),
-    })
+    (
+        guard,
+        Call {
+            state: CallState::Waiting(executor::spawn(rx)),
+            notify: Default::default(),
+        },
+    )
 }
 
 /// Implementation detail
@@ -187,8 +194,8 @@ impl<T> Drop for PanicGuard<T> {
 }
 
 fn map_poll<T>(poll: Poll<Result<T>, Canceled>) -> Poll<T, Error> {
-    let ret = match try!(poll) {
-        Async::Ready(val) => Async::Ready(try!(val)),
+    let ret = match poll? {
+        Async::Ready(val) => Async::Ready(val?),
         Async::NotReady => Async::NotReady,
     };
 

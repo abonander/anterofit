@@ -4,7 +4,7 @@
 
 pub mod threaded;
 
-pub use mpmc::{Receiver, RecvIter, RecvIntoIter};
+pub use mpmc::{Receiver, RecvIntoIter, RecvIter};
 
 /// The default executor which should be suitable for most use-cases.
 pub type DefaultExecutor = threaded::SingleThread;
@@ -25,7 +25,7 @@ pub trait ExecBox: Send + 'static {
     fn exec(self: Box<Self>);
 }
 
-impl ExecBox {
+impl dyn ExecBox {
     /// Create a new `ExecBox` which does nothing when called.
     ///
     /// Since it is zero-sized, this call should not allocate.
@@ -34,7 +34,10 @@ impl ExecBox {
     }
 }
 
-impl<F> ExecBox for F where F: FnOnce() + Send + 'static {
+impl<F> ExecBox for F
+where
+    F: FnOnce() + Send + 'static,
+{
     fn exec(self: Box<Self>) {
         (*self)()
     }

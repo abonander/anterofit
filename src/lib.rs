@@ -154,12 +154,12 @@
 //! `Future::poll()` and `Future::wait()` without external types so you
 //! have a choice over whether you want to use futures in your app or not.
 
-#![cfg_attr(feature="clippy", feature(plugin))]
-#![cfg_attr(feature="clippy", plugin(clippy))]
-#![cfg_attr(feature="clippy", deny(clippy))]
+#![cfg_attr(feature = "clippy", feature(plugin))]
+#![cfg_attr(feature = "clippy", plugin(clippy))]
+#![cfg_attr(feature = "clippy", deny(clippy))]
 #![warn(missing_docs)]
 #![cfg_attr(feature = "nightly", feature(specialization))]
-#![recursion_limit="100"]
+#![recursion_limit = "100"]
 
 #[macro_use]
 extern crate mime as mime_;
@@ -201,7 +201,7 @@ pub use error::Error;
 
 pub use hyper::Url;
 
-pub use adapter::{Adapter, AbsAdapter, AdapterBuilder, InterceptorMut};
+pub use adapter::{AbsAdapter, Adapter, AdapterBuilder, InterceptorMut};
 
 #[cfg(feature = "serde_json")]
 pub use adapter::JsonAdapter;
@@ -231,5 +231,7 @@ pub fn get_adapter<D, A: AbsAdapter, F: FnOnce(&D) -> &A>(delegate: &D, map: F) 
 /// Mutually exclusive with delegate service impls for the foreseeable future.
 pub trait UnsizeService {
     /// Unsize the given `Arc<A: AbsAdapter>` to the service trait object.
-    fn from_adapter<A>(adpt: Arc<A>) -> Arc<Self> where A: AbsAdapter;
+    fn from_adapter<A>(adpt: Arc<A>) -> Arc<Self>
+    where
+        A: AbsAdapter;
 }

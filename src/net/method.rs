@@ -54,8 +54,10 @@ pub struct ForceBody;
 
 impl Method for ForceBody {
     fn to_hyper(&self) -> ::hyper::method::Method {
-        panic!("`ForceBody` is not an actual HTTP method; you must have caught a panic \
-                during a `force_body!()` invocation and continued outside.")
+        panic!(
+            "`ForceBody` is not an actual HTTP method; you must have caught a panic \
+                during a `force_body!()` invocation and continued outside."
+        )
     }
 }
 

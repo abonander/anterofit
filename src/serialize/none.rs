@@ -2,11 +2,11 @@
 
 use std::io::{Read, Write};
 
-use super::{Serializer, Deserializer, Serialize, Deserialize};
+use super::{Deserialize, Deserializer, Serialize, Serializer};
 
 use mime::Mime;
 
-use ::Result;
+use Result;
 
 /// A no-op serializer which returns an error when attempting to use it.
 #[derive(Debug)]

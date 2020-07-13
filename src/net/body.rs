@@ -16,7 +16,7 @@ use std::fmt;
 use std::io::{self, Cursor, Read};
 use std::path::PathBuf;
 
-use ::Result;
+use Result;
 
 /// The result type for `Body::into_readable()`.
 pub type ReadableResult<T> = Result<Readable<T>>;
@@ -58,13 +58,17 @@ pub trait Body: Send + 'static {
 
     /// Serialize `self` with the given adapter into a request body.
     fn into_readable<S>(self, ser: &S) -> ReadableResult<Self::Readable>
-    where S: Serializer;
+    where
+        S: Serializer;
 }
 
 impl<B: EagerBody + Send + 'static> Body for B {
     type Readable = <B as EagerBody>::Readable;
 
-    fn into_readable<S>(self, ser: &S) -> ReadableResult<Self::Readable> where S: Serializer {
+    fn into_readable<S>(self, ser: &S) -> ReadableResult<Self::Readable>
+    where
+        S: Serializer,
+    {
         <B as EagerBody>::into_readable(self, ser)
     }
 }
@@ -78,16 +82,20 @@ pub trait EagerBody {
 
     /// Serialize `self` with the given adapter into a request body.
     fn into_readable<S>(self, ser: &S) -> ReadableResult<Self::Readable>
-        where S: Serializer;
+    where
+        S: Serializer;
 }
 
 impl<B: Serialize> EagerBody for B {
     type Readable = Cursor<Vec<u8>>;
 
-    fn into_readable<S>(self, ser: &S) -> ReadableResult<Self::Readable> where S: Serializer {
+    fn into_readable<S>(self, ser: &S) -> ReadableResult<Self::Readable>
+    where
+        S: Serializer,
+    {
         let mut buf = Vec::new();
 
-        try!(ser.serialize(&self, &mut buf));
+        ser.serialize(&self, &mut buf)?;
 
         Readable::new_ok(Cursor::new(buf), ser.content_type())
     }
@@ -118,7 +126,10 @@ impl<T: AsRef<[u8]>> RawBody<Cursor<T>> {
     /// as a plain text body.
     ///
     /// Assumes `text/plain; charset=utf8` as the content-type.
-    pub fn text(text: T) -> Self where T: Borrow<str> {
+    pub fn text(text: T) -> Self
+    where
+        T: Borrow<str>,
+    {
         RawBody::new(Cursor::new(text), mime::text_plain_utf8())
     }
 }
@@ -135,9 +146,12 @@ impl RawBody<Cursor<String>> {
 impl RawBody<Cursor<Vec<u8>>> {
     /// Use the serializer in `adapter` to serialize `val` as a raw body immediately.
     pub fn serialize_now<S, T>(ser: &S, val: &T) -> Result<Self>
-    where S: Serializer, T: Serialize {
+    where
+        S: Serializer,
+        T: Serialize,
+    {
         let mut buf: Vec<u8> = Vec::new();
-        try!(ser.serialize(val, &mut buf));
+        ser.serialize(val, &mut buf)?;
         Ok(RawBody::new(Cursor::new(buf), ser.content_type()))
     }
 }
@@ -145,7 +159,10 @@ impl RawBody<Cursor<Vec<u8>>> {
 impl<R: Read + Send + 'static> EagerBody for RawBody<R> {
     type Readable = R;
 
-    fn into_readable<S>(self, _ser: &S) -> ReadableResult<Self::Readable> where S: Serializer {
+    fn into_readable<S>(self, _ser: &S) -> ReadableResult<Self::Readable>
+    where
+        S: Serializer,
+    {
         Ok(self.0)
     }
 }
@@ -192,7 +209,9 @@ impl Body for EmptyFields {
     type Readable = io::Empty;
 
     fn into_readable<S>(self, _ser: &S) -> ReadableResult<Self::Readable>
-    where S: Serializer {
+    where
+        S: Serializer,
+    {
         Readable::new_ok(io::empty(), None)
     }
 }
@@ -229,11 +248,14 @@ impl Fields for TextFields {
 impl Body for TextFields {
     type Readable = Cursor<String>;
 
-    fn into_readable<S>(self, _ser: &S) -> ReadableResult<Self::Readable> where S: Serializer {
+    fn into_readable<S>(self, _ser: &S) -> ReadableResult<Self::Readable>
+    where
+        S: Serializer,
+    {
         let readable = Cursor::new(
             FormUrlEncoder::new(String::new())
                 .extend_pairs(self.0.into_pairs())
-                .finish()
+                .finish(),
         );
 
         Readable::new_ok(readable, mime::form_urlencoded())
@@ -279,7 +301,10 @@ impl Fields for MultipartFields {
 impl Body for MultipartFields {
     type Readable = PreparedFields;
 
-    fn into_readable<S>(self, _ser: &S) -> ReadableResult<Self::Readable> where S: Serializer {
+    fn into_readable<S>(self, _ser: &S) -> ReadableResult<Self::Readable>
+    where
+        S: Serializer,
+    {
         use self::FileField_::*;
 
         let mut multipart = Multipart::new();
@@ -293,17 +318,17 @@ impl Body for MultipartFields {
                 Stream {
                     stream,
                     filename,
-                    content_type
+                    content_type,
                 } => {
                     stream.add_self(key, filename, content_type, &mut multipart);
-                },
+                }
                 Path(path) => {
                     multipart.add_file(key, path);
                 }
             }
         }
 
-        let prepared = try!(multipart.prepare());
+        let prepared = multipart.prepare()?;
 
         let content_type = mime::formdata(prepared.boundary());
 
@@ -316,11 +341,15 @@ pub struct FileField(FileField_);
 
 impl FileField {
     /// Wrap a `Read` impl with an optional filename and MIME type to be serialized as a file field.
-    pub fn from_stream<S: Read + Send + 'static>(stream: S, filename: Option<String>, content_type: Option<Mime>) -> Self {
+    pub fn from_stream<S: Read + Send + 'static>(
+        stream: S,
+        filename: Option<String>,
+        content_type: Option<Mime>,
+    ) -> Self {
         FileField(FileField_::Stream {
             stream: Box::new(stream),
             filename: filename,
-            content_type: content_type
+            content_type: content_type,
         })
     }
 
@@ -334,22 +363,23 @@ impl fmt::Debug for FileField {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self.0 {
             FileField_::Stream {
-                ref content_type, ref filename, ..
-            } => f.debug_struct("FileField::Stream")
+                ref content_type,
+                ref filename,
+                ..
+            } => f
+                .debug_struct("FileField::Stream")
                 .field("stream", &"Box<Read + Send + 'static>")
                 .field("content_type", &content_type)
                 .field("filename", filename)
                 .finish(),
-            FileField_::Path(ref path) =>
-                f.debug_tuple("FileField::Path").field(path).finish()
+            FileField_::Path(ref path) => f.debug_tuple("FileField::Path").field(path).finish(),
         }
     }
-
 }
 
 enum FileField_ {
     Stream {
-        stream: Box<StreamField>,
+        stream: Box<dyn StreamField>,
         filename: Option<String>,
         content_type: Option<Mime>,
     },
@@ -357,11 +387,26 @@ enum FileField_ {
 }
 
 trait StreamField: Read + Send + 'static {
-    fn add_self(self: Self, name: String, filename: Option<String>, content_type: Option<Mime>, to: &mut Multipart);
+    fn add_self(
+        self: Self,
+        name: String,
+        filename: Option<String>,
+        content_type: Option<Mime>,
+        to: &mut Multipart,
+    );
 }
 
-impl<T> StreamField for T where T: Read + Send + 'static {
-    fn add_self(self: Self, name: String, filename: Option<String>, content_type: Option<Mime>, to: &mut Multipart) {
+impl<T> StreamField for T
+where
+    T: Read + Send + 'static,
+{
+    fn add_self(
+        self: Self,
+        name: String,
+        filename: Option<String>,
+        content_type: Option<Mime>,
+        to: &mut Multipart,
+    ) {
         to.add_stream(name, self, filename, content_type);
     }
 }

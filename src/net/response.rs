@@ -6,7 +6,7 @@ use std::io::{self, Read};
 
 use serialize::{Deserialize, Deserializer};
 
-use ::Result;
+use Result;
 
 /// A trait describing types which can be converted from raw response bodies.
 ///
@@ -17,12 +17,18 @@ use ::Result;
 pub trait FromResponse: Send + Sized + 'static {
     /// Deserialize or otherwise convert an instance of `Self` from `response`.
     fn from_response<D>(des: &D, response: Response) -> Result<Self>
-        where D: Deserializer;
+    where
+        D: Deserializer;
 }
 
-impl<T> FromResponse for T where T: Deserialize + Send + 'static {
+impl<T> FromResponse for T
+where
+    T: Deserialize + Send + 'static,
+{
     fn from_response<D>(des: &D, mut response: Response) -> Result<Self>
-        where D: Deserializer {
+    where
+        D: Deserializer,
+    {
         des.deserialize(&mut response)
     }
 }
@@ -50,8 +56,9 @@ impl Read for Raw {
 impl FromResponse for Raw {
     /// Simple wrapping operation; infallible.
     fn from_response<D>(_des: &D, response: Response) -> Result<Self>
-        where D: Deserializer {
-
+    where
+        D: Deserializer,
+    {
         Ok(Raw(response))
     }
 }
@@ -71,13 +78,18 @@ pub struct WithRaw<T> {
     pub value: T,
 }
 
-impl<T> FromResponse for WithRaw<T> where T: Deserialize + Send + 'static {
+impl<T> FromResponse for WithRaw<T>
+where
+    T: Deserialize + Send + 'static,
+{
     fn from_response<D>(des: &D, mut response: Response) -> Result<Self>
-        where D: Deserializer {
-        let val = try!(des.deserialize(&mut response));
+    where
+        D: Deserializer,
+    {
+        let val = des.deserialize(&mut response)?;
         Ok(WithRaw {
             raw: response,
-            value: val
+            value: val,
         })
     }
 }
@@ -97,9 +109,14 @@ pub struct TryWithRaw<T> {
     pub result: Result<T>,
 }
 
-impl<T> FromResponse for TryWithRaw<T> where T: Deserialize + Send + 'static {
+impl<T> FromResponse for TryWithRaw<T>
+where
+    T: Deserialize + Send + 'static,
+{
     fn from_response<D>(des: &D, mut response: Response) -> Result<Self>
-        where D: Deserializer {
+    where
+        D: Deserializer,
+    {
         let res = des.deserialize(&mut response);
         Ok(TryWithRaw {
             raw: response,
