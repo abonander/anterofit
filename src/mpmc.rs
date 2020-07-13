@@ -1,4 +1,4 @@
-use crossbeam::sync::SegQueue;
+use crossbeam::queue::SegQueue;
 use parking_lot::{Condvar, Mutex};
 
 use std::iter::IntoIterator;
@@ -60,7 +60,7 @@ impl Receiver {
     /// Returns `None` when the sending half of the queue is closed.
     pub fn recv(&self) -> Option<Box<dyn ExecBox>> {
         loop {
-            if let Some(val) = self.0.queue.try_pop() {
+            if let Ok(val) = self.0.queue.pop() {
                 // Wake another thread so it can check if there's more work in the queue
                 self.0.cvar.notify_one();
                 return Some(val);
