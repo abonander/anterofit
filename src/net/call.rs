@@ -187,8 +187,8 @@ impl<T> Drop for PanicGuard<T> {
 }
 
 fn map_poll<T>(poll: Poll<Result<T>, Canceled>) -> Poll<T, Error> {
-    let ret = match try!(poll) {
-        Async::Ready(val) => Async::Ready(try!(val)),
+    let ret = match poll? {
+        Async::Ready(val) => Async::Ready(val?),
         Async::NotReady => Async::NotReady,
     };
 

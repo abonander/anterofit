@@ -74,7 +74,7 @@ pub struct WithRaw<T> {
 impl<T> FromResponse for WithRaw<T> where T: Deserialize + Send + 'static {
     fn from_response<D>(des: &D, mut response: Response) -> Result<Self>
         where D: Deserializer {
-        let val = try!(des.deserialize(&mut response));
+        let val = des.deserialize(&mut response)?;
         Ok(WithRaw {
             raw: response,
             value: val

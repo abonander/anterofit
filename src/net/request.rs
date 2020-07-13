@@ -161,9 +161,9 @@ impl RequestHead {
     /// will be added.
     pub fn init_request<'c>(&self, base_url: Option<&Url>, client: &'c Client) -> Result<NetRequestBuilder<'c>> {
         let mut url = if let Some(base_url) = base_url {
-            try!(base_url.join(&self.url))
+            base_url.join(&self.url)?
         } else {
-            try!(Url::parse(&self.url))
+            Url::parse(&self.url)?
         };
 
         url.set_query(Some(&self.query));
@@ -288,7 +288,7 @@ impl<'a, A: 'a + ?Sized, M, B> RequestBuilder<'a, A, M, B> where A: AbsAdapter, 
         -> Result<RequestBuilder<'a, A, M, RawBody<<B_ as EagerBody>::Readable>>>
         where B_: EagerBody {
 
-        let body = try!(body.into_readable(&self.adapter.ref_consts().serializer)).into();
+        let body = body.into_readable(&self.adapter.ref_consts().serializer)?.into();
         Ok(self.body(body))
     }
 }
@@ -464,7 +464,7 @@ where S: Serializer, D: Deserializer, B: Body {
         interceptor.intercept(head);
     }
 
-    let mut readable = try!(body.into_readable(&consts.serializer));
+    let mut readable = body.into_readable(&consts.serializer)?;
 
     if let Some(content_type) = readable.content_type {
         head.header(ContentType(content_type));

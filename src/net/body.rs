@@ -87,7 +87,7 @@ impl<B: Serialize> EagerBody for B {
     fn into_readable<S>(self, ser: &S) -> ReadableResult<Self::Readable> where S: Serializer {
         let mut buf = Vec::new();
 
-        try!(ser.serialize(&self, &mut buf));
+        ser.serialize(&self, &mut buf)?;
 
         Readable::new_ok(Cursor::new(buf), ser.content_type())
     }
@@ -137,7 +137,7 @@ impl RawBody<Cursor<Vec<u8>>> {
     pub fn serialize_now<S, T>(ser: &S, val: &T) -> Result<Self>
     where S: Serializer, T: Serialize {
         let mut buf: Vec<u8> = Vec::new();
-        try!(ser.serialize(val, &mut buf));
+        ser.serialize(val, &mut buf)?;
         Ok(RawBody::new(Cursor::new(buf), ser.content_type()))
     }
 }
@@ -303,7 +303,7 @@ impl Body for MultipartFields {
             }
         }
 
-        let prepared = try!(multipart.prepare());
+        let prepared = multipart.prepare()?;
 
         let content_type = mime::formdata(prepared.boundary());
 

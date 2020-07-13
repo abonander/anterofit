@@ -124,7 +124,7 @@ impl Error {
 
 /// Flatten a `Result` of a `Result` where the outer's error type is convertible to `anterofit::Result`.
 pub fn flatten_res<T, E>(res: Result<Result<T, Error>, E>) -> Result<T, Error> where Error: From<E> {
-    try!(res)
+    res?
 }
 
 /// Error returned when a panic occurred while completing a request.
